@@ -1,0 +1,47 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+bool esErrorRedAuth(Object e) {
+  final s = e is AuthException
+      ? e.message.toLowerCase()
+      : e.toString().toLowerCase();
+  return s.contains('socketexception') ||
+      s.contains('failed host') ||
+      s.contains('clientexception') ||
+      s.contains('network') ||
+      s.contains('no route to host') ||
+      s.contains('connection') ||
+      s.contains('timeout');
+}
+
+/// Traduce los errores de autenticación de Supabase (que vienen en inglés) a
+/// mensajes claros en español para mostrar al usuario.
+String traducirErrorAuth(Object e) {
+  if (esErrorRedAuth(e)) {
+    return 'No hay conexión a internet. Podés entrar sin conexión si ya usaste esta cuenta en este dispositivo.';
+  }
+
+  if (e is AuthException) {
+    switch (e.code) {
+      case 'invalid_credentials':
+        return 'Correo o contraseña incorrectos.';
+      case 'email_not_confirmed':
+        return 'Tenés que confirmar tu correo antes de entrar.';
+      case 'over_request_rate_limit':
+      case 'over_email_send_rate_limit':
+        return 'Demasiados intentos. Esperá unos minutos y volvé a probar.';
+      case 'validation_failed':
+        return 'Revisá los datos ingresados.';
+    }
+    final m = e.message.toLowerCase();
+    if (m.contains('invalid login')) return 'Correo o contraseña incorrectos.';
+    if (m.contains('email not confirmed')) {
+      return 'Tenés que confirmar tu correo antes de entrar.';
+    }
+    if (m.contains('password')) {
+      return 'La contraseña debe tener al menos 6 caracteres.';
+    }
+    return 'No se pudo iniciar sesión. Intentá de nuevo.';
+  }
+
+  return 'Ocurrió un error. Intentá de nuevo.';
+}
