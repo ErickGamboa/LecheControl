@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../alertas/alertas_screen.dart';
 import '../app/theme.dart';
-import '../app/widgets/scan_field.dart';
+import '../app/widgets/pedir_identificador_dialog.dart';
 import '../data/local/database.dart';
 import '../gastos/gastos_screen.dart';
 import '../hoja_vida/hoja_vida_screen.dart';
@@ -56,33 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _abrirHojaVidaBuscando() async {
-    final ctrl = TextEditingController();
-    final focus = FocusNode();
-    final identificador = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Buscar animal'),
-        content: ScanField(
-          controller: ctrl,
-          focusNode: focus,
-          labelText: 'Identificador',
-          keyboardType: TextInputType.text,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (v) => Navigator.pop(dialogContext, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, ctrl.text),
-            child: const Text('Buscar'),
-          ),
-        ],
-      ),
+    final identificador = await pedirIdentificador(
+      context,
+      titulo: 'Buscar animal',
     );
-    focus.dispose();
     if (identificador == null || identificador.trim().isEmpty) return;
     final animal = await animalesRepo.buscarPorIdentificador(
       widget.lecheria.id,

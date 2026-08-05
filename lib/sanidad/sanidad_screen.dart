@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../app/widgets/scan_field.dart';
+import '../app/widgets/pedir_identificador_dialog.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../services.dart';
@@ -24,33 +24,10 @@ class SanidadScreen extends StatefulWidget {
 
 class _SanidadScreenState extends State<SanidadScreen> {
   Future<void> _aplicarAAnimal() async {
-    final ctrl = TextEditingController();
-    final focus = FocusNode();
-    final identificador = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Identificador del animal'),
-        content: ScanField(
-          controller: ctrl,
-          focusNode: focus,
-          labelText: 'Identificador',
-          keyboardType: TextInputType.text,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (v) => Navigator.pop(dialogContext, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, ctrl.text),
-            child: const Text('Buscar'),
-          ),
-        ],
-      ),
+    final identificador = await pedirIdentificador(
+      context,
+      titulo: 'Identificador del animal',
     );
-    focus.dispose();
     if (identificador == null || identificador.trim().isEmpty) return;
     final animal = await animalesRepo.buscarPorIdentificador(
       widget.lecheriaId,
