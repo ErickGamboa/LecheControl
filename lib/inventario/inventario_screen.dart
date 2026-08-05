@@ -110,28 +110,25 @@ class _InventarioScreenState extends State<InventarioScreen> {
               onChanged: (v) => setState(() => _busqueda = v),
             ),
           ),
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+          // Wrap y no un ListView horizontal: los 6 filtros no caben en el
+          // ancho de un teléfono y los últimos ("Terneros", "En tratamiento")
+          // quedaban fuera de pantalla sin ninguna pista de que había más.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: const Text('Todos'),
-                    selected: _grupo == null,
-                    onSelected: (_) => setState(() => _grupo = null),
-                  ),
+                ChoiceChip(
+                  label: const Text('Todos'),
+                  selected: _grupo == null,
+                  onSelected: (_) => setState(() => _grupo = null),
                 ),
                 for (final g in GrupoAnimal.todos)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(GrupoAnimal.etiqueta(g)),
-                      selected: _grupo == g,
-                      onSelected: (_) => setState(() => _grupo = g),
-                    ),
+                  ChoiceChip(
+                    label: Text(GrupoAnimal.etiqueta(g)),
+                    selected: _grupo == g,
+                    onSelected: (_) => setState(() => _grupo = g),
                   ),
               ],
             ),

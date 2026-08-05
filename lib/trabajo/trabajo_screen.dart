@@ -361,14 +361,8 @@ class _TarjetaAnimal extends StatelessWidget {
           const SizedBox(height: 16),
           Text('Registrar evento', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 2.4,
-            children: [
+          _GrillaEventos(
+            botones: [
               _BotonEvento(
                 icono: Icons.medical_services_outlined,
                 etiqueta: 'Sanidad',
@@ -760,6 +754,44 @@ class _TarjetaAnimal extends StatelessWidget {
     );
     if (context.mounted) Navigator.of(context).maybePop();
     onCambio();
+  }
+}
+
+/// Grilla de dos columnas para los botones de "Registrar evento".
+///
+/// Los botones de Secado y Parto son condicionales (dependen del grupo y del
+/// estado reproductivo del animal), asi que la cantidad varia entre 6 y 8.
+/// Con un numero impar, un GridView dejaba el ultimo boton pegado a la
+/// izquierda con un hueco al lado; aca queda centrado y todos conservan el
+/// mismo tamano.
+class _GrillaEventos extends StatelessWidget {
+  const _GrillaEventos({required this.botones});
+
+  final List<Widget> botones;
+
+  static const double _espacio = 12;
+  static const double _relacionAspecto = 2.4;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final ancho = (constraints.maxWidth - _espacio) / 2;
+        return Wrap(
+          spacing: _espacio,
+          runSpacing: _espacio,
+          alignment: WrapAlignment.center,
+          children: [
+            for (final boton in botones)
+              SizedBox(
+                width: ancho,
+                height: ancho / _relacionAspecto,
+                child: boton,
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 
