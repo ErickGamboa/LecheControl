@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/formato.dart';
 import '../data/local/database.dart';
 import '../data/repositories/rentabilidad_repository.dart';
 import '../hoja_vida/hoja_vida_screen.dart';
@@ -134,7 +135,7 @@ class _ResumenTotal extends StatelessWidget {
           children: [
             Text('Utilidad diaria total', style: theme.textTheme.titleMedium),
             Text(
-              '\$${total.toStringAsFixed(0)}',
+              colones(total),
               style: theme.textTheme.headlineSmall?.copyWith(
                 color: total >= 0
                     ? Colors.green.shade800
@@ -162,11 +163,11 @@ class _FilaRentabilidadTile extends StatelessWidget {
         title: Text(fila.animal.identificador),
         subtitle: Text(
           '${fila.litrosDia.toStringAsFixed(1)} L · '
-          'Costo: \$${fila.costoTotalDia.toStringAsFixed(0)}'
+          'Costo: ${colones(fila.costoTotalDia)}'
           '${fila.enRetiro ? ' · En retiro' : ''}',
         ),
         trailing: Text(
-          '\$${fila.utilidadDia.toStringAsFixed(0)}',
+          colones(fila.utilidadDia),
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: fila.utilidadDia >= 0

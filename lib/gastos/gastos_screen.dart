@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/formato.dart';
 import '../data/local/database.dart';
 import '../services.dart';
 
@@ -182,8 +183,8 @@ class _GastosScreenState extends State<GastosScreen> {
                   subtitle: periodo == null
                       ? const Text('Todavía no configurados')
                       : Text(
-                          'Litro: \$${periodo.precioLitro.toStringAsFixed(0)} · '
-                          'Concentrado: \$${periodo.precioConcentradoKg.toStringAsFixed(0)}/kg · '
+                          'Litro: ${colones(periodo.precioLitro)} · '
+                          'Concentrado: ${colones(periodo.precioConcentradoKg)}/kg · '
                           'Umbral secado: ${periodo.umbralSecadoLitros.toStringAsFixed(1)} L',
                         ),
                   trailing: const Icon(Icons.edit),
@@ -236,7 +237,7 @@ class _GastosScreenState extends State<GastosScreen> {
                           Card(
                             child: ListTile(
                               title: Text(c.categoria),
-                              trailing: Text('\$${c.monto.toStringAsFixed(0)}'),
+                              trailing: Text(colones(c.monto)),
                               onLongPress: () =>
                                   gastosRepo.eliminarCostoFijo(c.id),
                             ),
@@ -245,7 +246,7 @@ class _GastosScreenState extends State<GastosScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: Text(
-                            'Total: \$${total.toStringAsFixed(0)}',
+                            'Total: ${colones(total)}',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),

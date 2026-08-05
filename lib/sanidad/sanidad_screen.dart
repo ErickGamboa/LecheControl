@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/formato.dart';
 import '../app/widgets/pedir_identificador_dialog.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
@@ -128,7 +129,7 @@ class _SanidadScreenState extends State<SanidadScreen> {
                         title: Text(m.nombre),
                         subtitle: Text(
                           '${TipoDosisMedicamento.etiqueta(m.tipoDosis)} · '
-                          'Costo envase: \$${m.costoEnvase.toStringAsFixed(0)}'
+                          'Costo envase: ${colones(m.costoEnvase)}'
                           '${m.diasRetiroLeche > 0 ? ' · ${m.diasRetiroLeche}d retiro' : ''}',
                         ),
                         trailing: PopupMenuButton<String>(

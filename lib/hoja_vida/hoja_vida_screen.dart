@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/formato.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../data/repositories/pesas_repository.dart';
@@ -156,7 +157,7 @@ class _EventoTile extends StatelessWidget {
       partes.add('${evento.diasRetiro} días de retiro');
     }
     if (evento.costo != null) {
-      partes.add('Costo: \$${evento.costo!.toStringAsFixed(0)}');
+      partes.add('Costo: ${colones(evento.costo!)}');
     }
     if (evento.resultado != null) {
       partes.add(ResultadoPalpacion.etiqueta(evento.resultado!));
@@ -172,7 +173,7 @@ class _EventoTile extends StatelessWidget {
       partes.add(MotivoBaja.etiqueta(evento.motivoBaja!));
     }
     if (evento.precioVenta != null) {
-      partes.add('\$${evento.precioVenta!.toStringAsFixed(0)}');
+      partes.add(colones(evento.precioVenta!));
     }
     if (evento.sexoCria != null) {
       partes.add('Cría: ${Sexo.etiqueta(evento.sexoCria!)}');
