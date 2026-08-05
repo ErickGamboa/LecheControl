@@ -76,24 +76,33 @@ dart run build_runner build --delete-conflicting-outputs
 
 ### Supabase configuration / configuración de Supabase
 
-LecheControl needs **its own** Supabase project (do not reuse HatoControl's).
-Until one is created, the app still runs fully offline (see Demo mode
-below). To connect a real project:
+LecheControl uses **its own** Supabase project, `yskvlaovqvjfodiroaqz` (do not
+reuse HatoControl's, `geocoundyilwxrnbhcqu`). Its URL and anon key are the
+defaults in `lib/config/supabase_config.dart`, so a plain `flutter run` — and
+any installed APK — is connected to the cloud database out of the box. No
+`--dart-define` needed.
 
-1. Create a Supabase project.
-2. Run the SQL in `supabase/migrations/20260729120000_lechecontrol_v1.sql`
-   (Supabase → SQL Editor → paste → run). It creates every table, RLS policy
-   and the `planes` seed.
-3. Run the app with your project's URL and anon (publishable) key:
-
-   ```bash
-   flutter run \
-     --dart-define=LECHE_SUPABASE_URL=https://TU-PROYECTO.supabase.co \
-     --dart-define=LECHE_SUPABASE_ANON_KEY=TU_ANON_KEY
-   ```
-
-The `anon` key is a public client key by design (RLS enforces real security).
+The `anon` key is a public client key by design: it ships inside every client
+build and is extractable from any APK. RLS policies enforce real security.
 **Never** commit a `service_role` key.
+
+To point a build at a **different** project (e.g. staging), override the
+defaults without editing the file:
+
+```bash
+flutter run \
+  --dart-define=LECHE_SUPABASE_URL=https://OTRO-PROYECTO.supabase.co \
+  --dart-define=LECHE_SUPABASE_ANON_KEY=OTRA_ANON_KEY
+```
+
+`scripts/run_dev.sh` does this for you, reading the values from a gitignored
+`.local/e2e_credentials.env` and refusing to start if the URL points at
+HatoControl.
+
+Setting up a project from scratch: create it, then run the SQL in
+`supabase/migrations/20260729120000_lechecontrol_v1.sql` (Supabase → SQL
+Editor → paste → run). It creates every table, RLS policy and the `planes`
+seed.
 
 Accounts are **not** self-registered in the app (Módulo 0, invariant no. 9):
 an administrator creates the `cuentas`/`usuarios` rows and gives credentials

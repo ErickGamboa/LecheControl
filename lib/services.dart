@@ -38,7 +38,10 @@ final EstadoConexion estadoConexion = EstadoConexion();
 
 SupabaseClient get supabase => Supabase.instance.client;
 
-SupabaseClient? get _supabaseClientOrNull {
+/// Cliente de Supabase, o `null` si no hay configuración o si
+/// `Supabase.initialize` todavía no corrió (por ejemplo en tests de widget,
+/// que montan pantallas sin pasar por `bootstrapLecheControl`).
+SupabaseClient? get supabaseClientOrNull {
   if (!SupabaseConfig.estaConfigurado) return null;
   try {
     return Supabase.instance.client;
@@ -51,7 +54,7 @@ Future<void> sincronizarSiSePuede() async {
   if (!estadoConexion.hayConexion.value) {
     return;
   }
-  final client = _supabaseClientOrNull;
+  final client = supabaseClientOrNull;
   if (client == null || client.auth.currentSession == null) {
     return;
   }
@@ -60,7 +63,7 @@ Future<void> sincronizarSiSePuede() async {
 
 Future<void> cerrarSesion() async {
   await sesionLocalRepo.borrar();
-  final client = _supabaseClientOrNull;
+  final client = supabaseClientOrNull;
   if (client == null) return;
   try {
     await client.auth.signOut();

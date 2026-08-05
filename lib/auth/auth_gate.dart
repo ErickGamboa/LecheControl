@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../config/supabase_config.dart';
 import '../cuenta/cuenta_gate.dart';
 import '../data/local/database.dart';
 import '../services.dart';
@@ -13,15 +12,17 @@ import 'login_screen.dart';
 /// - Ninguna                  -> LoginScreen
 ///
 /// Escucha los cambios de autenticación en tiempo real, así que al iniciar o
-/// cerrar sesión la app cambia de pantalla automáticamente. Si Supabase
-/// todavía no está configurado (`SupabaseConfig.estaConfigurado == false`),
-/// solo se admite la sesión local (modo offline/demo).
+/// cerrar sesión la app cambia de pantalla automáticamente. Si no hay cliente
+/// de Supabase disponible (`supabaseClientOrNull == null`: sin configuración,
+/// o `Supabase.initialize` todavía no corrió), solo se admite la sesión local
+/// (modo offline/demo).
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
-    if (!SupabaseConfig.estaConfigurado) {
+    final client = supabaseClientOrNull;
+    if (client == null) {
       return ValueListenableBuilder<SesionLocalRow?>(
         valueListenable: sesionLocalRepo.sesion,
         builder: (context, sesionLocal, _) {
@@ -37,12 +38,12 @@ class AuthGate extends StatelessWidget {
     }
 
     return StreamBuilder<AuthState>(
-      stream: Supabase.instance.client.auth.onAuthStateChange,
+      stream: client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         return ValueListenableBuilder<SesionLocalRow?>(
           valueListenable: sesionLocalRepo.sesion,
           builder: (context, sesionLocal, _) {
-            final session = Supabase.instance.client.auth.currentSession;
+            final session = client.auth.currentSession;
             if (session != null) {
               return CuentaGate(usuarioId: session.user.id, sinConexion: false);
             }

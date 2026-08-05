@@ -1,6 +1,9 @@
 // Smoke test: la app debe arrancar y mostrar la pantalla de login cuando no
-// hay sesión (Supabase no configurado en el entorno de test, así que
-// AuthGate cae directo al modo offline/login local).
+// hay sesión. Este test monta AuthGate directo, sin pasar por
+// `bootstrapLecheControl`, así que `Supabase.initialize` nunca corrió y
+// `supabaseClientOrNull` devuelve null: AuthGate cae al modo offline/login
+// local. (SupabaseConfig sí trae credenciales por defecto, pero tener
+// configuración no implica tener el cliente inicializado.)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

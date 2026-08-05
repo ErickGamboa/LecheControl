@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app/theme.dart';
-import '../config/supabase_config.dart';
 import '../data/local/database.dart';
 import '../services.dart';
 import 'mensajes_auth.dart';
@@ -36,7 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _entrar() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!SupabaseConfig.estaConfigurado) {
+    final client = supabaseClientOrNull;
+    if (client == null) {
       _mostrarMensaje(
         'Esta app todavía no tiene un proyecto de Supabase configurado. '
         'Pedile a soporte tus credenciales o entrá sin conexión si ya '
@@ -47,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() => _cargando = true);
     try {
-      final auth = Supabase.instance.client.auth;
+      final auth = client.auth;
       await auth.signInWithPassword(
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text,

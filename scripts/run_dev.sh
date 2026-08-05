@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Runs the app in debug mode against the real LecheControl Supabase project,
-# reading credentials from gitignored .local/e2e_credentials.env so they never
-# have to be typed (or committed).
+# Runs the app in debug mode against an ALTERNATE Supabase project, reading
+# credentials from gitignored .local/e2e_credentials.env.
 #
-# Without these dart-defines the app boots with SupabaseConfig.estaConfigurado
-# == false and the login screen shows "Esta app todavía no tiene un proyecto
-# de Supabase configurado" — see lib/config/supabase_config.dart.
+# You do NOT need this script for normal development: the production project
+# (yskvlaovqvjfodiroaqz) is already the default in
+# lib/config/supabase_config.dart, so a plain `flutter run` is connected.
+# Use this only to point a build somewhere else (staging, a fork, a scratch
+# project) without editing tracked source.
 #
 # Required (env vars map 1:1 to dart-defines):
 #   LECHE_SUPABASE_URL        Supabase project URL (LecheControl project,
