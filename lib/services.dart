@@ -3,15 +3,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'connectivity/estado_conexion.dart';
 import 'data/local/database.dart';
-import 'data/repositories/alertas_repository.dart';
 import 'data/repositories/animales_repository.dart';
 import 'data/repositories/cuentas_repository.dart';
+import 'data/repositories/curva_repository.dart';
 import 'data/repositories/eventos_repository.dart';
-import 'data/repositories/gastos_repository.dart';
+import 'data/repositories/finanzas_repository.dart';
 import 'data/repositories/lecherias_repository.dart';
 import 'data/repositories/medicamentos_repository.dart';
 import 'data/repositories/pesas_repository.dart';
-import 'data/repositories/rentabilidad_repository.dart';
+import 'data/repositories/reporte_repository.dart';
 import 'data/repositories/sanidad_repository.dart';
 import 'data/repositories/sesion_local_repository.dart';
 import 'data/sync/sync_service.dart';
@@ -19,19 +19,19 @@ import 'data/sync/sync_service.dart';
 /// Instancias compartidas de la app (se crean una sola vez, de forma
 /// perezosa). Más adelante, si conviene, las podemos mover a Riverpod.
 final AppDatabase db = AppDatabase();
+final CurvaRepository curvaRepo = CurvaRepository(db);
 final LecheriasRepository lecheriasRepo = LecheriasRepository(db);
 final CuentasRepository cuentasRepo = CuentasRepository(db);
 final AnimalesRepository animalesRepo = AnimalesRepository(db);
 final EventosRepository eventosRepo = EventosRepository(db);
 final PesasRepository pesasRepo = PesasRepository(db);
-final GastosRepository gastosRepo = GastosRepository(db);
+final ReporteRepository reporteRepo = ReporteRepository(db, curva: curvaRepo);
+final FinanzasRepository finanzasRepo = FinanzasRepository(db);
 final MedicamentosRepository medicamentosRepo = MedicamentosRepository(db);
 final SanidadRepository sanidadRepo = SanidadRepository(
   db,
   medicamentosRepository: medicamentosRepo,
 );
-final RentabilidadRepository rentabilidadRepo = RentabilidadRepository(db);
-final AlertasRepository alertasRepo = AlertasRepository(db);
 final SesionLocalRepository sesionLocalRepo = SesionLocalRepository(db);
 final SyncService syncService = SyncService(db);
 final EstadoConexion estadoConexion = EstadoConexion();

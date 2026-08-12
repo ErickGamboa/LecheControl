@@ -100,6 +100,11 @@ class AnimalesRepository {
 
   /// Alta de un animal nuevo (Módulo 1 y 2). Pide lo mínimo: identificador,
   /// sexo, grupo y origen (comprado o nacido en la finca).
+  ///
+  /// [fechaUltimoParto] es opcional pero importante para las vacas que entran
+  /// al grupo En ordeño: sin ella no hay días de lactancia y la vaca queda
+  /// fuera de la comparación contra la curva en el reporte de producción. De
+  /// ahí en adelante la mantiene sola el evento de parto.
   Future<String> altaAnimal({
     required String lecheriaId,
     required String identificador,
@@ -109,6 +114,7 @@ class AnimalesRepository {
     double? precioCompra,
     DateTime? fechaCompra,
     String? madreId,
+    DateTime? fechaUltimoParto,
   }) async {
     final existente = await buscarPorIdentificador(lecheriaId, identificador);
     if (existente != null) {
@@ -133,12 +139,30 @@ class AnimalesRepository {
               origen == OrigenAnimal.comprado ? fechaCompra : null,
             ),
             madreId: Value(madreId),
+            fechaUltimoParto: Value(fechaUltimoParto),
             createdAt: ahora,
             updatedAt: ahora,
             pendiente: const Value(true),
           ),
         );
     return id;
+  }
+
+  /// Corrige a mano la fecha del último parto. Sirve para cargar de una vez
+  /// las vacas que ya estaban en la finca antes de usar la app, y para
+  /// arreglar una fecha mal digitada.
+  Future<void> editarFechaUltimoParto({
+    required String animalId,
+    required DateTime? fecha,
+  }) async {
+    final ahora = DateTime.now();
+    await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+      AnimalesCompanion(
+        fechaUltimoParto: Value(fecha),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
   }
 
   /// Mueve un animal a otro grupo/estado y deja la fecha en la hoja de vida.
@@ -228,20 +252,5 @@ class AnimalesRepository {
             ),
           );
     });
-  }
-
-  /// Edita el consumo diario de concentrado (kg/día) de un animal. Editable en
-  /// cualquier momento (Módulo 4).
-  Future<void> actualizarConcentrado({
-    required String animalId,
-    required double kgDia,
-  }) async {
-    await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
-      AnimalesCompanion(
-        concentradoKgDia: Value(kgDia),
-        updatedAt: Value(DateTime.now()),
-        pendiente: const Value(true),
-      ),
-    );
   }
 }

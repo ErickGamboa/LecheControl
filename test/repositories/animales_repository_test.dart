@@ -43,7 +43,6 @@ void main() {
       expect(animal.origen, OrigenAnimal.nacido);
       expect(animal.estado, EstadoAnimal.activo);
       expect(animal.estadoReproductivo, EstadoReproductivo.desconocido);
-      expect(animal.concentradoKgDia, 0);
       expect(animal.pendiente, isTrue);
       expect(animal.deletedAt, isNull);
     });

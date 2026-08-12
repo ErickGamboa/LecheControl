@@ -59,6 +59,13 @@ class TableSyncSpec {
 DateTime? _fechaOpcional(dynamic v) =>
     v == null ? null : DateTime.parse(v as String);
 
+/// `YYYY-MM-DD` para las columnas `date` de Postgres (`semanas`), que no
+/// llevan hora.
+String _soloFecha(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
+
 /// Motor de sincronización entre la base local (Drift/SQLite) y Supabase.
 ///
 /// Estrategia:
@@ -290,10 +297,13 @@ class SyncService {
     _eventosAnimalSpec,
     _pesasSesionesSpec,
     _pesasLecheSpec,
-    _parametrosPeriodoSpec,
-    _costosFijosSpec,
+    _curvaReferenciaSpec,
+    _configReporteSpec,
+    _semanasSpec,
+    _ingresosSemanaSpec,
+    _gastosSemanaSpec,
+    _categoriasGastoSpec,
     _medicamentosSpec,
-    _configAlertasSpec,
   ];
 
   /// Catálogo de licencias (solo lectura). No usa borrado suave ni `pendiente`.
@@ -495,9 +505,9 @@ class SyncService {
                 'precio_compra': a.precioCompra,
                 'fecha_compra': a.fechaCompra?.toIso8601String(),
                 'madre_id': a.madreId,
-                'concentrado_kg_dia': a.concentradoKgDia,
                 'fecha_probable_parto': a.fechaProbableParto?.toIso8601String(),
                 'retiro_leche_hasta': a.retiroLecheHasta?.toIso8601String(),
+                'fecha_ultimo_parto': a.fechaUltimoParto?.toIso8601String(),
                 'created_at': a.createdAt.toIso8601String(),
                 'deleted_at': a.deletedAt?.toIso8601String(),
               },
@@ -532,10 +542,9 @@ class SyncService {
               precioCompra: (r['precio_compra'] as num?)?.toDouble(),
               fechaCompra: _fechaOpcional(r['fecha_compra']),
               madreId: r['madre_id'] as String?,
-              concentradoKgDia:
-                  (r['concentrado_kg_dia'] as num?)?.toDouble() ?? 0,
               fechaProbableParto: _fechaOpcional(r['fecha_probable_parto']),
               retiroLecheHasta: _fechaOpcional(r['retiro_leche_hasta']),
+              fechaUltimoParto: _fechaOpcional(r['fecha_ultimo_parto']),
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: _fechaOpcional(r['deleted_at']),
@@ -692,7 +701,11 @@ class SyncService {
                 'id': p.id,
                 'sesion_id': p.sesionId,
                 'animal_id': p.animalId,
+                'identificador_manual': p.identificadorManual,
                 'litros': p.litros,
+                'litros_manana': p.litrosManana,
+                'litros_tarde': p.litrosTarde,
+                'concentrado_kg': p.concentradoKg,
                 'created_at': p.createdAt.toIso8601String(),
                 'deleted_at': p.deletedAt?.toIso8601String(),
               },
@@ -717,8 +730,12 @@ class SyncService {
             PesaLecheRow(
               id: r['id'] as String,
               sesionId: r['sesion_id'] as String,
-              animalId: r['animal_id'] as String,
+              animalId: r['animal_id'] as String?,
+              identificadorManual: r['identificador_manual'] as String?,
               litros: (r['litros'] as num).toDouble(),
+              litrosManana: (r['litros_manana'] as num?)?.toDouble(),
+              litrosTarde: (r['litros_tarde'] as num?)?.toDouble(),
+              concentradoKg: (r['concentrado_kg'] as num?)?.toDouble(),
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: _fechaOpcional(r['deleted_at']),
@@ -728,53 +745,108 @@ class SyncService {
     ),
   );
 
-  TableSyncSpec get _parametrosPeriodoSpec => TableSyncSpec(
-    tabla: 'parametros_periodo',
+  TableSyncSpec get _curvaReferenciaSpec => TableSyncSpec(
+    tabla: 'curva_referencia',
     subida: PushSpec(
       pendientes: () async {
         final filas = await (db.select(
-          db.parametrosPeriodo,
+          db.curvaReferencia,
         )..where((t) => t.pendiente.equals(true))).get();
         return [
-          for (final p in filas)
+          for (final c in filas)
             (
-              p.id,
+              c.id,
               {
-                'id': p.id,
-                'lecheria_id': p.lecheriaId,
-                'anio': p.anio,
-                'mes': p.mes,
-                'precio_litro': p.precioLitro,
-                'precio_concentrado_kg': p.precioConcentradoKg,
-                'umbral_secado_litros': p.umbralSecadoLitros,
-                'created_at': p.createdAt.toIso8601String(),
-                'deleted_at': p.deletedAt?.toIso8601String(),
+                'id': c.id,
+                'lecheria_id': c.lecheriaId,
+                'orden': c.orden,
+                'dia_desde': c.diaDesde,
+                'dia_hasta': c.diaHasta,
+                'litros_esperados': c.litrosEsperados,
+                'created_at': c.createdAt.toIso8601String(),
+                'deleted_at': c.deletedAt?.toIso8601String(),
               },
             ),
         ];
       },
       marcarSubida: (id) =>
-          (db.update(db.parametrosPeriodo)..where((t) => t.id.equals(id)))
-              .write(const ParametrosPeriodoCompanion(pendiente: Value(false))),
+          (db.update(db.curvaReferencia)..where((t) => t.id.equals(id))).write(
+            const CurvaReferenciaCompanion(pendiente: Value(false)),
+          ),
     ),
     bajada: PullSpec(
       tieneCambioLocalPendiente: (id) async {
         final fila = await (db.select(
-          db.parametrosPeriodo,
+          db.curvaReferencia,
         )..where((t) => t.id.equals(id))).getSingleOrNull();
         return fila?.pendiente ?? false;
       },
       aplicar: (r) => db
-          .into(db.parametrosPeriodo)
+          .into(db.curvaReferencia)
           .insertOnConflictUpdate(
-            ParametrosPeriodoRow(
+            CurvaReferenciaRow(
               id: r['id'] as String,
               lecheriaId: r['lecheria_id'] as String,
-              anio: r['anio'] as int,
-              mes: r['mes'] as int,
-              precioLitro: (r['precio_litro'] as num).toDouble(),
-              precioConcentradoKg: (r['precio_concentrado_kg'] as num)
-                  .toDouble(),
+              orden: r['orden'] as int,
+              diaDesde: r['dia_desde'] as int,
+              diaHasta: r['dia_hasta'] as int?,
+              litrosEsperados: (r['litros_esperados'] as num).toDouble(),
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: _fechaOpcional(r['deleted_at']),
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
+
+  TableSyncSpec get _configReporteSpec => TableSyncSpec(
+    tabla: 'config_reporte',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.configReporte,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final c in filas)
+            (
+              c.id,
+              {
+                'id': c.id,
+                'lecheria_id': c.lecheriaId,
+                'pct_excelente': c.pctExcelente,
+                'pct_bueno': c.pctBueno,
+                'pct_vigilar': c.pctVigilar,
+                'pct_bajo': c.pctBajo,
+                'umbral_secado_litros': c.umbralSecadoLitros,
+                'created_at': c.createdAt.toIso8601String(),
+                'deleted_at': c.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.configReporte)..where((t) => t.id.equals(id))).write(
+            const ConfigReporteCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.configReporte,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.configReporte)
+          .insertOnConflictUpdate(
+            ConfigReporteRow(
+              id: r['id'] as String,
+              lecheriaId: r['lecheria_id'] as String,
+              pctExcelente: (r['pct_excelente'] as num?)?.toDouble() ?? 100,
+              pctBueno: (r['pct_bueno'] as num?)?.toDouble() ?? 85,
+              pctVigilar: (r['pct_vigilar'] as num?)?.toDouble() ?? 70,
+              pctBajo: (r['pct_bajo'] as num?)?.toDouble() ?? 60,
               umbralSecadoLitros:
                   (r['umbral_secado_litros'] as num?)?.toDouble() ?? 8,
               createdAt: DateTime.parse(r['created_at'] as String),
@@ -786,50 +858,51 @@ class SyncService {
     ),
   );
 
-  TableSyncSpec get _costosFijosSpec => TableSyncSpec(
-    tabla: 'costos_fijos',
+  TableSyncSpec get _semanasSpec => TableSyncSpec(
+    tabla: 'semanas',
     subida: PushSpec(
       pendientes: () async {
         final filas = await (db.select(
-          db.costosFijos,
+          db.semanas,
         )..where((t) => t.pendiente.equals(true))).get();
         return [
-          for (final c in filas)
+          for (final s in filas)
             (
-              c.id,
+              s.id,
               {
-                'id': c.id,
-                'lecheria_id': c.lecheriaId,
-                'periodo_id': c.periodoId,
-                'categoria': c.categoria,
-                'monto': c.monto,
-                'created_at': c.createdAt.toIso8601String(),
-                'deleted_at': c.deletedAt?.toIso8601String(),
+                'id': s.id,
+                'lecheria_id': s.lecheriaId,
+                // Columnas `date` en Postgres: mandamos solo el día.
+                'fecha_inicio': _soloFecha(s.fechaInicio),
+                'fecha_fin': _soloFecha(s.fechaFin),
+                'cerrada': s.cerrada,
+                'created_at': s.createdAt.toIso8601String(),
+                'deleted_at': s.deletedAt?.toIso8601String(),
               },
             ),
         ];
       },
       marcarSubida: (id) =>
-          (db.update(db.costosFijos)..where((t) => t.id.equals(id))).write(
-            const CostosFijosCompanion(pendiente: Value(false)),
+          (db.update(db.semanas)..where((t) => t.id.equals(id))).write(
+            const SemanasCompanion(pendiente: Value(false)),
           ),
     ),
     bajada: PullSpec(
       tieneCambioLocalPendiente: (id) async {
         final fila = await (db.select(
-          db.costosFijos,
+          db.semanas,
         )..where((t) => t.id.equals(id))).getSingleOrNull();
         return fila?.pendiente ?? false;
       },
       aplicar: (r) => db
-          .into(db.costosFijos)
+          .into(db.semanas)
           .insertOnConflictUpdate(
-            CostoFijoRow(
+            SemanaRow(
               id: r['id'] as String,
               lecheriaId: r['lecheria_id'] as String,
-              periodoId: r['periodo_id'] as String,
-              categoria: r['categoria'] as String,
-              monto: (r['monto'] as num).toDouble(),
+              fechaInicio: DateTime.parse(r['fecha_inicio'] as String),
+              fechaFin: DateTime.parse(r['fecha_fin'] as String),
+              cerrada: r['cerrada'] as bool? ?? false,
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: _fechaOpcional(r['deleted_at']),
@@ -839,6 +912,170 @@ class SyncService {
     ),
   );
 
+  TableSyncSpec get _ingresosSemanaSpec => TableSyncSpec(
+    tabla: 'ingresos_semana',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.ingresosSemana,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final i in filas)
+            (
+              i.id,
+              {
+                'id': i.id,
+                'lecheria_id': i.lecheriaId,
+                'semana_id': i.semanaId,
+                'tipo': i.tipo,
+                'monto': i.monto,
+                'litros': i.litros,
+                'animal_id': i.animalId,
+                'detalle': i.detalle,
+                'created_at': i.createdAt.toIso8601String(),
+                'deleted_at': i.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.ingresosSemana)..where((t) => t.id.equals(id))).write(
+            const IngresosSemanaCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.ingresosSemana,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.ingresosSemana)
+          .insertOnConflictUpdate(
+            IngresoSemanaRow(
+              id: r['id'] as String,
+              lecheriaId: r['lecheria_id'] as String,
+              semanaId: r['semana_id'] as String,
+              tipo: r['tipo'] as String,
+              monto: (r['monto'] as num).toDouble(),
+              litros: (r['litros'] as num?)?.toDouble(),
+              animalId: r['animal_id'] as String?,
+              detalle: r['detalle'] as String?,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: _fechaOpcional(r['deleted_at']),
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
+
+  TableSyncSpec get _gastosSemanaSpec => TableSyncSpec(
+    tabla: 'gastos_semana',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.gastosSemana,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final g in filas)
+            (
+              g.id,
+              {
+                'id': g.id,
+                'lecheria_id': g.lecheriaId,
+                'semana_id': g.semanaId,
+                'categoria': g.categoria,
+                'monto': g.monto,
+                'detalle': g.detalle,
+                'created_at': g.createdAt.toIso8601String(),
+                'deleted_at': g.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.gastosSemana)..where((t) => t.id.equals(id))).write(
+            const GastosSemanaCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.gastosSemana,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.gastosSemana)
+          .insertOnConflictUpdate(
+            GastoSemanaRow(
+              id: r['id'] as String,
+              lecheriaId: r['lecheria_id'] as String,
+              semanaId: r['semana_id'] as String,
+              categoria: r['categoria'] as String,
+              monto: (r['monto'] as num).toDouble(),
+              detalle: r['detalle'] as String?,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: _fechaOpcional(r['deleted_at']),
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
+
+  TableSyncSpec get _categoriasGastoSpec => TableSyncSpec(
+    tabla: 'categorias_gasto',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.categoriasGasto,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final c in filas)
+            (
+              c.id,
+              {
+                'id': c.id,
+                'lecheria_id': c.lecheriaId,
+                'nombre': c.nombre,
+                'orden': c.orden,
+                'created_at': c.createdAt.toIso8601String(),
+                'deleted_at': c.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.categoriasGasto)..where((t) => t.id.equals(id))).write(
+            const CategoriasGastoCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.categoriasGasto,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.categoriasGasto)
+          .insertOnConflictUpdate(
+            CategoriaGastoRow(
+              id: r['id'] as String,
+              lecheriaId: r['lecheria_id'] as String,
+              nombre: r['nombre'] as String,
+              orden: r['orden'] as int? ?? 0,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: _fechaOpcional(r['deleted_at']),
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
   TableSyncSpec get _medicamentosSpec => TableSyncSpec(
     tabla: 'medicamentos',
     subida: PushSpec(
@@ -892,65 +1129,6 @@ class SyncService {
                   ?.toDouble(),
               dosisFijaMl: (r['dosis_fija_ml'] as num?)?.toDouble(),
               diasRetiroLeche: r['dias_retiro_leche'] as int? ?? 0,
-              createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: DateTime.parse(r['updated_at'] as String),
-              deletedAt: _fechaOpcional(r['deleted_at']),
-              pendiente: false,
-            ),
-          ),
-    ),
-  );
-
-  TableSyncSpec get _configAlertasSpec => TableSyncSpec(
-    tabla: 'config_alertas',
-    subida: PushSpec(
-      pendientes: () async {
-        final filas = await (db.select(
-          db.configAlertas,
-        )..where((t) => t.pendiente.equals(true))).get();
-        return [
-          for (final c in filas)
-            (
-              c.id,
-              {
-                'id': c.id,
-                'lecheria_id': c.lecheriaId,
-                'dias_celo_esperado': c.diasCeloEsperado,
-                'dias_confirmar_preniez': c.diasConfirmarPreniez,
-                'dias_vacios_altos': c.diasVaciosAltos,
-                'dias_antes_secar': c.diasAntesSecar,
-                'dias_antes_parto': c.diasAntesParto,
-                'dias_aviso_fin_retiro': c.diasAvisoFinRetiro,
-                'created_at': c.createdAt.toIso8601String(),
-                'deleted_at': c.deletedAt?.toIso8601String(),
-              },
-            ),
-        ];
-      },
-      marcarSubida: (id) =>
-          (db.update(db.configAlertas)..where((t) => t.id.equals(id))).write(
-            const ConfigAlertasCompanion(pendiente: Value(false)),
-          ),
-    ),
-    bajada: PullSpec(
-      tieneCambioLocalPendiente: (id) async {
-        final fila = await (db.select(
-          db.configAlertas,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      },
-      aplicar: (r) => db
-          .into(db.configAlertas)
-          .insertOnConflictUpdate(
-            ConfigAlertaRow(
-              id: r['id'] as String,
-              lecheriaId: r['lecheria_id'] as String,
-              diasCeloEsperado: r['dias_celo_esperado'] as int? ?? 21,
-              diasConfirmarPreniez: r['dias_confirmar_preniez'] as int? ?? 45,
-              diasVaciosAltos: r['dias_vacios_altos'] as int? ?? 150,
-              diasAntesSecar: r['dias_antes_secar'] as int? ?? 60,
-              diasAntesParto: r['dias_antes_parto'] as int? ?? 14,
-              diasAvisoFinRetiro: r['dias_aviso_fin_retiro'] as int? ?? 1,
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: _fechaOpcional(r['deleted_at']),

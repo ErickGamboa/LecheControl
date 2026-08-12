@@ -1,7 +1,17 @@
 # LecheControl — agent working guide
 
 ## Product context
-Flutter offline-first app for dairy farm management (`lechería`): animals, milk weighing, health, reproduction, costs, profitability, alerts. Local state is Drift/SQLite; Supabase is remote sync/auth backend.
+Flutter offline-first app for dairy farm management (`lechería`), built around
+three things:
+
+1. **Cattle inventory and events** — births, health, reproduction, culling.
+2. **Weekly milk weighing** — morning + evening litres and concentrate kg per
+   cow, feeding a production report that grades each cow against a reference
+   lactation curve.
+3. **Weekly finances** — income (milk, cattle sales) and expenses are typed in,
+   not calculated; the week's profit is the difference.
+
+Local state is Drift/SQLite; Supabase is the remote sync/auth backend.
 
 **Product behavior source of truth:** `docs/ESPECIFICACION_FUNCIONAL.md`. If a feature is not described there, do not build it. Implementation sequencing lives in `docs/ROADMAP.md`.
 
@@ -18,7 +28,9 @@ Architecture is intentionally aligned with sibling project `../HatoControlRun` (
 - `lib/data/local/database.dart`: Drift schema and migrations.
 - `lib/data/repositories/`: local-first business operations. UI calls repositories, not Supabase.
 - `lib/data/sync/sync_service.dart`: bidirectional sync Drift ↔ Supabase.
-- Feature UI: `auth/`, `cuenta/`, `home/`, `trabajo/`, `inventario/`, `pesa/`, `gastos/`, `rentabilidad/`, `hoja_vida/`, `sanidad/`, `alertas/`.
+- Feature UI: `auth/`, `cuenta/`, `home/`, `trabajo/`, `inventario/`, `pesa/` (captura + reporte de producción), `finanzas/`, `hoja_vida/`, `sanidad/`.
+- `lib/data/domain/`: reglas de negocio puras y testeables sin base de datos
+  (`curva_lactancia.dart`, `semana.dart`, `grupos.dart`).
 
 ## Non-negotiable invariants
 1. Offline-first: writes go to Drift first and set `pendiente=true`.

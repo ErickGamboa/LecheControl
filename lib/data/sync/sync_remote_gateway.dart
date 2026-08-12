@@ -95,7 +95,12 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
   }) async {
     var query = _sb.from(tabla).select();
     if (!cursor.esVacio) {
-      final ts = cursor.updatedAt!.toIso8601String();
+      // `.toUtc()` no es opcional: Drift devuelve la fecha del cursor en hora
+      // local, y `toIso8601String()` sobre una fecha local no lleva la `Z`
+      // final. Postgres interpreta esa cadena como UTC, así que el filtro
+      // quedaría corrido tantas horas como el huso del dispositivo — y al
+      // este de Greenwich se perderían filas sin ningún error visible.
+      final ts = cursor.updatedAt!.toUtc().toIso8601String();
       query = query.or(
         'updated_at.gt.$ts,and(updated_at.eq.$ts,$idColumna.gt.${cursor.id})',
       );

@@ -116,9 +116,13 @@ class Animales extends Table {
   RealColumn get precioCompra => real().nullable()();
   DateTimeColumn get fechaCompra => dateTime().nullable()();
   TextColumn get madreId => text().nullable()();
-  RealColumn get concentradoKgDia => real().withDefault(const Constant(0))();
   DateTimeColumn get fechaProbableParto => dateTime().nullable()();
   DateTimeColumn get retiroLecheHasta => dateTime().nullable()();
+
+  /// Base para los días de lactancia (DLac) del reporte de producción. La fija
+  /// el evento de parto; es editable a mano para cargar de una vez las vacas
+  /// que ya estaban en la finca antes de usar la app.
+  DateTimeColumn get fechaUltimoParto => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -135,7 +139,6 @@ class Animales extends Table {
     "CHECK (estado_reproductivo IN ('vacia','preñada','desconocido'))",
     "CHECK (origen IN ('comprado','nacido'))",
     'CHECK (precio_compra IS NULL OR precio_compra >= 0)',
-    'CHECK (concentrado_kg_dia >= 0)',
   ];
 }
 
@@ -193,35 +196,25 @@ class PesasSesiones extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Litros pesados de un animal dentro de una sesión.
+/// Lo pesado de una vaca dentro de una sesión: leche de la mañana, de la
+/// tarde y kilos de concentrado que comió ese día.
+///
+/// `animalId` es nulo cuando se trata de una **vaca manual**: una que se pesa
+/// pero no está en el inventario, y por eso no tiene días de lactancia. En ese
+/// caso se identifica por `identificadorManual`. Siempre viene uno de los dos,
+/// nunca los dos ni ninguno.
 @DataClassName('PesaLecheRow')
 class PesasLeche extends Table {
   TextColumn get id => text()();
   TextColumn get sesionId => text()();
-  TextColumn get animalId => text()();
+  TextColumn get animalId => text().nullable()();
+  TextColumn get identificadorManual => text().nullable()();
+
+  /// Total del día = mañana + tarde. Lo calcula el repositorio al guardar.
   RealColumn get litros => real()();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
-  DateTimeColumn get deletedAt => dateTime().nullable()();
-  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
-
-  @override
-  Set<Column> get primaryKey => {id};
-
-  @override
-  List<String> get customConstraints => ['CHECK (litros >= 0)'];
-}
-
-/// Parámetros de precio del período (mes calendario), Módulo 4.
-@DataClassName('ParametrosPeriodoRow')
-class ParametrosPeriodo extends Table {
-  TextColumn get id => text()();
-  TextColumn get lecheriaId => text()();
-  IntColumn get anio => integer()();
-  IntColumn get mes => integer()();
-  RealColumn get precioLitro => real()();
-  RealColumn get precioConcentradoKg => real()();
-  RealColumn get umbralSecadoLitros => real().withDefault(const Constant(8))();
+  RealColumn get litrosManana => real().nullable()();
+  RealColumn get litrosTarde => real().nullable()();
+  RealColumn get concentradoKg => real().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -232,21 +225,128 @@ class ParametrosPeriodo extends Table {
 
   @override
   List<String> get customConstraints => [
-    'CHECK (mes BETWEEN 1 AND 12)',
-    'CHECK (precio_litro >= 0)',
-    'CHECK (precio_concentrado_kg >= 0)',
-    'CHECK (umbral_secado_litros >= 0)',
+    'CHECK (litros >= 0)',
+    'CHECK (litros_manana IS NULL OR litros_manana >= 0)',
+    'CHECK (litros_tarde IS NULL OR litros_tarde >= 0)',
+    'CHECK (concentrado_kg IS NULL OR concentrado_kg >= 0)',
+    'CHECK ((animal_id IS NOT NULL AND identificador_manual IS NULL) '
+        'OR (animal_id IS NULL AND identificador_manual IS NOT NULL))',
   ];
 }
 
-/// Costo fijo del período (luz, salario, agua, alquiler…), Módulo 4.
-@DataClassName('CostoFijoRow')
-class CostosFijos extends Table {
+/// Litros que se esperan de una vaca según cuántos días lleva de parida.
+/// Siete tramos editables por lechería (Módulo 3 — reporte de producción).
+///
+/// Para una vaca concreta el esperado NO es el escalón del tramo: se
+/// interpola entre el punto central de cada tramo, para que la curva suba y
+/// baje suave y una vaca no salte de "Excelente" a "Muy Bajo" por cumplir un
+/// día más. Punto central = (diaDesde + diaHasta) / 2; para el último tramo
+/// (diaHasta nulo, "más de 305 días") se usa diaDesde + 25.
+@DataClassName('CurvaReferenciaRow')
+class CurvaReferencia extends Table {
   TextColumn get id => text()();
   TextColumn get lecheriaId => text()();
-  TextColumn get periodoId => text()();
+  IntColumn get orden => integer()();
+  IntColumn get diaDesde => integer()();
+  IntColumn get diaHasta => integer().nullable()();
+  RealColumn get litrosEsperados => real()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    'CHECK (dia_desde >= 0)',
+    'CHECK (dia_hasta IS NULL OR dia_hasta > dia_desde)',
+    'CHECK (litros_esperados >= 0)',
+  ];
+}
+
+/// Cómo se etiqueta una vaca según (lo que dio ÷ lo que se esperaba), y el
+/// umbral de litros para sugerir secado. Una fila por lechería.
+@DataClassName('ConfigReporteRow')
+class ConfigReporte extends Table {
+  TextColumn get id => text()();
+  TextColumn get lecheriaId => text()();
+  RealColumn get pctExcelente => real().withDefault(const Constant(100))();
+  RealColumn get pctBueno => real().withDefault(const Constant(85))();
+  RealColumn get pctVigilar => real().withDefault(const Constant(70))();
+  RealColumn get pctBajo => real().withDefault(const Constant(60))();
+  RealColumn get umbralSecadoLitros => real().withDefault(const Constant(8))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Semana de la finca (lunes a domingo), unidad de las finanzas.
+@DataClassName('SemanaRow')
+class Semanas extends Table {
+  TextColumn get id => text()();
+  TextColumn get lecheriaId => text()();
+  DateTimeColumn get fechaInicio => dateTime()(); // lunes
+  DateTimeColumn get fechaFin => dateTime()(); // domingo
+  BoolColumn get cerrada => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Plata que entró en la semana. No se calcula: se digita lo que
+/// efectivamente se recibió.
+@DataClassName('IngresoSemanaRow')
+class IngresosSemana extends Table {
+  TextColumn get id => text()();
+  TextColumn get lecheriaId => text()();
+  TextColumn get semanaId => text()();
+  TextColumn get tipo => text()(); // 'leche' | 'venta_ganado' | 'otro'
+  RealColumn get monto => real()();
+
+  /// Solo para tipo `leche`: litros que la planta pagó. `monto / litros` da el
+  /// precio real por litro de la semana, que es lo que usa la rentabilidad
+  /// por vaca (plata real, no un precio estimado).
+  RealColumn get litros => real().nullable()();
+
+  /// Solo para tipo `venta_ganado`: qué animal se vendió, para su hoja de vida.
+  TextColumn get animalId => text().nullable()();
+  TextColumn get detalle => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    "CHECK (tipo IN ('leche','venta_ganado','otro'))",
+    'CHECK (monto >= 0)',
+    'CHECK (litros IS NULL OR litros >= 0)',
+  ];
+}
+
+/// Plata que salió en la semana (salario del peón, concentrado, medicamentos,
+/// cerca…). La categoría es texto libre, sugerido desde `CategoriasGasto`.
+@DataClassName('GastoSemanaRow')
+class GastosSemana extends Table {
+  TextColumn get id => text()();
+  TextColumn get lecheriaId => text()();
+  TextColumn get semanaId => text()();
   TextColumn get categoria => text()();
   RealColumn get monto => real()();
+  TextColumn get detalle => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -257,6 +357,22 @@ class CostosFijos extends Table {
 
   @override
   List<String> get customConstraints => ['CHECK (monto >= 0)'];
+}
+
+/// Categorías sugeridas de gasto, para que meter uno sea tocar y no escribir.
+@DataClassName('CategoriaGastoRow')
+class CategoriasGasto extends Table {
+  TextColumn get id => text()();
+  TextColumn get lecheriaId => text()();
+  TextColumn get nombre => text()();
+  IntColumn get orden => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 /// Catálogo de medicamentos de la lechería (Módulo 7).
@@ -285,28 +401,6 @@ class Medicamentos extends Table {
     'CHECK (costo_envase >= 0)',
     'CHECK (dias_retiro_leche >= 0)',
   ];
-}
-
-/// Umbrales configurables de alertas reproductivas y de manejo (Módulo 9).
-@DataClassName('ConfigAlertaRow')
-class ConfigAlertas extends Table {
-  TextColumn get id => text()();
-  TextColumn get lecheriaId => text()();
-  IntColumn get diasCeloEsperado => integer().withDefault(const Constant(21))();
-  IntColumn get diasConfirmarPreniez =>
-      integer().withDefault(const Constant(45))();
-  IntColumn get diasVaciosAltos => integer().withDefault(const Constant(150))();
-  IntColumn get diasAntesSecar => integer().withDefault(const Constant(60))();
-  IntColumn get diasAntesParto => integer().withDefault(const Constant(14))();
-  IntColumn get diasAvisoFinRetiro =>
-      integer().withDefault(const Constant(1))();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
-  DateTimeColumn get deletedAt => dateTime().nullable()();
-  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
-
-  @override
-  Set<Column> get primaryKey => {id};
 }
 
 /// Guarda, por cada tabla, la fecha (y el id, para desempatar filas con el
@@ -361,10 +455,13 @@ class SesionesLocales extends Table {
     EventosAnimal,
     PesasSesiones,
     PesasLeche,
-    ParametrosPeriodo,
-    CostosFijos,
+    CurvaReferencia,
+    ConfigReporte,
+    Semanas,
+    IngresosSemana,
+    GastosSemana,
+    CategoriasGasto,
     Medicamentos,
-    ConfigAlertas,
     SyncCursores,
     SyncEstados,
     SesionesLocales,
@@ -378,13 +475,53 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
       await _crearIndicesUnicosLocales();
+    },
+    // v1 -> v2: la pesa pasa a mañana/tarde/concentrado y admite vacas
+    // manuales; el animal guarda su último parto (días de lactancia); entran
+    // la curva de referencia y las finanzas semanales.
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(animales, animales.fechaUltimoParto);
+        await m.addColumn(pesasLeche, pesasLeche.identificadorManual);
+        await m.addColumn(pesasLeche, pesasLeche.litrosManana);
+        await m.addColumn(pesasLeche, pesasLeche.litrosTarde);
+        await m.addColumn(pesasLeche, pesasLeche.concentradoKg);
+        // `animalId` deja de ser obligatorio (vacas manuales). SQLite no
+        // sabe aflojar un NOT NULL, así que Drift recrea la tabla copiando
+        // las filas. Las pesas viejas quedan con mañana/tarde en null: el
+        // reporte las muestra como "sin desglose" en vez de inventarse un
+        // reparto que nadie midió.
+        await m.alterTable(TableMigration(pesasLeche));
+        await m.createTable(curvaReferencia);
+        await m.createTable(configReporte);
+        await m.createTable(semanas);
+        await m.createTable(ingresosSemana);
+        await m.createTable(gastosSemana);
+        await m.createTable(categoriasGasto);
+        await _crearIndicesUnicosLocales();
+      }
+      // v2 -> v3: sale el módulo de Alertas y el período mensual. Las
+      // finanzas semanales (semanas / ingresos_semana / gastos_semana) ya
+      // reemplazan a parametros_periodo y costos_fijos.
+      if (from < 3) {
+        await customStatement('DROP TABLE IF EXISTS costos_fijos');
+        await customStatement('DROP TABLE IF EXISTS parametros_periodo');
+        await customStatement('DROP TABLE IF EXISTS config_alertas');
+      }
+      // v3 -> v4: el concentrado se mide en cada pesa
+      // (`pesas_leche.concentrado_kg`), no como un valor fijo en la ficha del
+      // animal. La columna también se eliminó en Supabase, así que dejarla
+      // acá haría fallar la subida de cada animal.
+      if (from < 4) {
+        await m.alterTable(TableMigration(animales));
+      }
     },
   );
 
@@ -403,8 +540,23 @@ class AppDatabase extends _$AppDatabase {
     );
     await customStatement(
       'CREATE UNIQUE INDEX IF NOT EXISTS '
-      'idx_parametros_periodo_lecheria_anio_mes '
-      'ON parametros_periodo (lecheria_id, anio, mes) '
+      'idx_curva_referencia_lecheria_tramo '
+      'ON curva_referencia (lecheria_id, dia_desde) '
+      'WHERE deleted_at IS NULL',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_config_reporte_lecheria '
+      'ON config_reporte (lecheria_id) '
+      'WHERE deleted_at IS NULL',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_semanas_lecheria_inicio '
+      'ON semanas (lecheria_id, fecha_inicio) '
+      'WHERE deleted_at IS NULL',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_categorias_gasto_lecheria_nombre '
+      'ON categorias_gasto (lecheria_id, nombre) '
       'WHERE deleted_at IS NULL',
     );
   }

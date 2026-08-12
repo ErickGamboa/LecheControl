@@ -3,7 +3,8 @@ import 'package:drift/drift.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../data/repositories/animales_repository.dart';
-import '../data/repositories/gastos_repository.dart';
+import '../data/domain/semana.dart';
+import '../data/repositories/finanzas_repository.dart';
 import '../data/repositories/lecherias_repository.dart';
 import '../data/repositories/medicamentos_repository.dart';
 import '../data/repositories/pesas_repository.dart';
@@ -27,20 +28,20 @@ class DemoSeed {
     LecheriasRepository? lecherias,
     AnimalesRepository? animales,
     PesasRepository? pesas,
-    GastosRepository? gastos,
+    FinanzasRepository? finanzas,
     MedicamentosRepository? medicamentos,
   }) : _db = database ?? db,
        _lecherias = lecherias ?? lecheriasRepo,
        _animales = animales ?? animalesRepo,
        _pesas = pesas ?? pesasRepo,
-       _gastos = gastos ?? gastosRepo,
+       _finanzas = finanzas ?? finanzasRepo,
        _medicamentos = medicamentos ?? medicamentosRepo;
 
   final AppDatabase _db;
   final LecheriasRepository _lecherias;
   final AnimalesRepository _animales;
   final PesasRepository _pesas;
-  final GastosRepository _gastos;
+  final FinanzasRepository _finanzas;
   final MedicamentosRepository _medicamentos;
 
   /// Idempotente: si la lechería demo ya existe para este usuario, no hace
@@ -63,7 +64,7 @@ class DemoSeed {
 
     await _sembrarMedicamentos(lecheriaId);
     await _sembrarAnimales(lecheriaId);
-    await _sembrarParametros(lecheriaId);
+    await _sembrarFinanzas(lecheriaId);
     await _sembrarPesaReciente(lecheriaId);
 
     return lecheriaId;
@@ -101,15 +102,16 @@ class DemoSeed {
   Future<void> _sembrarAnimales(String lecheriaId) async {
     final ahora = DateTime.now();
 
-    // 3 vacas en ordeño (una con concentrado y retiro de leche vigente).
+    // 3 vacas en ordeño en distintas etapas de lactancia, para que el reporte
+    // de producción tenga con qué comparar (una con retiro de leche vigente).
     await _animales.altaAnimal(
       lecheriaId: lecheriaId,
       identificador: '1001',
       sexo: Sexo.hembra,
       grupo: GrupoAnimal.enOrdeno,
       origen: OrigenAnimal.nacido,
+      fechaUltimoParto: ahora.subtract(const Duration(days: 45)),
     );
-    await _fijarConcentrado(lecheriaId, '1001', 3.5);
 
     await _animales.altaAnimal(
       lecheriaId: lecheriaId,
@@ -119,8 +121,8 @@ class DemoSeed {
       origen: OrigenAnimal.comprado,
       precioCompra: 450000,
       fechaCompra: ahora.subtract(const Duration(days: 400)),
+      fechaUltimoParto: ahora.subtract(const Duration(days: 160)),
     );
-    await _fijarConcentrado(lecheriaId, '1002', 4.0);
 
     await _animales.altaAnimal(
       lecheriaId: lecheriaId,
@@ -128,8 +130,8 @@ class DemoSeed {
       sexo: Sexo.hembra,
       grupo: GrupoAnimal.enOrdeno,
       origen: OrigenAnimal.nacido,
+      fechaUltimoParto: ahora.subtract(const Duration(days: 265)),
     );
-    await _fijarConcentrado(lecheriaId, '1003', 2.5);
     await _fijarRetiro(lecheriaId, '1003', ahora.add(const Duration(days: 2)));
 
     // 1 vaca seca, próxima a parir.
@@ -154,19 +156,6 @@ class DemoSeed {
       grupo: GrupoAnimal.novillas,
       origen: OrigenAnimal.nacido,
     );
-  }
-
-  Future<void> _fijarConcentrado(
-    String lecheriaId,
-    String identificador,
-    double kgDia,
-  ) async {
-    final animal = await _animales.buscarPorIdentificador(
-      lecheriaId,
-      identificador,
-    );
-    if (animal == null) return;
-    await _animales.actualizarConcentrado(animalId: animal.id, kgDia: kgDia);
   }
 
   Future<void> _fijarRetiro(
@@ -212,46 +201,46 @@ class DemoSeed {
     );
   }
 
-  Future<void> _sembrarParametros(String lecheriaId) async {
-    final ahora = DateTime.now();
-    await _gastos.upsertParametrosPeriodo(
+  /// Una semana con plata entrando y saliendo, para que Finanzas tenga algo
+  /// que mostrar apenas se abre la demo.
+  Future<void> _sembrarFinanzas(String lecheriaId) async {
+    final semana = await _finanzas.abrirSemana(lecheriaId: lecheriaId);
+    await _finanzas.agregarIngreso(
       lecheriaId: lecheriaId,
-      anio: ahora.year,
-      mes: ahora.month,
-      precioLitro: 380,
-      precioConcentradoKg: 320,
-      umbralSecadoLitros: 8,
+      semanaId: semana.id,
+      tipo: TipoIngreso.leche,
+      monto: 399000,
+      litros: 1050, // ₡380/L
     );
-    final periodo = await _gastos.obtenerPeriodo(
-      lecheriaId,
-      ahora.year,
-      ahora.month,
-    );
-    if (periodo == null) return;
-    await _gastos.addCostoFijo(
+    await _finanzas.agregarGasto(
       lecheriaId: lecheriaId,
-      periodoId: periodo.id,
-      categoria: 'Luz',
-      monto: 45000,
-    );
-    await _gastos.addCostoFijo(
-      lecheriaId: lecheriaId,
-      periodoId: periodo.id,
+      semanaId: semana.id,
       categoria: 'Salario del peón',
-      monto: 320000,
+      monto: 80000,
     );
-    await _gastos.addCostoFijo(
+    await _finanzas.agregarGasto(
       lecheriaId: lecheriaId,
-      periodoId: periodo.id,
-      categoria: 'Agua',
-      monto: 15000,
+      semanaId: semana.id,
+      categoria: 'Concentrado',
+      monto: 120000,
+    );
+    await _finanzas.agregarGasto(
+      lecheriaId: lecheriaId,
+      semanaId: semana.id,
+      categoria: 'Cerca',
+      monto: 18000,
     );
   }
 
   Future<void> _sembrarPesaReciente(String lecheriaId) async {
     final sesion = await _pesas.abrirSesion(lecheriaId: lecheriaId);
-    final litrosPorIdentificador = {'1001': 18.5, '1002': 21.0, '1003': 14.2};
-    for (final entry in litrosPorIdentificador.entries) {
+    // Mañana, tarde y kilos de concentrado, como se captura de verdad.
+    final pesadas = {
+      '1001': (manana: 10.0, tarde: 8.5, concentrado: 3.5),
+      '1002': (manana: 11.5, tarde: 9.5, concentrado: 4.0),
+      '1003': (manana: 7.7, tarde: 6.5, concentrado: 2.5),
+    };
+    for (final entry in pesadas.entries) {
       final animal = await _animales.buscarPorIdentificador(
         lecheriaId,
         entry.key,
@@ -260,7 +249,9 @@ class DemoSeed {
       await _pesas.registrarPesa(
         sesionId: sesion.id,
         animalId: animal.id,
-        litros: entry.value,
+        litrosManana: entry.value.manana,
+        litrosTarde: entry.value.tarde,
+        concentradoKg: entry.value.concentrado,
       );
     }
     await _pesas.cerrarSesion(sesion.id);

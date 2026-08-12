@@ -52,6 +52,45 @@ void main() {
       },
     );
 
+    test('con dos sesiones abiertas del día, reutiliza la primera', () async {
+      // Pasa de verdad: dos dispositivos pesando sin señal el mismo día,
+      // cada uno crea la suya, y al sincronizar quedan las dos.
+      await db
+          .into(db.pesasSesiones)
+          .insert(
+            PesasSesionesCompanion.insert(
+              id: 'sesion-a',
+              lecheriaId: lecheriaId,
+              fecha: DateTime(2026, 3, 10, 6),
+              createdAt: DateTime(2026, 3, 10, 6),
+              updatedAt: DateTime(2026, 3, 10, 6),
+            ),
+          );
+      await db
+          .into(db.pesasSesiones)
+          .insert(
+            PesasSesionesCompanion.insert(
+              id: 'sesion-b',
+              lecheriaId: lecheriaId,
+              fecha: DateTime(2026, 3, 10, 15),
+              createdAt: DateTime(2026, 3, 10, 15),
+              updatedAt: DateTime(2026, 3, 10, 15),
+            ),
+          );
+
+      final sesion = await repo.abrirSesion(
+        lecheriaId: lecheriaId,
+        fecha: DateTime(2026, 3, 10, 18),
+      );
+
+      expect(sesion.id, 'sesion-a');
+      expect(
+        await db.select(db.pesasSesiones).get(),
+        hasLength(2),
+        reason: 'no se debe crear una tercera',
+      );
+    });
+
     test('abre una sesión nueva si la del día ya está cerrada', () async {
       final primera = await repo.abrirSesion(
         lecheriaId: lecheriaId,
@@ -76,7 +115,7 @@ void main() {
       final existente = await repo.registrarPesa(
         sesionId: sesion.id,
         animalId: animalId,
-        litros: 18.5,
+        litrosTotal: 18.5,
       );
 
       expect(existente, isNull, reason: 'null significa que se guardó');
@@ -93,13 +132,13 @@ void main() {
         await repo.registrarPesa(
           sesionId: sesion.id,
           animalId: animalId,
-          litros: 18.5,
+          litrosTotal: 18.5,
         );
 
         final existente = await repo.registrarPesa(
           sesionId: sesion.id,
           animalId: animalId,
-          litros: 20,
+          litrosTotal: 20,
         );
 
         expect(existente, isNotNull);
@@ -115,13 +154,13 @@ void main() {
       await repo.registrarPesa(
         sesionId: sesion.id,
         animalId: animalId,
-        litros: 18.5,
+        litrosTotal: 18.5,
       );
 
       final resultado = await repo.registrarPesa(
         sesionId: sesion.id,
         animalId: animalId,
-        litros: 20,
+        litrosTotal: 20,
         corregir: true,
       );
 
@@ -129,6 +168,144 @@ void main() {
       final pesas = await db.select(db.pesasLeche).get();
       expect(pesas, hasLength(1), reason: 'corrige, no duplica');
       expect(pesas.single.litros, 20);
+    });
+
+    test('suma mañana y tarde para el total del día', () async {
+      final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+
+      await repo.registrarPesa(
+        sesionId: sesion.id,
+        animalId: animalId,
+        litrosManana: 9.5,
+        litrosTarde: 8,
+        concentradoKg: 4.5,
+      );
+
+      final pesa = (await db.select(db.pesasLeche).get()).single;
+      expect(pesa.litros, 17.5);
+      expect(pesa.litrosManana, 9.5);
+      expect(pesa.litrosTarde, 8);
+      expect(pesa.concentradoKg, 4.5);
+    });
+
+    test(
+      'acepta un solo ordeño (la vaca que solo se ordeña de mañana)',
+      () async {
+        final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+
+        await repo.registrarPesa(
+          sesionId: sesion.id,
+          animalId: animalId,
+          litrosManana: 12,
+        );
+
+        final pesa = (await db.select(db.pesasLeche).get()).single;
+        expect(pesa.litros, 12);
+        expect(pesa.litrosTarde, isNull);
+      },
+    );
+
+    test('pesa una vaca manual, sin ficha en el inventario', () async {
+      final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+
+      await repo.registrarPesa(
+        sesionId: sesion.id,
+        identificadorManual: '8890',
+        litrosManana: 6.7,
+        litrosTarde: 6.5,
+      );
+
+      final pesa = (await db.select(db.pesasLeche).get()).single;
+      expect(pesa.animalId, isNull);
+      expect(pesa.identificadorManual, '8890');
+      expect(pesa.litros, closeTo(13.2, 0.001));
+    });
+
+    test('la vaca manual tampoco se duplica en la misma sesión', () async {
+      final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+      await repo.registrarPesa(
+        sesionId: sesion.id,
+        identificadorManual: '8890',
+        litrosManana: 6,
+      );
+
+      final existente = await repo.registrarPesa(
+        sesionId: sesion.id,
+        identificadorManual: '8890',
+        litrosManana: 9,
+      );
+
+      expect(existente, isNotNull);
+      expect(await db.select(db.pesasLeche).get(), hasLength(1));
+    });
+  });
+
+  group('faltantesDeSesion', () {
+    test('lista las vacas en ordeño que todavía no se pesaron', () async {
+      await seedAnimal(
+        db,
+        lecheriaId: lecheriaId,
+        id: 'animal-2',
+        identificador: 'A-2',
+      );
+      final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+      await repo.registrarPesa(
+        sesionId: sesion.id,
+        animalId: animalId,
+        litrosManana: 10,
+      );
+
+      final faltantes = await repo.faltantesDeSesion(
+        lecheriaId: lecheriaId,
+        sesionId: sesion.id,
+      );
+
+      expect(faltantes.map((a) => a.id), ['animal-2']);
+    });
+
+    test('una vaca manual no tacha a ninguna del inventario', () async {
+      final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+      await repo.registrarPesa(
+        sesionId: sesion.id,
+        identificadorManual: '8890',
+        litrosManana: 6,
+      );
+
+      final faltantes = await repo.faltantesDeSesion(
+        lecheriaId: lecheriaId,
+        sesionId: sesion.id,
+      );
+
+      expect(
+        faltantes.map((a) => a.id),
+        [animalId],
+        reason: 'la manual es extra: no cubre a la vaca registrada',
+      );
+    });
+  });
+
+  group('observarDetalleSesion', () {
+    test('trae la ficha de la vaca, y null para las manuales', () async {
+      final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+      await repo.registrarPesa(
+        sesionId: sesion.id,
+        animalId: animalId,
+        litrosManana: 10,
+      );
+      await repo.registrarPesa(
+        sesionId: sesion.id,
+        identificadorManual: '8890',
+        litrosManana: 6,
+      );
+
+      final detalle = await repo.observarDetalleSesion(sesion.id).first;
+
+      expect(detalle, hasLength(2));
+      final manual = detalle.firstWhere((d) => d.esManual);
+      final registrada = detalle.firstWhere((d) => !d.esManual);
+      expect(manual.animal, isNull);
+      expect(manual.etiqueta, '8890 *');
+      expect(registrada.animal!.id, animalId);
     });
   });
 
@@ -142,7 +319,7 @@ void main() {
       await repo.registrarPesa(
         sesionId: ayer.id,
         animalId: animalId,
-        litros: 10,
+        litrosTotal: 10,
       );
       await repo.cerrarSesion(ayer.id);
 
@@ -159,12 +336,12 @@ void main() {
       await repo.registrarPesa(
         sesionId: hoy.id,
         animalId: animalId,
-        litros: 12,
+        litrosTotal: 12,
       );
       await repo.registrarPesa(
         sesionId: hoy.id,
         animalId: 'animal-2',
-        litros: 8,
+        litrosTotal: 8,
       );
 
       final resumen = await repo.resumenSesion(hoy.id);
@@ -188,7 +365,7 @@ void main() {
       await repo.registrarPesa(
         sesionId: sesion1.id,
         animalId: animalId,
-        litros: 10,
+        litrosTotal: 10,
       );
       await repo.cerrarSesion(sesion1.id);
       final sesion2 = await repo.abrirSesion(
@@ -198,7 +375,7 @@ void main() {
       await repo.registrarPesa(
         sesionId: sesion2.id,
         animalId: animalId,
-        litros: 14,
+        litrosTotal: 14,
       );
 
       expect(await repo.ultimaProduccion(animalId), 14);

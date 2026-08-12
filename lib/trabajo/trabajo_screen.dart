@@ -346,13 +346,6 @@ class _TarjetaAnimal extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (animal.concentradoKgDia > 0) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Concentrado: ${animal.concentradoKgDia.toStringAsFixed(1)} kg/día',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -405,11 +398,6 @@ class _TarjetaAnimal extends StatelessWidget {
                 icono: Icons.swap_horiz,
                 etiqueta: 'Cambiar de grupo',
                 onTap: () => _cambiarGrupoDialog(context),
-              ),
-              _BotonEvento(
-                icono: Icons.grass_outlined,
-                etiqueta: 'Concentrado',
-                onTap: () => _concentradoDialog(context),
               ),
               _BotonEvento(
                 icono: Icons.remove_circle_outline,
@@ -660,40 +648,6 @@ class _TarjetaAnimal extends StatelessWidget {
     onCambio();
   }
 
-  Future<void> _concentradoDialog(BuildContext context) async {
-    final ctrl = TextEditingController(
-      text: animal.concentradoKgDia.toStringAsFixed(1),
-    );
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Concentrado (kg/día)'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Kg por día',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-    if (confirmado != true) return;
-    final kg = double.tryParse(ctrl.text.replaceAll(',', '.')) ?? 0;
-    await animalesRepo.actualizarConcentrado(animalId: animal.id, kgDia: kg);
-    onCambio();
-  }
-
   Future<void> _bajaDialog(BuildContext context) async {
     String motivo = MotivoBaja.venta;
     final precioCtrl = TextEditingController();
@@ -841,6 +795,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
   String _grupo = GrupoAnimal.enOrdeno;
   String _origen = OrigenAnimal.nacido;
   DateTime _fechaCompra = DateTime.now();
+  DateTime? _fechaUltimoParto;
   bool _guardando = false;
   String? _error;
 
@@ -872,6 +827,9 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
             ? double.tryParse(_precioCtrl.text.replaceAll(',', '.'))
             : null,
         fechaCompra: _origen == OrigenAnimal.comprado ? _fechaCompra : null,
+        fechaUltimoParto: _grupo == GrupoAnimal.enOrdeno
+            ? _fechaUltimoParto
+            : null,
       );
       sincronizarSiSePuede();
       if (mounted) Navigator.pop(context, true);
@@ -1002,6 +960,51 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
                     lastDate: DateTime.now(),
                   );
                   if (elegida != null) setState(() => _fechaCompra = elegida);
+                },
+              ),
+            ],
+            // Solo tiene sentido para una vaca que ya está dando leche. Sin
+            // esta fecha no hay días de lactancia, y sin ellos la vaca queda
+            // fuera de la comparación contra la curva en el reporte.
+            if (_grupo == GrupoAnimal.enOrdeno) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Último parto',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              ListTile(
+                key: const ValueKey('trabajo.alta.ultimoParto'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  _fechaUltimoParto == null
+                      ? 'Sin registrar'
+                      : '${_fechaUltimoParto!.day}/${_fechaUltimoParto!.month}/'
+                            '${_fechaUltimoParto!.year}',
+                ),
+                subtitle: Text(
+                  _fechaUltimoParto == null
+                      ? 'Sin esta fecha la vaca no va a tener días de '
+                            'lactancia en el reporte'
+                      : '${DateTime.now().difference(_fechaUltimoParto!).inDays} '
+                            'días de lactancia',
+                  style: TextStyle(
+                    color: _fechaUltimoParto == null
+                        ? Colors.orange.shade800
+                        : null,
+                  ),
+                ),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final ahora = DateTime.now();
+                  final elegida = await showDatePicker(
+                    context: context,
+                    initialDate: _fechaUltimoParto ?? ahora,
+                    firstDate: DateTime(ahora.year - 3),
+                    lastDate: ahora,
+                  );
+                  if (elegida != null) {
+                    setState(() => _fechaUltimoParto = elegida);
+                  }
                 },
               ),
             ],

@@ -102,8 +102,9 @@ Future<String> seedAnimal(
   String sexo = Sexo.hembra,
   String grupo = GrupoAnimal.enOrdeno,
   String origen = OrigenAnimal.nacido,
-  double concentradoKgDia = 0,
   DateTime? retiroLecheHasta,
+  DateTime? fechaUltimoParto,
+  DateTime? fechaProbableParto,
   DateTime? now,
 }) async {
   final ts = now ?? DateTime(2026, 1, 1);
@@ -117,8 +118,9 @@ Future<String> seedAnimal(
           sexo: sexo,
           grupo: grupo,
           origen: origen,
-          concentradoKgDia: Value(concentradoKgDia),
           retiroLecheHasta: Value(retiroLecheHasta),
+          fechaUltimoParto: Value(fechaUltimoParto),
+          fechaProbableParto: Value(fechaProbableParto),
           createdAt: ts,
           updatedAt: ts,
         ),

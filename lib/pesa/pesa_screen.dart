@@ -3,18 +3,30 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../app/widgets/scan_field.dart';
-import '../data/domain/grupos.dart';
+import '../data/domain/curva_lactancia.dart';
+import '../data/domain/semana.dart';
 import '../data/local/database.dart';
 import '../data/repositories/pesas_repository.dart';
 import '../services.dart';
+import 'reporte_screen.dart';
 
-/// Pesa de leche (Módulo 3): abre/reutiliza la sesión del día, permite
-/// escanear/ingresar cada vaca y su producción, muestra un contador de
-/// pesadas vs. faltantes, y al cerrar presenta el resumen de la sesión.
+/// Pesa de leche (Módulo 3). Abre o reutiliza la sesión del día y va vaca por
+/// vaca: se captura el identificador (lector RFID o a mano) y se anotan los
+/// litros de la **mañana**, los de la **tarde** y los **kilos de concentrado**
+/// que comió.
+///
+/// Una vaca que no está en el inventario se puede pesar igual, como **vaca
+/// manual**: queda con su identificador suelto, sin días de lactancia. Es lo
+/// que el cliente marca con asterisco en su reporte.
 class PesaScreen extends StatefulWidget {
-  const PesaScreen({super.key, required this.lecheriaId});
+  const PesaScreen({
+    super.key,
+    required this.lecheriaId,
+    required this.nombreLecheria,
+  });
 
   final String lecheriaId;
+  final String nombreLecheria;
 
   @override
   State<PesaScreen> createState() => _PesaScreenState();
@@ -23,11 +35,22 @@ class PesaScreen extends StatefulWidget {
 class _PesaScreenState extends State<PesaScreen> {
   PesaSesionRow? _sesion;
   bool _cargando = true;
+
   final _identCtrl = TextEditingController();
   final _identFocus = FocusNode();
-  final _litrosCtrl = TextEditingController();
-  final _litrosFocus = FocusNode();
+  final _mananaCtrl = TextEditingController();
+  final _mananaFocus = FocusNode();
+  final _tardeCtrl = TextEditingController();
+  final _tardeFocus = FocusNode();
+  final _concentradoCtrl = TextEditingController();
+
+  /// Vaca del inventario que se está pesando ahora.
   AnimalRow? _animalActual;
+
+  /// Identificador de una vaca que NO está en el inventario y que el ganadero
+  /// decidió pesar igual.
+  String? _manualActual;
+
   String? _mensaje;
 
   @override
@@ -40,8 +63,11 @@ class _PesaScreenState extends State<PesaScreen> {
   void dispose() {
     _identCtrl.dispose();
     _identFocus.dispose();
-    _litrosCtrl.dispose();
-    _litrosFocus.dispose();
+    _mananaCtrl.dispose();
+    _mananaFocus.dispose();
+    _tardeCtrl.dispose();
+    _tardeFocus.dispose();
+    _concentradoCtrl.dispose();
     super.dispose();
   }
 
@@ -54,48 +80,119 @@ class _PesaScreenState extends State<PesaScreen> {
     });
   }
 
-  Future<void> _buscarAnimal(String identificador) async {
-    if (identificador.trim().isEmpty) return;
-    final animal = await animalesRepo.buscarPorIdentificador(
-      widget.lecheriaId,
-      identificador.trim(),
-    );
-    if (!mounted) return;
-    if (animal == null) {
-      setState(() {
-        _animalActual = null;
-        _mensaje = 'Animal no encontrado';
-      });
-      return;
-    }
-    setState(() {
-      _animalActual = animal;
-      _mensaje = null;
-    });
-    _litrosFocus.requestFocus();
+  bool get _hayVacaEnCurso => _animalActual != null || _manualActual != null;
+
+  void _limpiarCaptura() {
+    _animalActual = null;
+    _manualActual = null;
+    _identCtrl.clear();
+    _mananaCtrl.clear();
+    _tardeCtrl.clear();
+    _concentradoCtrl.clear();
   }
 
-  Future<void> _guardarLitros() async {
+  double? _leer(TextEditingController c) {
+    final texto = c.text.trim().replaceAll(',', '.');
+    if (texto.isEmpty) return null;
+    return double.tryParse(texto);
+  }
+
+  Future<void> _buscarAnimal(String identificador) async {
+    final ident = identificador.trim();
+    if (ident.isEmpty) return;
+    final animal = await animalesRepo.buscarPorIdentificador(
+      widget.lecheriaId,
+      ident,
+    );
+    if (!mounted) return;
+
+    if (animal == null) {
+      // No está en el inventario. En vez de dejar al ganadero trabado en
+      // media ordeña, se le ofrece pesarla igual como vaca manual.
+      final pesarManual = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Vaca no registrada'),
+          content: Text(
+            '"$ident" no está en el inventario.\n\n'
+            'Podés pesarla igual como vaca manual: se le anota la leche, '
+            'pero no va a tener días de lactancia ni comparación contra la '
+            'curva.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              key: const ValueKey('pesa.confirmarManual'),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Pesar como manual'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (pesarManual != true) {
+        setState(() {
+          _animalActual = null;
+          _manualActual = null;
+          _mensaje = null;
+        });
+        return;
+      }
+      setState(() {
+        _animalActual = null;
+        _manualActual = ident;
+        _mensaje = null;
+      });
+      _mananaFocus.requestFocus();
+      return;
+    }
+
+    setState(() {
+      _animalActual = animal;
+      _manualActual = null;
+      _mensaje = null;
+      _concentradoCtrl.text = '';
+    });
+    _mananaFocus.requestFocus();
+  }
+
+  Future<void> _guardar() async {
     final sesion = _sesion;
-    final animal = _animalActual;
-    if (sesion == null || animal == null) return;
-    final litros = double.tryParse(_litrosCtrl.text.replaceAll(',', '.'));
-    if (litros == null) return;
+    if (sesion == null || !_hayVacaEnCurso) return;
+
+    final manana = _leer(_mananaCtrl);
+    final tarde = _leer(_tardeCtrl);
+    if (manana == null && tarde == null) {
+      setState(() => _mensaje = 'Anotá al menos un ordeño (mañana o tarde).');
+      return;
+    }
+    final concentrado = _leer(_concentradoCtrl);
+    final animalId = _animalActual?.id;
+    final manual = _manualActual;
 
     final existente = await pesasRepo.registrarPesa(
       sesionId: sesion.id,
-      animalId: animal.id,
-      litros: litros,
+      animalId: animalId,
+      identificadorManual: manual,
+      litrosManana: manana,
+      litrosTarde: tarde,
+      concentradoKg: concentrado,
     );
     if (!mounted) return;
+
     if (existente != null) {
+      final nuevoTotal = (manana ?? 0) + (tarde ?? 0);
       final corregir = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('Ya se pesó hoy'),
           content: Text(
-            '${animal.identificador} ya tiene ${existente.litros.toStringAsFixed(1)} L '
-            'registrados en esta sesión. ¿Corregir por ${litros.toStringAsFixed(1)} L?',
+            '${_animalActual?.identificador ?? manual} ya tiene '
+            '${existente.litros.toStringAsFixed(1)} L registrados en esta '
+            'sesión. ¿Corregir por ${nuevoTotal.toStringAsFixed(1)} L?',
           ),
           actions: [
             TextButton(
@@ -109,23 +206,23 @@ class _PesaScreenState extends State<PesaScreen> {
           ],
         ),
       );
-      if (corregir == true) {
-        await pesasRepo.registrarPesa(
-          sesionId: sesion.id,
-          animalId: animal.id,
-          litros: litros,
-          corregir: true,
-        );
-      } else {
-        return;
-      }
+      if (corregir != true) return;
+      await pesasRepo.registrarPesa(
+        sesionId: sesion.id,
+        animalId: animalId,
+        identificadorManual: manual,
+        litrosManana: manana,
+        litrosTarde: tarde,
+        concentradoKg: concentrado,
+        corregir: true,
+      );
+      if (!mounted) return;
     }
 
     sincronizarSiSePuede();
     setState(() {
-      _animalActual = null;
-      _identCtrl.clear();
-      _litrosCtrl.clear();
+      _limpiarCaptura();
+      _mensaje = null;
     });
     _identFocus.requestFocus();
   }
@@ -134,12 +231,16 @@ class _PesaScreenState extends State<PesaScreen> {
     final sesion = _sesion;
     if (sesion == null) return;
     final resumen = await pesasRepo.resumenSesion(sesion.id);
+    final faltantes = await pesasRepo.faltantesDeSesion(
+      lecheriaId: widget.lecheriaId,
+      sesionId: sesion.id,
+    );
     if (!mounted) return;
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Cerrar sesión de pesa'),
-        content: _ResumenSesionWidget(resumen: resumen),
+        content: _ResumenSesionWidget(resumen: resumen, faltantes: faltantes),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -154,8 +255,27 @@ class _PesaScreenState extends State<PesaScreen> {
     );
     if (confirmado == true) {
       await pesasRepo.cerrarSesion(sesion.id);
+      sincronizarSiSePuede();
+      if (!mounted) return;
+      // Cerrar la pesa y ver el reporte es un solo movimiento: es para lo que
+      // se pesó. Al salir del reporte, se sale también de la pesa.
+      await _abrirReporte();
       if (mounted) Navigator.of(context).maybePop();
     }
+  }
+
+  Future<void> _abrirReporte() {
+    final sesion = _sesion;
+    if (sesion == null) return Future.value();
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReporteScreen(
+          lecheriaId: widget.lecheriaId,
+          sesionId: sesion.id,
+          nombreLecheria: widget.nombreLecheria,
+        ),
+      ),
+    );
   }
 
   @override
@@ -168,8 +288,26 @@ class _PesaScreenState extends State<PesaScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pesa de leche'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Pesa de leche'),
+            // Se pesa un día por semana: decir de qué semana es esta pesa
+            // evita confundirla con la de la semana pasada.
+            Text(
+              'Semana del ${etiquetaSemana(lunesDe(_sesion!.fecha), domingoDe(_sesion!.fecha))}',
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
+          ],
+        ),
         actions: [
+          IconButton(
+            key: const ValueKey('pesa.verReporte'),
+            tooltip: 'Ver reporte',
+            onPressed: _abrirReporte,
+            icon: const Icon(Icons.assessment_outlined),
+          ),
           TextButton.icon(
             key: const ValueKey('pesa.cerrar'),
             onPressed: _cerrarSesion,
@@ -178,10 +316,9 @@ class _PesaScreenState extends State<PesaScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
             _ContadorSesion(
               key: const ValueKey('pesa.contador'),
@@ -203,26 +340,48 @@ class _PesaScreenState extends State<PesaScreen> {
               const SizedBox(height: 8),
               Text(_mensaje!, style: TextStyle(color: Colors.red.shade700)),
             ],
-            if (_animalActual != null) ...[
+            if (_hayVacaEnCurso) ...[
               const SizedBox(height: 16),
-              Text(
-                _animalActual!.identificador,
-                style: Theme.of(context).textTheme.titleLarge,
+              _CabeceraVaca(animal: _animalActual, manual: _manualActual),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: QuickNumberField(
+                      key: const ValueKey('pesa.manana'),
+                      controller: _mananaCtrl,
+                      focusNode: _mananaFocus,
+                      labelText: 'Mañana',
+                      suffixText: 'L',
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: (_) => _tardeFocus.requestFocus(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: QuickNumberField(
+                      key: const ValueKey('pesa.tarde'),
+                      controller: _tardeCtrl,
+                      focusNode: _tardeFocus,
+                      labelText: 'Tarde',
+                      suffixText: 'L',
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               QuickNumberField(
-                key: const ValueKey('pesa.litros'),
-                controller: _litrosCtrl,
-                focusNode: _litrosFocus,
-                labelText: 'Litros',
-                suffixText: 'L',
-                autofocus: true,
-                onSubmitted: (_) => _guardarLitros(),
+                key: const ValueKey('pesa.concentrado'),
+                controller: _concentradoCtrl,
+                labelText: 'Concentrado',
+                suffixText: 'kg',
+                onSubmitted: (_) => _guardar(),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
                 key: const ValueKey('pesa.guardar'),
-                onPressed: _guardarLitros,
+                onPressed: _guardar,
                 icon: const Icon(Icons.save),
                 label: const Text('Guardar'),
                 style: FilledButton.styleFrom(
@@ -232,41 +391,54 @@ class _PesaScreenState extends State<PesaScreen> {
             ],
             const SizedBox(height: 16),
             const Divider(),
-            Expanded(
-              child: StreamBuilder<List<PesaLecheRow>>(
-                stream: pesasRepo.observarPesasDeSesion(_sesion!.id),
-                builder: (context, snapshot) {
-                  final pesas = snapshot.data ?? const [];
-                  if (pesas.isEmpty) {
-                    return const Center(
-                      child: Text('Todavía no hay pesadas en esta sesión.'),
-                    );
-                  }
-                  return ListView.builder(
-                    itemCount: pesas.length,
-                    itemBuilder: (context, i) {
-                      final p = pesas[pesas.length - 1 - i];
-                      return FutureBuilder<AnimalRow?>(
-                        future:
-                            (db.select(db.animales)
-                                  ..where((t) => t.id.equals(p.animalId)))
-                                .getSingleOrNull(),
-                        builder: (context, animalSnap) {
-                          return ListTile(
-                            leading: const Icon(Icons.water_drop_outlined),
-                            title: Text(animalSnap.data?.identificador ?? '…'),
-                            trailing: Text('${p.litros.toStringAsFixed(1)} L'),
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
+            _ListaPesadas(sesionId: _sesion!.id),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Quién se está pesando: identificador, días de lactancia y grupo. Para una
+/// vaca manual avisa que no tiene ficha.
+class _CabeceraVaca extends StatelessWidget {
+  const _CabeceraVaca({required this.animal, required this.manual});
+
+  final AnimalRow? animal;
+  final String? manual;
+
+  @override
+  Widget build(BuildContext context) {
+    final estilo = Theme.of(context).textTheme;
+    if (animal == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$manual *', style: estilo.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            'Vaca manual — sin ficha ni días de lactancia',
+            style: estilo.bodySmall?.copyWith(color: Colors.orange.shade800),
+          ),
+        ],
+      );
+    }
+
+    final dlac = diasLactancia(animal!.fechaUltimoParto);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(animal!.identificador, style: estilo.titleLarge),
+        const SizedBox(height: 4),
+        Text(
+          dlac == null
+              ? 'Sin parto registrado — no se puede calcular días de lactancia'
+              : '$dlac días de lactancia',
+          style: estilo.bodySmall?.copyWith(
+            color: dlac == null ? Colors.orange.shade800 : null,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -283,14 +455,24 @@ class _ContadorSesion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<PesaLecheRow>>(
-      stream: pesasRepo.observarPesasDeSesion(sesionId),
+    return StreamBuilder<List<PesaDeSesion>>(
+      stream: pesasRepo.observarDetalleSesion(sesionId),
       builder: (context, snapshot) {
-        final pesadas = snapshot.data?.length ?? 0;
-        return FutureBuilder<int>(
-          future: animalesRepo.contarPorGrupo(lecheriaId, GrupoAnimal.enOrdeno),
-          builder: (context, totalSnap) {
-            final total = totalSnap.data ?? 0;
+        final detalle = snapshot.data ?? const <PesaDeSesion>[];
+        // Contra el total del hato solo cuentan las vacas del inventario: las
+        // manuales son extra y sumarlas haría ver "38 de 36".
+        final delInventario = detalle.where((d) => !d.esManual).length;
+        final manuales = detalle.length - delInventario;
+        final litros = detalle.fold<double>(0, (a, d) => a + d.pesa.litros);
+
+        return FutureBuilder<List<AnimalRow>>(
+          future: pesasRepo.faltantesDeSesion(
+            lecheriaId: lecheriaId,
+            sesionId: sesionId,
+          ),
+          builder: (context, faltantesSnap) {
+            final faltan = faltantesSnap.data?.length;
+            final total = faltan == null ? null : delInventario + faltan;
             return Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -300,12 +482,27 @@ class _ContadorSesion extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '$pesadas de $total pesadas',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        total == null
+                            ? '$delInventario pesadas'
+                            : '$delInventario de $total pesadas',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        manuales == 0
+                            ? '${litros.toStringAsFixed(1)} L en total'
+                            : '${litros.toStringAsFixed(1)} L en total · '
+                                  '$manuales manual${manuales == 1 ? '' : 'es'}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ),
                   Icon(
-                    pesadas >= total && total > 0
+                    faltan == 0 && delInventario > 0
                         ? Icons.check_circle
                         : Icons.pending_outlined,
                     color: kVerdeLeche,
@@ -320,10 +517,79 @@ class _ContadorSesion extends StatelessWidget {
   }
 }
 
+class _ListaPesadas extends StatelessWidget {
+  const _ListaPesadas({required this.sesionId});
+
+  final String sesionId;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<PesaDeSesion>>(
+      stream: pesasRepo.observarDetalleSesion(sesionId),
+      builder: (context, snapshot) {
+        final detalle = snapshot.data ?? const <PesaDeSesion>[];
+        if (detalle.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text('Todavía no hay pesadas en esta sesión.'),
+            ),
+          );
+        }
+        return Column(
+          children: [for (final d in detalle) _FilaPesada(detalle: d)],
+        );
+      },
+    );
+  }
+}
+
+class _FilaPesada extends StatelessWidget {
+  const _FilaPesada({required this.detalle});
+
+  final PesaDeSesion detalle;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = detalle.pesa;
+    final partes = <String>[
+      if (p.litrosManana != null) 'M ${p.litrosManana!.toStringAsFixed(1)}',
+      if (p.litrosTarde != null) 'T ${p.litrosTarde!.toStringAsFixed(1)}',
+      if (p.concentradoKg != null)
+        '${p.concentradoKg!.toStringAsFixed(1)} kg conc.',
+    ];
+    final dlac = detalle.diasLactanciaHoy();
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        Icons.water_drop_outlined,
+        color: detalle.esManual ? Colors.orange.shade700 : kVerdeLeche,
+      ),
+      title: Text(detalle.etiqueta),
+      subtitle: Text(
+        [
+          if (dlac != null) '$dlac días',
+          // Las pesas anteriores a esta versión traen solo el total: se dice,
+          // en vez de inventar un reparto que nadie midió.
+          if (partes.isEmpty) 'sin desglose' else partes.join(' · '),
+        ].join(' · '),
+      ),
+      trailing: Text(
+        '${p.litros.toStringAsFixed(1)} L',
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
 class _ResumenSesionWidget extends StatelessWidget {
-  const _ResumenSesionWidget({required this.resumen});
+  const _ResumenSesionWidget({required this.resumen, required this.faltantes});
 
   final ResumenSesion resumen;
+  final List<AnimalRow> faltantes;
 
   @override
   Widget build(BuildContext context) {
@@ -342,6 +608,22 @@ class _ResumenSesionWidget extends StatelessWidget {
             '${resumen.variacionRespectoAnterior! >= 0 ? '+' : ''}'
             '${resumen.variacionRespectoAnterior!.toStringAsFixed(1)} L',
           ),
+        if (faltantes.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Quedan ${faltantes.length} sin pesar',
+            style: TextStyle(
+              color: Colors.orange.shade800,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            faltantes.take(8).map((a) => a.identificador).join(', ') +
+                (faltantes.length > 8 ? '…' : ''),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ],
     );
   }

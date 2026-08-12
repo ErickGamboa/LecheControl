@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/formato.dart';
+import '../data/domain/curva_lactancia.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../data/repositories/pesas_repository.dart';
@@ -59,12 +60,36 @@ class _EncabezadoAnimal extends StatelessWidget {
 
   final AnimalRow animal;
 
+  /// Fija o corrige la fecha del último parto. Es la única forma de cargar
+  /// los días de lactancia de una vaca que ya estaba en la finca antes de
+  /// usar la app, o de arreglar una fecha mal digitada.
+  Future<void> _editarUltimoParto(BuildContext context) async {
+    final ahora = DateTime.now();
+    final elegida = await showDatePicker(
+      context: context,
+      initialDate: animal.fechaUltimoParto ?? ahora,
+      firstDate: DateTime(ahora.year - 3),
+      lastDate: ahora,
+      helpText: 'Fecha del último parto',
+    );
+    if (elegida == null) return;
+    await animalesRepo.editarFechaUltimoParto(
+      animalId: animal.id,
+      fecha: elegida,
+    );
+    sincronizarSiSePuede();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final enRetiro =
         animal.retiroLecheHasta != null &&
         animal.retiroLecheHasta!.isAfter(DateTime.now());
+    final dlac = diasLactancia(animal.fechaUltimoParto);
+    final esVacaDeOrdeno =
+        animal.sexo == Sexo.hembra && animal.grupo == GrupoAnimal.enOrdeno;
+
     return Container(
       width: double.infinity,
       color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
@@ -76,6 +101,21 @@ class _EncabezadoAnimal extends StatelessWidget {
           Chip(label: Text(Sexo.etiqueta(animal.sexo))),
           Chip(label: Text(GrupoAnimal.etiqueta(animal.grupo))),
           Chip(label: Text(EstadoAnimal.etiqueta(animal.estado))),
+          // Los días de lactancia son la base del reporte de producción, así
+          // que se muestran acá y se pueden corregir de un toque.
+          if (esVacaDeOrdeno)
+            ActionChip(
+              key: const ValueKey('hojaVida.dlac'),
+              avatar: Icon(
+                dlac == null ? Icons.warning_amber : Icons.event_outlined,
+                size: 18,
+                color: dlac == null ? Colors.orange.shade800 : null,
+              ),
+              label: Text(
+                dlac == null ? 'Sin último parto' : '$dlac días de lactancia',
+              ),
+              onPressed: () => _editarUltimoParto(context),
+            ),
           if (animal.sexo == Sexo.hembra)
             Chip(
               label: Text(
@@ -92,11 +132,6 @@ class _EncabezadoAnimal extends StatelessWidget {
               backgroundColor: theme.colorScheme.errorContainer,
               avatar: const Icon(Icons.warning_amber, size: 18),
               label: Text('Retiro hasta ${_fmt(animal.retiroLecheHasta!)}'),
-            ),
-          if (animal.concentradoKgDia > 0)
-            Chip(
-              avatar: const Icon(Icons.grass_outlined, size: 18),
-              label: Text('${animal.concentradoKgDia.toStringAsFixed(1)} kg/d'),
             ),
         ],
       ),

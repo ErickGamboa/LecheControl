@@ -78,9 +78,35 @@ Una vez por semana el ganadero **pesa la leche** de las vacas en ordeño para sa
 
 ### Registrar una pesa
 1. Se abre una **sesión de pesa** con su **fecha**.
-2. Por cada vaca en ordeño: se captura el **identificador** (RFID o manual) y se digita **un solo valor: litros del día**.
+2. Por cada vaca en ordeño se captura el **identificador** (RFID o manual) y se digita:
+   - **Litros de la mañana** y **litros de la tarde** (el total del día lo suma la app).
+   - **Kilos de concentrado** que comió ese día.
+   Basta con anotar un solo ordeño si la vaca se ordeña una vez.
 3. **Contador visible:** vacas pesadas y **faltantes** (respecto al grupo En ordeño).
 4. Si una vaca **ya se pesó en esta sesión** y se vuelve a escanear: mostrar el registro y **preguntar si se corrige** (no duplicar).
+5. **Vacas manuales:** una vaca que no está en el inventario se puede pesar igual, con su identificador suelto. Se le anota la leche pero **no tiene días de lactancia** ni comparación contra la curva, y **no cuenta** contra el total de vacas por pesar. En los listados sale marcada con asterisco.
+
+### Días de lactancia (DLac)
+Los días desde el **último parto** de la vaca. La app los lleva sola: el evento de parto reinicia la cuenta. Para las vacas que ya estaban en la finca antes de usar la app, la fecha del último parto se puede **cargar a mano una sola vez**. Una vaca sin esa fecha aparece sin DLac y no se compara contra la curva.
+
+### Reporte de producción
+Al cerrar la pesa se arma el **reporte general de producción lechera**:
+
+- **Producción por vaca:** identificador, DLac, mañana, tarde, total, concentrado, total de la pesa anterior y estado.
+- **Resumen del hato:** vacas registradas, en producción, secas o prontas, manuales; producción total, promedio general y promedio de las vacas en producción.
+- **Curva de lactancia:** el promedio real del hato por tramo de días en leche, contra la curva de referencia.
+- **Mejores vacas** y **vacas por debajo de lo esperado**, con su `% del esperado`.
+- **Top 5 mayor y menor producción**, **distribución por rango** (Alta > 18 L, Media 12-18 L, Baja 8-12 L, Muy baja < 8 L) y **estado reproductivo**.
+- **Recomendaciones:** Mantener / Vigilar / Revisar, según el `% del esperado`.
+
+### Curva de referencia (litros esperados según DLac)
+Una tabla de **siete tramos editables** por lechería, precargada con `0-30 → 18.8`, `31-70 → 26`, `71-120 → 24`, `121-180 → 21`, `181-240 → 18`, `241-305 → 14`, `>305 → 10`.
+
+Para una vaca concreta el esperado **no es el escalón del tramo**: la app **interpola** entre el día central de cada tramo, para que la curva suba y baje suave y una vaca no salte de "Excelente" a "Muy bajo" por cumplir un día más.
+
+`% del esperado = producción del día ÷ litros esperados para sus DLac`. Los umbrales de calificación (por defecto: ≥100 % Excelente, 85-99 % Bueno, 70-84 % Vigilar, 60-69 % Bajo, <60 % Muy bajo) también son editables.
+
+A los ~3 meses de pesas la app muestra el **promedio real del hato** por tramo junto a la tabla y ofrece **adoptarlo**, tramo por tramo. Así la referencia deja de ser un valor genérico y pasa a ser el de esa finca.
 
 ### Al terminar la pesa — Resumen
 - **Total de vacas** pesadas.
@@ -94,50 +120,36 @@ Una vez por semana el ganadero **pesa la leche** de las vacas en ordeño para sa
 
 ---
 
-## Módulo 4 — Gastos y parámetros (mensual)
+## Módulos 4 y 5 — Finanzas (semanal)
 
-Aquí el ganadero registra **lo que gasta** y define los **precios** que la app usa para calcular utilidad. Se maneja **por período (mes calendario, del 1 al fin de mes)**.
+Una sola pantalla. El período es la **semana, de lunes a domingo**.
 
-### Costos
-- **Costos fijos del mes** (categorías creadas por el usuario, ej.): **luz, salario del peón, agua, alquiler, depreciación…**
-  - La app convierte el total del mes en **costo fijo/día** y lo **reparte entre las vacas en ordeño** → **costo fijo por vaca por día**.
-- **Costos variables:** principalmente **concentrado** (ver abajo) y **sanidad** (viene del Módulo 7).
+### Ingresos — se digitan, no se calculan
+Cada semana el ganadero anota **la plata que efectivamente entró**:
 
-### Parámetros de precio
-- **Precio del litro de leche** (ej. ₡380/L). Es **único por período** (aplica a todo el hato ese mes).
-- **Precio del concentrado por kg** (ej. ₡X/kg).
+- **Leche:** el monto que pagó la planta y, junto a él, **los litros que pagó**.
+- **Venta de ganado:** el monto y, si aplica, qué animal se vendió (queda en su hoja de vida).
+- **Otro.**
 
-### Concentrado por vaca
-- El consumo de concentrado se maneja **individual por vaca** (kg/día), porque impacta directo su rentabilidad.
-- Se define/edita por vaca (se puede capturar junto a la pesa de leche). **Editable** en cualquier momento.
-- **Costo concentrado/día de la vaca** = `kg concentrado/día × precio concentrado/kg`.
+> Esto reemplaza la decisión vieja de calcular el ingreso como `litros × precio`. Ya no se digita un precio del litro: **sale de dividir lo que pagaron entre los litros que pagaron**, así que es el precio real de esa semana.
 
----
+### Gastos
+Se anota cada salida con su **categoría** (salario del peón, concentrado, medicamentos, cerca, combustible, transporte…). Las categorías son botones; si el ganadero escribe una nueva, queda guardada para la próxima.
 
-## Módulo 5 — Rentabilidad por vaca y decisiones
+### Utilidad de la semana
+`Σ ingresos − Σ gastos`. Puede ser negativa, y se muestra igual.
 
-Es el módulo que le permite **tomar decisiones**: ver las mejores y peores vacas y decidir **cuáles secar**. Toma la **última pesa** de cada vaca y los parámetros del Módulo 4.
+### Rentabilidad por vaca
+Con el **precio real** de la semana:
 
-### Tabla de rentabilidad (por vaca)
-Columnas (como en el Excel del cliente):
+| Animal | Litros | Ingreso | Costo | Utilidad |
+|---|---|---|---|---|
 
-| Animal | Litros/día | Kg Concentrado/día | Costo Concentrado/día | Costo Fijo/vaca | Costo Total/día | Ingreso/día | Utilidad/día |
-|---|---|---|---|---|---|---|---|
+- **Ingreso** = `litros de su última pesa de la semana × precio real por litro`. Si la vaca está **en retiro**, su leche se descarta → ingreso 0.
+- **Costo** = `gastos de la semana ÷ número de vacas en ordeño`.
+- **Utilidad** = `ingreso − costo`. Ordenadas de mayor a menor.
 
-- **Ingreso/día** = `litros/día × precio del litro de leche`.
-- **Costo Concentrado/día** = `kg concentrado/día × precio concentrado/kg`.
-- **Costo Fijo/vaca** = `costos fijos del día ÷ número de vacas en ordeño`.
-- **Costo Total/día** = `costo concentrado/día + costo fijo/vaca`.
-- **Utilidad/día** = `ingreso/día − costo total/día`. *(Puede ser negativa.)*
-
-### Rankings y decisiones
-- **Top 5 vacas con MAYOR utilidad** y **Top 5 con MENOR utilidad**.
-- **Decisión de secado:** la app **sugiere** candidatas a secar según una regla (ej.: **vacas por debajo de X litros/día** o con **utilidad negativa** → "Secar"). El umbral es configurable. La decisión final la toma el ganadero (un toque marca el evento **Secado** del Módulo 1).
-- **Filtros** por grupo/estado.
-
-### Utilidad del negocio (resumen)
-- **Utilidad total del período** = `Σ (ingreso de todas las vacas) − (costos fijos del período + costo total de concentrado + costo de sanidad del período)`.
-- Vista mensual para ver **cuánto ganó** la lechería.
+Si esa semana no se anotaron los litros junto al monto, **no hay precio real y la tabla no se muestra**: es preferible no mostrar nada a mostrar una utilidad inventada.
 
 ---
 

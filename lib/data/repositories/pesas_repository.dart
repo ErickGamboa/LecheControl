@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../domain/curva_lactancia.dart';
+import '../domain/grupos.dart';
 import '../local/database.dart';
 
 /// Resumen de una sesión de pesa terminada (Módulo 3).
@@ -34,6 +36,29 @@ class PesaHistorial {
 
 enum Tendencia { subiendo, estable, bajando }
 
+/// Una fila de lo pesado en una sesión, con la ficha de la vaca si la tiene.
+class PesaDeSesion {
+  const PesaDeSesion({required this.pesa, required this.animal});
+
+  final PesaLecheRow pesa;
+
+  /// null cuando es una **vaca manual**: se le anota leche pero no está en el
+  /// inventario, así que no tiene días de lactancia.
+  final AnimalRow? animal;
+
+  bool get esManual => animal == null;
+
+  /// Cómo se muestra en la lista. Las manuales van con asterisco, igual que
+  /// en el reporte que trajo el cliente.
+  String get etiqueta =>
+      animal?.identificador ?? '${pesa.identificadorManual ?? '?'} *';
+
+  /// Días de lactancia de la vaca al momento de consultar. null para las
+  /// manuales y para las que nunca tuvieron un parto registrado.
+  int? diasLactanciaHoy({DateTime? hoy}) =>
+      diasLactancia(animal?.fechaUltimoParto, hoy: hoy);
+}
+
 /// Acceso a sesiones de pesa y litros por vaca (Módulo 3). Lee y escribe en
 /// la base local; el sync corre por separado.
 class PesasRepository {
@@ -50,15 +75,22 @@ class PesasRepository {
     final ahora = fecha ?? DateTime.now();
     final inicioDia = DateTime(ahora.year, ahora.month, ahora.day);
     final finDia = inicioDia.add(const Duration(days: 1));
+    // Puede haber MÁS de una sesión abierta del día: si dos dispositivos
+    // pesan sin señal y luego sincronizan, cada uno creó la suya. Se
+    // reutiliza la primera que se abrió, para seguir sumando donde ya se
+    // venía trabajando. Sin el `limit(1)` esto reventaba la pantalla.
     final existente =
-        await (db.select(db.pesasSesiones)..where(
-              (t) =>
-                  t.lecheriaId.equals(lecheriaId) &
-                  t.deletedAt.isNull() &
-                  t.cerrada.equals(false) &
-                  t.fecha.isBiggerOrEqualValue(inicioDia) &
-                  t.fecha.isSmallerThanValue(finDia),
-            ))
+        await (db.select(db.pesasSesiones)
+              ..where(
+                (t) =>
+                    t.lecheriaId.equals(lecheriaId) &
+                    t.deletedAt.isNull() &
+                    t.cerrada.equals(false) &
+                    t.fecha.isBiggerOrEqualValue(inicioDia) &
+                    t.fecha.isSmallerThanValue(finDia),
+              )
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
+              ..limit(1))
             .getSingleOrNull();
     if (existente != null) return existente;
 
@@ -100,24 +132,42 @@ class PesasRepository {
         .getSingleOrNull();
   }
 
-  /// Registra los litros de un animal en la sesión. Si el animal YA se pesó
-  /// en esta sesión y [corregir] es false, devuelve la fila existente para
-  /// que la UI pregunte si se corrige (no se duplica). Si [corregir] es
-  /// true, actualiza esa fila. Devuelve null cuando se guardó (fila nueva o
-  /// corrección aplicada).
+  /// Registra lo pesado de una vaca en la sesión: leche de la mañana, de la
+  /// tarde y kilos de concentrado. El total del día se calcula acá.
+  ///
+  /// Se identifica la vaca por [animalId] (está en el inventario) o por
+  /// [identificadorManual] (vaca manual, sin ficha ni días de lactancia).
+  /// Hay que pasar exactamente uno de los dos.
+  ///
+  /// Si esa vaca YA se pesó en esta sesión y [corregir] es false, devuelve la
+  /// fila existente para que la UI pregunte si se corrige (no se duplica). Si
+  /// [corregir] es true, actualiza esa fila. Devuelve null cuando se guardó
+  /// (fila nueva o corrección aplicada).
   Future<PesaLecheRow?> registrarPesa({
     required String sesionId,
-    required String animalId,
-    required double litros,
+    String? animalId,
+    String? identificadorManual,
+    double? litrosManana,
+    double? litrosTarde,
+    double? litrosTotal,
+    double? concentradoKg,
     bool corregir = false,
   }) async {
+    assert(
+      (animalId == null) != (identificadorManual == null),
+      'Pasá animalId (vaca del inventario) o identificadorManual (vaca '
+      'manual), pero no los dos ni ninguno.',
+    );
+    // [litrosTotal] es para cuando se anota el día completo sin separar los
+    // dos ordeños; el reporte muestra esas filas como "sin desglose".
+    final litros = litrosTotal ?? ((litrosManana ?? 0) + (litrosTarde ?? 0));
     final existente =
-        await (db.select(db.pesasLeche)..where(
-              (t) =>
-                  t.sesionId.equals(sesionId) &
-                  t.animalId.equals(animalId) &
-                  t.deletedAt.isNull(),
-            ))
+        await (db.select(db.pesasLeche)..where((t) {
+              final base = t.sesionId.equals(sesionId) & t.deletedAt.isNull();
+              return animalId != null
+                  ? base & t.animalId.equals(animalId)
+                  : base & t.identificadorManual.equals(identificadorManual!);
+            }))
             .getSingleOrNull();
     final ahora = DateTime.now();
 
@@ -130,6 +180,9 @@ class PesasRepository {
       )..where((t) => t.id.equals(existente.id))).write(
         PesasLecheCompanion(
           litros: Value(litros),
+          litrosManana: Value(litrosManana),
+          litrosTarde: Value(litrosTarde),
+          concentradoKg: Value(concentradoKg),
           updatedAt: Value(ahora),
           pendiente: const Value(true),
         ),
@@ -142,8 +195,12 @@ class PesasRepository {
           PesasLecheCompanion.insert(
             id: _uuid.v4(),
             sesionId: sesionId,
-            animalId: animalId,
+            animalId: Value(animalId),
+            identificadorManual: Value(identificadorManual),
             litros: litros,
+            litrosManana: Value(litrosManana),
+            litrosTarde: Value(litrosTarde),
+            concentradoKg: Value(concentradoKg),
             createdAt: ahora,
             updatedAt: ahora,
             pendiente: const Value(true),
@@ -170,6 +227,61 @@ class PesasRepository {
     return (db.select(db.pesasLeche)
           ..where((t) => t.sesionId.equals(sesionId) & t.deletedAt.isNull()))
         .watch();
+  }
+
+  /// Lo pesado en la sesión junto con la ficha de cada vaca. Las vacas
+  /// manuales vienen con `animal` en null: no tienen ficha ni días de
+  /// lactancia, y en la lista se marcan con asterisco.
+  Stream<List<PesaDeSesion>> observarDetalleSesion(String sesionId) {
+    final consulta =
+        db.select(db.pesasLeche).join([
+            leftOuterJoin(
+              db.animales,
+              db.animales.id.equalsExp(db.pesasLeche.animalId),
+            ),
+          ])
+          ..where(
+            db.pesasLeche.sesionId.equals(sesionId) &
+                db.pesasLeche.deletedAt.isNull(),
+          )
+          ..orderBy([OrderingTerm.desc(db.pesasLeche.createdAt)]);
+
+    return consulta.watch().map(
+      (filas) => [
+        for (final f in filas)
+          PesaDeSesion(
+            pesa: f.readTable(db.pesasLeche),
+            animal: f.readTableOrNull(db.animales),
+          ),
+      ],
+    );
+  }
+
+  /// Vacas del grupo En ordeño que todavía no se pesaron en esta sesión.
+  Future<List<AnimalRow>> faltantesDeSesion({
+    required String lecheriaId,
+    required String sesionId,
+  }) async {
+    final enOrdeno =
+        await (db.select(db.animales)..where(
+              (t) =>
+                  t.lecheriaId.equals(lecheriaId) &
+                  t.deletedAt.isNull() &
+                  t.estado.equals(EstadoAnimal.activo) &
+                  t.grupo.equals(GrupoAnimal.enOrdeno),
+            ))
+            .get();
+    final pesadas = await (db.select(
+      db.pesasLeche,
+    )..where((t) => t.sesionId.equals(sesionId) & t.deletedAt.isNull())).get();
+    final yaPesadas = {
+      for (final p in pesadas)
+        if (p.animalId != null) p.animalId!,
+    };
+    return [
+      for (final a in enOrdeno)
+        if (!yaPesadas.contains(a.id)) a,
+    ]..sort((a, b) => a.identificador.compareTo(b.identificador));
   }
 
   Future<ResumenSesion> resumenSesion(String sesionId) async {

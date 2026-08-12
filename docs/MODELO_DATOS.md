@@ -42,7 +42,7 @@ Ver también `lib/data/sync/sync_service.dart` para el mapeo exacto de columnas
 
 | Tabla | Columnas clave | Notas |
 |---|---|---|
-| `animales` | `id`, `lecheria_id`, `identificador` (único por lechería, activos), `sexo`, `grupo`, `estado`, `estado_reproductivo`, `origen`, `precio_compra`, `fecha_compra`, `madre_id`, `concentrado_kg_dia`, `fecha_probable_parto`, `retiro_leche_hasta` | `grupo` ∈ `en_ordeno, secas, novillas, terneros, en_tratamiento`. `retiro_leche_hasta` bloquea el ingreso de leche en Rentabilidad mientras esté vigente. |
+| `animales` | `id`, `lecheria_id`, `identificador` (único por lechería, activos), `sexo`, `grupo`, `estado`, `estado_reproductivo`, `origen`, `precio_compra`, `fecha_compra`, `madre_id`, `fecha_probable_parto`, `retiro_leche_hasta`, `fecha_ultimo_parto` | `grupo` ∈ `en_ordeno, secas, novillas, terneros, en_tratamiento`. `retiro_leche_hasta` anula el ingreso de esa vaca mientras esté vigente. `fecha_ultimo_parto` es la base de los días de lactancia (DLac) del reporte de producción: la fija el evento `parto` y se puede corregir a mano desde la hoja de vida, que es como se cargan las vacas que ya estaban en la finca. |
 | `eventos_animal` | `id`, `animal_id`, `lecheria_id`, `tipo`, `fecha`, + columnas específicas por tipo (`medicamento_id`/`dosis`/`dias_retiro`/`costo` para sanidad; `resultado` para palpación; `toro_pajilla` para servicio; `grupo_anterior`/`grupo_nuevo` para cambios de grupo/secado; `motivo_baja`/`precio_venta` para bajas; `sexo_cria`/`cria_animal_id` para partos) | Es la hoja de vida completa (Módulo 6): un registro append-only por evento. `tipo` ∈ `sanidad, celo, monta, inseminacion, palpacion, secado, parto, cambio_grupo, baja, concentrado`. |
 
 ## Pesa de leche (Módulo 3)
@@ -50,18 +50,49 @@ Ver también `lib/data/sync/sync_service.dart` para el mapeo exacto de columnas
 | Tabla | Columnas clave | Notas |
 |---|---|---|
 | `pesas_sesiones` | `id`, `lecheria_id`, `fecha`, `cerrada` | Una sesión por día (se reutiliza si ya hay una abierta). |
-| `pesas_leche` | `id`, `sesion_id`, `animal_id`, `litros` | Sin `lecheria_id` propio: la membresía se valida vía `pesas_sesiones.lecheria_id`. Un registro por animal por sesión (se corrige, no se duplica). |
+| `pesas_leche` | `id`, `sesion_id`, `animal_id`, `identificador_manual`, `litros`, `litros_manana`, `litros_tarde`, `concentrado_kg` | Sin `lecheria_id` propio: la membresía se valida vía `pesas_sesiones.lecheria_id`. Un registro por vaca por sesión (se corrige, no se duplica). `litros` es el total del día y lo calcula el cliente. Viene `animal_id` (vaca del inventario) **o** `identificador_manual` (vaca que se pesa sin ficha, sin días de lactancia), nunca los dos. Las filas anteriores a v2 no tienen desglose mañana/tarde y el reporte las marca como tales. |
 
-## Gastos y rentabilidad (Módulo 4 y 5)
+## Reporte de producción (Módulo 3)
 
 | Tabla | Columnas clave | Notas |
 |---|---|---|
-| `parametros_periodo` | `id`, `lecheria_id`, `anio`, `mes`, `precio_litro`, `precio_concentrado_kg`, `umbral_secado_litros` | Único por `(lecheria_id, anio, mes)`. |
-| `costos_fijos` | `id`, `lecheria_id`, `periodo_id`, `categoria`, `monto` | Se reparten entre las vacas activas del grupo `en_ordeno` (Módulo 5: `costoFijoDia = total / díasDelMes`, dividido entre la cantidad de vacas). |
+| `curva_referencia` | `id`, `lecheria_id`, `orden`, `dia_desde`, `dia_hasta`, `litros_esperados` | Siete tramos editables por lechería (pantalla `lib/ajustes/curva_screen.dart`): cuántos litros se esperan según los días de lactancia. Para una vaca concreta el esperado **no** es el escalón del tramo — se interpola entre el punto central de cada tramo (`(dia_desde + dia_hasta) / 2`; para el último, `dia_hasta` nulo, `dia_desde + 25`), para que la curva suba y baje suave. Valores iniciales: 18.8 / 26 / 24 / 21 / 18 / 14 / 10. `CurvaRepository.promediosRealesDelHato` calcula lo que el hato produce de verdad en cada tramo, sobre todas las pesas, para poder recalibrar tramo por tramo cuando haya suficientes observaciones (10 por defecto). |
+| `config_reporte` | `id`, `lecheria_id`, `pct_excelente`, `pct_bueno`, `pct_vigilar`, `pct_bajo`, `umbral_secado_litros` | Único por lechería. Umbrales de `producción ÷ esperado` para etiquetar cada vaca. |
 
-Rentabilidad (`lib/data/repositories/rentabilidad_repository.dart`) no
-persiste nada: se calcula en memoria a partir de la última pesa de cada vaca,
-`parametros_periodo` y la suma de `costos_fijos` del mes.
+## Finanzas semanales (Módulo 4 y 5)
+
+El período es la **semana** (lunes a domingo), no el mes. Los ingresos **no se
+calculan**: se digita la plata que efectivamente entró.
+
+| Tabla | Columnas clave | Notas |
+|---|---|---|
+| `semanas` | `id`, `lecheria_id`, `fecha_inicio`, `fecha_fin`, `cerrada` | Único por `(lecheria_id, fecha_inicio)`. `fecha_inicio` es el lunes. Columnas `date` en Postgres: el sync manda solo el día. |
+| `ingresos_semana` | `id`, `lecheria_id`, `semana_id`, `tipo`, `monto`, `litros`, `animal_id`, `detalle` | `tipo` ∈ `leche, venta_ganado, otro`. `litros` solo aplica a `leche`: `monto / litros` da el precio real por litro de la semana, que es lo que usa la rentabilidad por vaca. `animal_id` solo aplica a `venta_ganado`, para la hoja de vida del animal. |
+| `gastos_semana` | `id`, `lecheria_id`, `semana_id`, `categoria`, `monto`, `detalle` | Salario del peón, concentrado, medicamentos, cerca… |
+| `categorias_gasto` | `id`, `lecheria_id`, `nombre`, `orden` | Sugerencias para que meter un gasto sea tocar y no escribir. Único por `(lecheria_id, nombre)`. |
+
+Utilidad de la semana = `Σ ingresos_semana − Σ gastos_semana`. No se persiste:
+se calcula al abrir el módulo.
+
+### Empezar de cero
+
+`supabase/scripts/borrar_datos_finca.sql` vacía el contenido de la finca
+(animales, eventos, pesas, medicamentos, gastos) y **mantiene** la cuenta, el
+usuario, la lechería, la curva de referencia, los umbrales y las categorías de
+gasto. No cambia el esquema, por eso vive en `scripts/` y no en `migrations/`.
+
+⚠️ Antes de correrlo hay que **borrar los datos de la app en cada dispositivo**
+(Ajustes → Aplicaciones → LecheControl → Almacenamiento → Borrar datos). Si no,
+las filas locales marcadas `pendiente` se vuelven a subir en la siguiente
+sincronización y los datos reaparecen.
+
+### Tablas reemplazadas (se eliminan en la migración de limpieza)
+
+`parametros_periodo` y `costos_fijos` (período mensual, precio del litro
+digitado) quedan reemplazadas por `semanas` / `ingresos_semana` /
+`gastos_semana`. `config_alertas` desaparece junto con el módulo de Alertas.
+Siguen en el esquema hasta que la app deje de leerlas — ver
+`supabase/migrations/20260810120100_v2_limpieza.sql`.
 
 ## Sanidad (Módulo 7)
 

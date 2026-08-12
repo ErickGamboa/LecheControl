@@ -2539,18 +2539,6 @@ class $AnimalesTable extends Animales
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _concentradoKgDiaMeta = const VerificationMeta(
-    'concentradoKgDia',
-  );
-  @override
-  late final GeneratedColumn<double> concentradoKgDia = GeneratedColumn<double>(
-    'concentrado_kg_dia',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
   static const VerificationMeta _fechaProbablePartoMeta =
       const VerificationMeta('fechaProbableParto');
   @override
@@ -2569,6 +2557,18 @@ class $AnimalesTable extends Animales
   late final GeneratedColumn<DateTime> retiroLecheHasta =
       GeneratedColumn<DateTime>(
         'retiro_leche_hasta',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _fechaUltimoPartoMeta = const VerificationMeta(
+    'fechaUltimoParto',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fechaUltimoParto =
+      GeneratedColumn<DateTime>(
+        'fecha_ultimo_parto',
         aliasedName,
         true,
         type: DriftSqlType.dateTime,
@@ -2635,9 +2635,9 @@ class $AnimalesTable extends Animales
     precioCompra,
     fechaCompra,
     madreId,
-    concentradoKgDia,
     fechaProbableParto,
     retiroLecheHasta,
+    fechaUltimoParto,
     createdAt,
     updatedAt,
     deletedAt,
@@ -2742,15 +2742,6 @@ class $AnimalesTable extends Animales
         madreId.isAcceptableOrUnknown(data['madre_id']!, _madreIdMeta),
       );
     }
-    if (data.containsKey('concentrado_kg_dia')) {
-      context.handle(
-        _concentradoKgDiaMeta,
-        concentradoKgDia.isAcceptableOrUnknown(
-          data['concentrado_kg_dia']!,
-          _concentradoKgDiaMeta,
-        ),
-      );
-    }
     if (data.containsKey('fecha_probable_parto')) {
       context.handle(
         _fechaProbablePartoMeta,
@@ -2766,6 +2757,15 @@ class $AnimalesTable extends Animales
         retiroLecheHasta.isAcceptableOrUnknown(
           data['retiro_leche_hasta']!,
           _retiroLecheHastaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fecha_ultimo_parto')) {
+      context.handle(
+        _fechaUltimoPartoMeta,
+        fechaUltimoParto.isAcceptableOrUnknown(
+          data['fecha_ultimo_parto']!,
+          _fechaUltimoPartoMeta,
         ),
       );
     }
@@ -2850,10 +2850,6 @@ class $AnimalesTable extends Animales
         DriftSqlType.string,
         data['${effectivePrefix}madre_id'],
       ),
-      concentradoKgDia: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}concentrado_kg_dia'],
-      )!,
       fechaProbableParto: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}fecha_probable_parto'],
@@ -2861,6 +2857,10 @@ class $AnimalesTable extends Animales
       retiroLecheHasta: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}retiro_leche_hasta'],
+      ),
+      fechaUltimoParto: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha_ultimo_parto'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -2899,9 +2899,13 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
   final double? precioCompra;
   final DateTime? fechaCompra;
   final String? madreId;
-  final double concentradoKgDia;
   final DateTime? fechaProbableParto;
   final DateTime? retiroLecheHasta;
+
+  /// Base para los días de lactancia (DLac) del reporte de producción. La fija
+  /// el evento de parto; es editable a mano para cargar de una vez las vacas
+  /// que ya estaban en la finca antes de usar la app.
+  final DateTime? fechaUltimoParto;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -2918,9 +2922,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     this.precioCompra,
     this.fechaCompra,
     this.madreId,
-    required this.concentradoKgDia,
     this.fechaProbableParto,
     this.retiroLecheHasta,
+    this.fechaUltimoParto,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -2946,12 +2950,14 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     if (!nullToAbsent || madreId != null) {
       map['madre_id'] = Variable<String>(madreId);
     }
-    map['concentrado_kg_dia'] = Variable<double>(concentradoKgDia);
     if (!nullToAbsent || fechaProbableParto != null) {
       map['fecha_probable_parto'] = Variable<DateTime>(fechaProbableParto);
     }
     if (!nullToAbsent || retiroLecheHasta != null) {
       map['retiro_leche_hasta'] = Variable<DateTime>(retiroLecheHasta);
+    }
+    if (!nullToAbsent || fechaUltimoParto != null) {
+      map['fecha_ultimo_parto'] = Variable<DateTime>(fechaUltimoParto);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -2981,13 +2987,15 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       madreId: madreId == null && nullToAbsent
           ? const Value.absent()
           : Value(madreId),
-      concentradoKgDia: Value(concentradoKgDia),
       fechaProbableParto: fechaProbableParto == null && nullToAbsent
           ? const Value.absent()
           : Value(fechaProbableParto),
       retiroLecheHasta: retiroLecheHasta == null && nullToAbsent
           ? const Value.absent()
           : Value(retiroLecheHasta),
+      fechaUltimoParto: fechaUltimoParto == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fechaUltimoParto),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -3016,12 +3024,14 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       precioCompra: serializer.fromJson<double?>(json['precioCompra']),
       fechaCompra: serializer.fromJson<DateTime?>(json['fechaCompra']),
       madreId: serializer.fromJson<String?>(json['madreId']),
-      concentradoKgDia: serializer.fromJson<double>(json['concentradoKgDia']),
       fechaProbableParto: serializer.fromJson<DateTime?>(
         json['fechaProbableParto'],
       ),
       retiroLecheHasta: serializer.fromJson<DateTime?>(
         json['retiroLecheHasta'],
+      ),
+      fechaUltimoParto: serializer.fromJson<DateTime?>(
+        json['fechaUltimoParto'],
       ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -3044,9 +3054,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       'precioCompra': serializer.toJson<double?>(precioCompra),
       'fechaCompra': serializer.toJson<DateTime?>(fechaCompra),
       'madreId': serializer.toJson<String?>(madreId),
-      'concentradoKgDia': serializer.toJson<double>(concentradoKgDia),
       'fechaProbableParto': serializer.toJson<DateTime?>(fechaProbableParto),
       'retiroLecheHasta': serializer.toJson<DateTime?>(retiroLecheHasta),
+      'fechaUltimoParto': serializer.toJson<DateTime?>(fechaUltimoParto),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -3066,9 +3076,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     Value<double?> precioCompra = const Value.absent(),
     Value<DateTime?> fechaCompra = const Value.absent(),
     Value<String?> madreId = const Value.absent(),
-    double? concentradoKgDia,
     Value<DateTime?> fechaProbableParto = const Value.absent(),
     Value<DateTime?> retiroLecheHasta = const Value.absent(),
+    Value<DateTime?> fechaUltimoParto = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -3085,13 +3095,15 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     precioCompra: precioCompra.present ? precioCompra.value : this.precioCompra,
     fechaCompra: fechaCompra.present ? fechaCompra.value : this.fechaCompra,
     madreId: madreId.present ? madreId.value : this.madreId,
-    concentradoKgDia: concentradoKgDia ?? this.concentradoKgDia,
     fechaProbableParto: fechaProbableParto.present
         ? fechaProbableParto.value
         : this.fechaProbableParto,
     retiroLecheHasta: retiroLecheHasta.present
         ? retiroLecheHasta.value
         : this.retiroLecheHasta,
+    fechaUltimoParto: fechaUltimoParto.present
+        ? fechaUltimoParto.value
+        : this.fechaUltimoParto,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -3120,15 +3132,15 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           ? data.fechaCompra.value
           : this.fechaCompra,
       madreId: data.madreId.present ? data.madreId.value : this.madreId,
-      concentradoKgDia: data.concentradoKgDia.present
-          ? data.concentradoKgDia.value
-          : this.concentradoKgDia,
       fechaProbableParto: data.fechaProbableParto.present
           ? data.fechaProbableParto.value
           : this.fechaProbableParto,
       retiroLecheHasta: data.retiroLecheHasta.present
           ? data.retiroLecheHasta.value
           : this.retiroLecheHasta,
+      fechaUltimoParto: data.fechaUltimoParto.present
+          ? data.fechaUltimoParto.value
+          : this.fechaUltimoParto,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -3150,9 +3162,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           ..write('precioCompra: $precioCompra, ')
           ..write('fechaCompra: $fechaCompra, ')
           ..write('madreId: $madreId, ')
-          ..write('concentradoKgDia: $concentradoKgDia, ')
           ..write('fechaProbableParto: $fechaProbableParto, ')
           ..write('retiroLecheHasta: $retiroLecheHasta, ')
+          ..write('fechaUltimoParto: $fechaUltimoParto, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -3174,9 +3186,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     precioCompra,
     fechaCompra,
     madreId,
-    concentradoKgDia,
     fechaProbableParto,
     retiroLecheHasta,
+    fechaUltimoParto,
     createdAt,
     updatedAt,
     deletedAt,
@@ -3197,9 +3209,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           other.precioCompra == this.precioCompra &&
           other.fechaCompra == this.fechaCompra &&
           other.madreId == this.madreId &&
-          other.concentradoKgDia == this.concentradoKgDia &&
           other.fechaProbableParto == this.fechaProbableParto &&
           other.retiroLecheHasta == this.retiroLecheHasta &&
+          other.fechaUltimoParto == this.fechaUltimoParto &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -3218,9 +3230,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
   final Value<double?> precioCompra;
   final Value<DateTime?> fechaCompra;
   final Value<String?> madreId;
-  final Value<double> concentradoKgDia;
   final Value<DateTime?> fechaProbableParto;
   final Value<DateTime?> retiroLecheHasta;
+  final Value<DateTime?> fechaUltimoParto;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -3238,9 +3250,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     this.precioCompra = const Value.absent(),
     this.fechaCompra = const Value.absent(),
     this.madreId = const Value.absent(),
-    this.concentradoKgDia = const Value.absent(),
     this.fechaProbableParto = const Value.absent(),
     this.retiroLecheHasta = const Value.absent(),
+    this.fechaUltimoParto = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -3259,9 +3271,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     this.precioCompra = const Value.absent(),
     this.fechaCompra = const Value.absent(),
     this.madreId = const Value.absent(),
-    this.concentradoKgDia = const Value.absent(),
     this.fechaProbableParto = const Value.absent(),
     this.retiroLecheHasta = const Value.absent(),
+    this.fechaUltimoParto = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -3287,9 +3299,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Expression<double>? precioCompra,
     Expression<DateTime>? fechaCompra,
     Expression<String>? madreId,
-    Expression<double>? concentradoKgDia,
     Expression<DateTime>? fechaProbableParto,
     Expression<DateTime>? retiroLecheHasta,
+    Expression<DateTime>? fechaUltimoParto,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -3308,10 +3320,10 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       if (precioCompra != null) 'precio_compra': precioCompra,
       if (fechaCompra != null) 'fecha_compra': fechaCompra,
       if (madreId != null) 'madre_id': madreId,
-      if (concentradoKgDia != null) 'concentrado_kg_dia': concentradoKgDia,
       if (fechaProbableParto != null)
         'fecha_probable_parto': fechaProbableParto,
       if (retiroLecheHasta != null) 'retiro_leche_hasta': retiroLecheHasta,
+      if (fechaUltimoParto != null) 'fecha_ultimo_parto': fechaUltimoParto,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -3332,9 +3344,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Value<double?>? precioCompra,
     Value<DateTime?>? fechaCompra,
     Value<String?>? madreId,
-    Value<double>? concentradoKgDia,
     Value<DateTime?>? fechaProbableParto,
     Value<DateTime?>? retiroLecheHasta,
+    Value<DateTime?>? fechaUltimoParto,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -3353,9 +3365,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       precioCompra: precioCompra ?? this.precioCompra,
       fechaCompra: fechaCompra ?? this.fechaCompra,
       madreId: madreId ?? this.madreId,
-      concentradoKgDia: concentradoKgDia ?? this.concentradoKgDia,
       fechaProbableParto: fechaProbableParto ?? this.fechaProbableParto,
       retiroLecheHasta: retiroLecheHasta ?? this.retiroLecheHasta,
+      fechaUltimoParto: fechaUltimoParto ?? this.fechaUltimoParto,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -3400,9 +3412,6 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     if (madreId.present) {
       map['madre_id'] = Variable<String>(madreId.value);
     }
-    if (concentradoKgDia.present) {
-      map['concentrado_kg_dia'] = Variable<double>(concentradoKgDia.value);
-    }
     if (fechaProbableParto.present) {
       map['fecha_probable_parto'] = Variable<DateTime>(
         fechaProbableParto.value,
@@ -3410,6 +3419,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     }
     if (retiroLecheHasta.present) {
       map['retiro_leche_hasta'] = Variable<DateTime>(retiroLecheHasta.value);
+    }
+    if (fechaUltimoParto.present) {
+      map['fecha_ultimo_parto'] = Variable<DateTime>(fechaUltimoParto.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -3443,9 +3455,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
           ..write('precioCompra: $precioCompra, ')
           ..write('fechaCompra: $fechaCompra, ')
           ..write('madreId: $madreId, ')
-          ..write('concentradoKgDia: $concentradoKgDia, ')
           ..write('fechaProbableParto: $fechaProbableParto, ')
           ..write('retiroLecheHasta: $retiroLecheHasta, ')
+          ..write('fechaUltimoParto: $fechaUltimoParto, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -5288,14 +5300,774 @@ class $PesasLecheTable extends PesasLeche
   late final GeneratedColumn<String> animalId = GeneratedColumn<String>(
     'animal_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
+  static const VerificationMeta _identificadorManualMeta =
+      const VerificationMeta('identificadorManual');
+  @override
+  late final GeneratedColumn<String> identificadorManual =
+      GeneratedColumn<String>(
+        'identificador_manual',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _litrosMeta = const VerificationMeta('litros');
   @override
   late final GeneratedColumn<double> litros = GeneratedColumn<double>(
     'litros',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _litrosMananaMeta = const VerificationMeta(
+    'litrosManana',
+  );
+  @override
+  late final GeneratedColumn<double> litrosManana = GeneratedColumn<double>(
+    'litros_manana',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _litrosTardeMeta = const VerificationMeta(
+    'litrosTarde',
+  );
+  @override
+  late final GeneratedColumn<double> litrosTarde = GeneratedColumn<double>(
+    'litros_tarde',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _concentradoKgMeta = const VerificationMeta(
+    'concentradoKg',
+  );
+  @override
+  late final GeneratedColumn<double> concentradoKg = GeneratedColumn<double>(
+    'concentrado_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sesionId,
+    animalId,
+    identificadorManual,
+    litros,
+    litrosManana,
+    litrosTarde,
+    concentradoKg,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pesas_leche';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PesaLecheRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('sesion_id')) {
+      context.handle(
+        _sesionIdMeta,
+        sesionId.isAcceptableOrUnknown(data['sesion_id']!, _sesionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sesionIdMeta);
+    }
+    if (data.containsKey('animal_id')) {
+      context.handle(
+        _animalIdMeta,
+        animalId.isAcceptableOrUnknown(data['animal_id']!, _animalIdMeta),
+      );
+    }
+    if (data.containsKey('identificador_manual')) {
+      context.handle(
+        _identificadorManualMeta,
+        identificadorManual.isAcceptableOrUnknown(
+          data['identificador_manual']!,
+          _identificadorManualMeta,
+        ),
+      );
+    }
+    if (data.containsKey('litros')) {
+      context.handle(
+        _litrosMeta,
+        litros.isAcceptableOrUnknown(data['litros']!, _litrosMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_litrosMeta);
+    }
+    if (data.containsKey('litros_manana')) {
+      context.handle(
+        _litrosMananaMeta,
+        litrosManana.isAcceptableOrUnknown(
+          data['litros_manana']!,
+          _litrosMananaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('litros_tarde')) {
+      context.handle(
+        _litrosTardeMeta,
+        litrosTarde.isAcceptableOrUnknown(
+          data['litros_tarde']!,
+          _litrosTardeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('concentrado_kg')) {
+      context.handle(
+        _concentradoKgMeta,
+        concentradoKg.isAcceptableOrUnknown(
+          data['concentrado_kg']!,
+          _concentradoKgMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PesaLecheRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PesaLecheRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      sesionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sesion_id'],
+      )!,
+      animalId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}animal_id'],
+      ),
+      identificadorManual: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}identificador_manual'],
+      ),
+      litros: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}litros'],
+      )!,
+      litrosManana: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}litros_manana'],
+      ),
+      litrosTarde: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}litros_tarde'],
+      ),
+      concentradoKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}concentrado_kg'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $PesasLecheTable createAlias(String alias) {
+    return $PesasLecheTable(attachedDatabase, alias);
+  }
+}
+
+class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
+  final String id;
+  final String sesionId;
+  final String? animalId;
+  final String? identificadorManual;
+
+  /// Total del día = mañana + tarde. Lo calcula el repositorio al guardar.
+  final double litros;
+  final double? litrosManana;
+  final double? litrosTarde;
+  final double? concentradoKg;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const PesaLecheRow({
+    required this.id,
+    required this.sesionId,
+    this.animalId,
+    this.identificadorManual,
+    required this.litros,
+    this.litrosManana,
+    this.litrosTarde,
+    this.concentradoKg,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['sesion_id'] = Variable<String>(sesionId);
+    if (!nullToAbsent || animalId != null) {
+      map['animal_id'] = Variable<String>(animalId);
+    }
+    if (!nullToAbsent || identificadorManual != null) {
+      map['identificador_manual'] = Variable<String>(identificadorManual);
+    }
+    map['litros'] = Variable<double>(litros);
+    if (!nullToAbsent || litrosManana != null) {
+      map['litros_manana'] = Variable<double>(litrosManana);
+    }
+    if (!nullToAbsent || litrosTarde != null) {
+      map['litros_tarde'] = Variable<double>(litrosTarde);
+    }
+    if (!nullToAbsent || concentradoKg != null) {
+      map['concentrado_kg'] = Variable<double>(concentradoKg);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  PesasLecheCompanion toCompanion(bool nullToAbsent) {
+    return PesasLecheCompanion(
+      id: Value(id),
+      sesionId: Value(sesionId),
+      animalId: animalId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(animalId),
+      identificadorManual: identificadorManual == null && nullToAbsent
+          ? const Value.absent()
+          : Value(identificadorManual),
+      litros: Value(litros),
+      litrosManana: litrosManana == null && nullToAbsent
+          ? const Value.absent()
+          : Value(litrosManana),
+      litrosTarde: litrosTarde == null && nullToAbsent
+          ? const Value.absent()
+          : Value(litrosTarde),
+      concentradoKg: concentradoKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(concentradoKg),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory PesaLecheRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PesaLecheRow(
+      id: serializer.fromJson<String>(json['id']),
+      sesionId: serializer.fromJson<String>(json['sesionId']),
+      animalId: serializer.fromJson<String?>(json['animalId']),
+      identificadorManual: serializer.fromJson<String?>(
+        json['identificadorManual'],
+      ),
+      litros: serializer.fromJson<double>(json['litros']),
+      litrosManana: serializer.fromJson<double?>(json['litrosManana']),
+      litrosTarde: serializer.fromJson<double?>(json['litrosTarde']),
+      concentradoKg: serializer.fromJson<double?>(json['concentradoKg']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'sesionId': serializer.toJson<String>(sesionId),
+      'animalId': serializer.toJson<String?>(animalId),
+      'identificadorManual': serializer.toJson<String?>(identificadorManual),
+      'litros': serializer.toJson<double>(litros),
+      'litrosManana': serializer.toJson<double?>(litrosManana),
+      'litrosTarde': serializer.toJson<double?>(litrosTarde),
+      'concentradoKg': serializer.toJson<double?>(concentradoKg),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  PesaLecheRow copyWith({
+    String? id,
+    String? sesionId,
+    Value<String?> animalId = const Value.absent(),
+    Value<String?> identificadorManual = const Value.absent(),
+    double? litros,
+    Value<double?> litrosManana = const Value.absent(),
+    Value<double?> litrosTarde = const Value.absent(),
+    Value<double?> concentradoKg = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => PesaLecheRow(
+    id: id ?? this.id,
+    sesionId: sesionId ?? this.sesionId,
+    animalId: animalId.present ? animalId.value : this.animalId,
+    identificadorManual: identificadorManual.present
+        ? identificadorManual.value
+        : this.identificadorManual,
+    litros: litros ?? this.litros,
+    litrosManana: litrosManana.present ? litrosManana.value : this.litrosManana,
+    litrosTarde: litrosTarde.present ? litrosTarde.value : this.litrosTarde,
+    concentradoKg: concentradoKg.present
+        ? concentradoKg.value
+        : this.concentradoKg,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  PesaLecheRow copyWithCompanion(PesasLecheCompanion data) {
+    return PesaLecheRow(
+      id: data.id.present ? data.id.value : this.id,
+      sesionId: data.sesionId.present ? data.sesionId.value : this.sesionId,
+      animalId: data.animalId.present ? data.animalId.value : this.animalId,
+      identificadorManual: data.identificadorManual.present
+          ? data.identificadorManual.value
+          : this.identificadorManual,
+      litros: data.litros.present ? data.litros.value : this.litros,
+      litrosManana: data.litrosManana.present
+          ? data.litrosManana.value
+          : this.litrosManana,
+      litrosTarde: data.litrosTarde.present
+          ? data.litrosTarde.value
+          : this.litrosTarde,
+      concentradoKg: data.concentradoKg.present
+          ? data.concentradoKg.value
+          : this.concentradoKg,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PesaLecheRow(')
+          ..write('id: $id, ')
+          ..write('sesionId: $sesionId, ')
+          ..write('animalId: $animalId, ')
+          ..write('identificadorManual: $identificadorManual, ')
+          ..write('litros: $litros, ')
+          ..write('litrosManana: $litrosManana, ')
+          ..write('litrosTarde: $litrosTarde, ')
+          ..write('concentradoKg: $concentradoKg, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sesionId,
+    animalId,
+    identificadorManual,
+    litros,
+    litrosManana,
+    litrosTarde,
+    concentradoKg,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PesaLecheRow &&
+          other.id == this.id &&
+          other.sesionId == this.sesionId &&
+          other.animalId == this.animalId &&
+          other.identificadorManual == this.identificadorManual &&
+          other.litros == this.litros &&
+          other.litrosManana == this.litrosManana &&
+          other.litrosTarde == this.litrosTarde &&
+          other.concentradoKg == this.concentradoKg &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class PesasLecheCompanion extends UpdateCompanion<PesaLecheRow> {
+  final Value<String> id;
+  final Value<String> sesionId;
+  final Value<String?> animalId;
+  final Value<String?> identificadorManual;
+  final Value<double> litros;
+  final Value<double?> litrosManana;
+  final Value<double?> litrosTarde;
+  final Value<double?> concentradoKg;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const PesasLecheCompanion({
+    this.id = const Value.absent(),
+    this.sesionId = const Value.absent(),
+    this.animalId = const Value.absent(),
+    this.identificadorManual = const Value.absent(),
+    this.litros = const Value.absent(),
+    this.litrosManana = const Value.absent(),
+    this.litrosTarde = const Value.absent(),
+    this.concentradoKg = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PesasLecheCompanion.insert({
+    required String id,
+    required String sesionId,
+    this.animalId = const Value.absent(),
+    this.identificadorManual = const Value.absent(),
+    required double litros,
+    this.litrosManana = const Value.absent(),
+    this.litrosTarde = const Value.absent(),
+    this.concentradoKg = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       sesionId = Value(sesionId),
+       litros = Value(litros),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<PesaLecheRow> custom({
+    Expression<String>? id,
+    Expression<String>? sesionId,
+    Expression<String>? animalId,
+    Expression<String>? identificadorManual,
+    Expression<double>? litros,
+    Expression<double>? litrosManana,
+    Expression<double>? litrosTarde,
+    Expression<double>? concentradoKg,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sesionId != null) 'sesion_id': sesionId,
+      if (animalId != null) 'animal_id': animalId,
+      if (identificadorManual != null)
+        'identificador_manual': identificadorManual,
+      if (litros != null) 'litros': litros,
+      if (litrosManana != null) 'litros_manana': litrosManana,
+      if (litrosTarde != null) 'litros_tarde': litrosTarde,
+      if (concentradoKg != null) 'concentrado_kg': concentradoKg,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PesasLecheCompanion copyWith({
+    Value<String>? id,
+    Value<String>? sesionId,
+    Value<String?>? animalId,
+    Value<String?>? identificadorManual,
+    Value<double>? litros,
+    Value<double?>? litrosManana,
+    Value<double?>? litrosTarde,
+    Value<double?>? concentradoKg,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return PesasLecheCompanion(
+      id: id ?? this.id,
+      sesionId: sesionId ?? this.sesionId,
+      animalId: animalId ?? this.animalId,
+      identificadorManual: identificadorManual ?? this.identificadorManual,
+      litros: litros ?? this.litros,
+      litrosManana: litrosManana ?? this.litrosManana,
+      litrosTarde: litrosTarde ?? this.litrosTarde,
+      concentradoKg: concentradoKg ?? this.concentradoKg,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (sesionId.present) {
+      map['sesion_id'] = Variable<String>(sesionId.value);
+    }
+    if (animalId.present) {
+      map['animal_id'] = Variable<String>(animalId.value);
+    }
+    if (identificadorManual.present) {
+      map['identificador_manual'] = Variable<String>(identificadorManual.value);
+    }
+    if (litros.present) {
+      map['litros'] = Variable<double>(litros.value);
+    }
+    if (litrosManana.present) {
+      map['litros_manana'] = Variable<double>(litrosManana.value);
+    }
+    if (litrosTarde.present) {
+      map['litros_tarde'] = Variable<double>(litrosTarde.value);
+    }
+    if (concentradoKg.present) {
+      map['concentrado_kg'] = Variable<double>(concentradoKg.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PesasLecheCompanion(')
+          ..write('id: $id, ')
+          ..write('sesionId: $sesionId, ')
+          ..write('animalId: $animalId, ')
+          ..write('identificadorManual: $identificadorManual, ')
+          ..write('litros: $litros, ')
+          ..write('litrosManana: $litrosManana, ')
+          ..write('litrosTarde: $litrosTarde, ')
+          ..write('concentradoKg: $concentradoKg, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CurvaReferenciaTable extends CurvaReferencia
+    with TableInfo<$CurvaReferenciaTable, CurvaReferenciaRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CurvaReferenciaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lecheriaIdMeta = const VerificationMeta(
+    'lecheriaId',
+  );
+  @override
+  late final GeneratedColumn<String> lecheriaId = GeneratedColumn<String>(
+    'lecheria_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ordenMeta = const VerificationMeta('orden');
+  @override
+  late final GeneratedColumn<int> orden = GeneratedColumn<int>(
+    'orden',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _diaDesdeMeta = const VerificationMeta(
+    'diaDesde',
+  );
+  @override
+  late final GeneratedColumn<int> diaDesde = GeneratedColumn<int>(
+    'dia_desde',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _diaHastaMeta = const VerificationMeta(
+    'diaHasta',
+  );
+  @override
+  late final GeneratedColumn<int> diaHasta = GeneratedColumn<int>(
+    'dia_hasta',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _litrosEsperadosMeta = const VerificationMeta(
+    'litrosEsperados',
+  );
+  @override
+  late final GeneratedColumn<double> litrosEsperados = GeneratedColumn<double>(
+    'litros_esperados',
     aliasedName,
     false,
     type: DriftSqlType.double,
@@ -5352,9 +6124,11 @@ class $PesasLecheTable extends PesasLeche
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    sesionId,
-    animalId,
-    litros,
+    lecheriaId,
+    orden,
+    diaDesde,
+    diaHasta,
+    litrosEsperados,
     createdAt,
     updatedAt,
     deletedAt,
@@ -5364,10 +6138,10 @@ class $PesasLecheTable extends PesasLeche
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'pesas_leche';
+  static const String $name = 'curva_referencia';
   @override
   VerificationContext validateIntegrity(
-    Insertable<PesaLecheRow> instance, {
+    Insertable<CurvaReferenciaRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -5377,29 +6151,46 @@ class $PesasLecheTable extends PesasLeche
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('sesion_id')) {
+    if (data.containsKey('lecheria_id')) {
       context.handle(
-        _sesionIdMeta,
-        sesionId.isAcceptableOrUnknown(data['sesion_id']!, _sesionIdMeta),
+        _lecheriaIdMeta,
+        lecheriaId.isAcceptableOrUnknown(data['lecheria_id']!, _lecheriaIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_sesionIdMeta);
+      context.missing(_lecheriaIdMeta);
     }
-    if (data.containsKey('animal_id')) {
+    if (data.containsKey('orden')) {
       context.handle(
-        _animalIdMeta,
-        animalId.isAcceptableOrUnknown(data['animal_id']!, _animalIdMeta),
+        _ordenMeta,
+        orden.isAcceptableOrUnknown(data['orden']!, _ordenMeta),
       );
     } else if (isInserting) {
-      context.missing(_animalIdMeta);
+      context.missing(_ordenMeta);
     }
-    if (data.containsKey('litros')) {
+    if (data.containsKey('dia_desde')) {
       context.handle(
-        _litrosMeta,
-        litros.isAcceptableOrUnknown(data['litros']!, _litrosMeta),
+        _diaDesdeMeta,
+        diaDesde.isAcceptableOrUnknown(data['dia_desde']!, _diaDesdeMeta),
       );
     } else if (isInserting) {
-      context.missing(_litrosMeta);
+      context.missing(_diaDesdeMeta);
+    }
+    if (data.containsKey('dia_hasta')) {
+      context.handle(
+        _diaHastaMeta,
+        diaHasta.isAcceptableOrUnknown(data['dia_hasta']!, _diaHastaMeta),
+      );
+    }
+    if (data.containsKey('litros_esperados')) {
+      context.handle(
+        _litrosEsperadosMeta,
+        litrosEsperados.isAcceptableOrUnknown(
+          data['litros_esperados']!,
+          _litrosEsperadosMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_litrosEsperadosMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -5435,24 +6226,32 @@ class $PesasLecheTable extends PesasLeche
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  PesaLecheRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CurvaReferenciaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return PesaLecheRow(
+    return CurvaReferenciaRow(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      sesionId: attachedDatabase.typeMapping.read(
+      lecheriaId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}sesion_id'],
+        data['${effectivePrefix}lecheria_id'],
       )!,
-      animalId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}animal_id'],
+      orden: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}orden'],
       )!,
-      litros: attachedDatabase.typeMapping.read(
+      diaDesde: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dia_desde'],
+      )!,
+      diaHasta: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dia_hasta'],
+      ),
+      litrosEsperados: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
-        data['${effectivePrefix}litros'],
+        data['${effectivePrefix}litros_esperados'],
       )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -5474,25 +6273,30 @@ class $PesasLecheTable extends PesasLeche
   }
 
   @override
-  $PesasLecheTable createAlias(String alias) {
-    return $PesasLecheTable(attachedDatabase, alias);
+  $CurvaReferenciaTable createAlias(String alias) {
+    return $CurvaReferenciaTable(attachedDatabase, alias);
   }
 }
 
-class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
+class CurvaReferenciaRow extends DataClass
+    implements Insertable<CurvaReferenciaRow> {
   final String id;
-  final String sesionId;
-  final String animalId;
-  final double litros;
+  final String lecheriaId;
+  final int orden;
+  final int diaDesde;
+  final int? diaHasta;
+  final double litrosEsperados;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
   final bool pendiente;
-  const PesaLecheRow({
+  const CurvaReferenciaRow({
     required this.id,
-    required this.sesionId,
-    required this.animalId,
-    required this.litros,
+    required this.lecheriaId,
+    required this.orden,
+    required this.diaDesde,
+    this.diaHasta,
+    required this.litrosEsperados,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -5502,9 +6306,13 @@ class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['sesion_id'] = Variable<String>(sesionId);
-    map['animal_id'] = Variable<String>(animalId);
-    map['litros'] = Variable<double>(litros);
+    map['lecheria_id'] = Variable<String>(lecheriaId);
+    map['orden'] = Variable<int>(orden);
+    map['dia_desde'] = Variable<int>(diaDesde);
+    if (!nullToAbsent || diaHasta != null) {
+      map['dia_hasta'] = Variable<int>(diaHasta);
+    }
+    map['litros_esperados'] = Variable<double>(litrosEsperados);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -5514,12 +6322,16 @@ class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
     return map;
   }
 
-  PesasLecheCompanion toCompanion(bool nullToAbsent) {
-    return PesasLecheCompanion(
+  CurvaReferenciaCompanion toCompanion(bool nullToAbsent) {
+    return CurvaReferenciaCompanion(
       id: Value(id),
-      sesionId: Value(sesionId),
-      animalId: Value(animalId),
-      litros: Value(litros),
+      lecheriaId: Value(lecheriaId),
+      orden: Value(orden),
+      diaDesde: Value(diaDesde),
+      diaHasta: diaHasta == null && nullToAbsent
+          ? const Value.absent()
+          : Value(diaHasta),
+      litrosEsperados: Value(litrosEsperados),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -5529,16 +6341,18 @@ class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
     );
   }
 
-  factory PesaLecheRow.fromJson(
+  factory CurvaReferenciaRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return PesaLecheRow(
+    return CurvaReferenciaRow(
       id: serializer.fromJson<String>(json['id']),
-      sesionId: serializer.fromJson<String>(json['sesionId']),
-      animalId: serializer.fromJson<String>(json['animalId']),
-      litros: serializer.fromJson<double>(json['litros']),
+      lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
+      orden: serializer.fromJson<int>(json['orden']),
+      diaDesde: serializer.fromJson<int>(json['diaDesde']),
+      diaHasta: serializer.fromJson<int?>(json['diaHasta']),
+      litrosEsperados: serializer.fromJson<double>(json['litrosEsperados']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -5550,9 +6364,11 @@ class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'sesionId': serializer.toJson<String>(sesionId),
-      'animalId': serializer.toJson<String>(animalId),
-      'litros': serializer.toJson<double>(litros),
+      'lecheriaId': serializer.toJson<String>(lecheriaId),
+      'orden': serializer.toJson<int>(orden),
+      'diaDesde': serializer.toJson<int>(diaDesde),
+      'diaHasta': serializer.toJson<int?>(diaHasta),
+      'litrosEsperados': serializer.toJson<double>(litrosEsperados),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -5560,31 +6376,41 @@ class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
     };
   }
 
-  PesaLecheRow copyWith({
+  CurvaReferenciaRow copyWith({
     String? id,
-    String? sesionId,
-    String? animalId,
-    double? litros,
+    String? lecheriaId,
+    int? orden,
+    int? diaDesde,
+    Value<int?> diaHasta = const Value.absent(),
+    double? litrosEsperados,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
     bool? pendiente,
-  }) => PesaLecheRow(
+  }) => CurvaReferenciaRow(
     id: id ?? this.id,
-    sesionId: sesionId ?? this.sesionId,
-    animalId: animalId ?? this.animalId,
-    litros: litros ?? this.litros,
+    lecheriaId: lecheriaId ?? this.lecheriaId,
+    orden: orden ?? this.orden,
+    diaDesde: diaDesde ?? this.diaDesde,
+    diaHasta: diaHasta.present ? diaHasta.value : this.diaHasta,
+    litrosEsperados: litrosEsperados ?? this.litrosEsperados,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     pendiente: pendiente ?? this.pendiente,
   );
-  PesaLecheRow copyWithCompanion(PesasLecheCompanion data) {
-    return PesaLecheRow(
+  CurvaReferenciaRow copyWithCompanion(CurvaReferenciaCompanion data) {
+    return CurvaReferenciaRow(
       id: data.id.present ? data.id.value : this.id,
-      sesionId: data.sesionId.present ? data.sesionId.value : this.sesionId,
-      animalId: data.animalId.present ? data.animalId.value : this.animalId,
-      litros: data.litros.present ? data.litros.value : this.litros,
+      lecheriaId: data.lecheriaId.present
+          ? data.lecheriaId.value
+          : this.lecheriaId,
+      orden: data.orden.present ? data.orden.value : this.orden,
+      diaDesde: data.diaDesde.present ? data.diaDesde.value : this.diaDesde,
+      diaHasta: data.diaHasta.present ? data.diaHasta.value : this.diaHasta,
+      litrosEsperados: data.litrosEsperados.present
+          ? data.litrosEsperados.value
+          : this.litrosEsperados,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -5594,11 +6420,13 @@ class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
 
   @override
   String toString() {
-    return (StringBuffer('PesaLecheRow(')
+    return (StringBuffer('CurvaReferenciaRow(')
           ..write('id: $id, ')
-          ..write('sesionId: $sesionId, ')
-          ..write('animalId: $animalId, ')
-          ..write('litros: $litros, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('orden: $orden, ')
+          ..write('diaDesde: $diaDesde, ')
+          ..write('diaHasta: $diaHasta, ')
+          ..write('litrosEsperados: $litrosEsperados, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -5610,9 +6438,11 @@ class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
   @override
   int get hashCode => Object.hash(
     id,
-    sesionId,
-    animalId,
-    litros,
+    lecheriaId,
+    orden,
+    diaDesde,
+    diaHasta,
+    litrosEsperados,
     createdAt,
     updatedAt,
     deletedAt,
@@ -5621,59 +6451,70 @@ class PesaLecheRow extends DataClass implements Insertable<PesaLecheRow> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is PesaLecheRow &&
+      (other is CurvaReferenciaRow &&
           other.id == this.id &&
-          other.sesionId == this.sesionId &&
-          other.animalId == this.animalId &&
-          other.litros == this.litros &&
+          other.lecheriaId == this.lecheriaId &&
+          other.orden == this.orden &&
+          other.diaDesde == this.diaDesde &&
+          other.diaHasta == this.diaHasta &&
+          other.litrosEsperados == this.litrosEsperados &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
           other.pendiente == this.pendiente);
 }
 
-class PesasLecheCompanion extends UpdateCompanion<PesaLecheRow> {
+class CurvaReferenciaCompanion extends UpdateCompanion<CurvaReferenciaRow> {
   final Value<String> id;
-  final Value<String> sesionId;
-  final Value<String> animalId;
-  final Value<double> litros;
+  final Value<String> lecheriaId;
+  final Value<int> orden;
+  final Value<int> diaDesde;
+  final Value<int?> diaHasta;
+  final Value<double> litrosEsperados;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
   final Value<bool> pendiente;
   final Value<int> rowid;
-  const PesasLecheCompanion({
+  const CurvaReferenciaCompanion({
     this.id = const Value.absent(),
-    this.sesionId = const Value.absent(),
-    this.animalId = const Value.absent(),
-    this.litros = const Value.absent(),
+    this.lecheriaId = const Value.absent(),
+    this.orden = const Value.absent(),
+    this.diaDesde = const Value.absent(),
+    this.diaHasta = const Value.absent(),
+    this.litrosEsperados = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.pendiente = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  PesasLecheCompanion.insert({
+  CurvaReferenciaCompanion.insert({
     required String id,
-    required String sesionId,
-    required String animalId,
-    required double litros,
+    required String lecheriaId,
+    required int orden,
+    required int diaDesde,
+    this.diaHasta = const Value.absent(),
+    required double litrosEsperados,
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
     this.pendiente = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       sesionId = Value(sesionId),
-       animalId = Value(animalId),
-       litros = Value(litros),
+       lecheriaId = Value(lecheriaId),
+       orden = Value(orden),
+       diaDesde = Value(diaDesde),
+       litrosEsperados = Value(litrosEsperados),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
-  static Insertable<PesaLecheRow> custom({
+  static Insertable<CurvaReferenciaRow> custom({
     Expression<String>? id,
-    Expression<String>? sesionId,
-    Expression<String>? animalId,
-    Expression<double>? litros,
+    Expression<String>? lecheriaId,
+    Expression<int>? orden,
+    Expression<int>? diaDesde,
+    Expression<int>? diaHasta,
+    Expression<double>? litrosEsperados,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -5682,9 +6523,11 @@ class PesasLecheCompanion extends UpdateCompanion<PesaLecheRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (sesionId != null) 'sesion_id': sesionId,
-      if (animalId != null) 'animal_id': animalId,
-      if (litros != null) 'litros': litros,
+      if (lecheriaId != null) 'lecheria_id': lecheriaId,
+      if (orden != null) 'orden': orden,
+      if (diaDesde != null) 'dia_desde': diaDesde,
+      if (diaHasta != null) 'dia_hasta': diaHasta,
+      if (litrosEsperados != null) 'litros_esperados': litrosEsperados,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -5693,22 +6536,26 @@ class PesasLecheCompanion extends UpdateCompanion<PesaLecheRow> {
     });
   }
 
-  PesasLecheCompanion copyWith({
+  CurvaReferenciaCompanion copyWith({
     Value<String>? id,
-    Value<String>? sesionId,
-    Value<String>? animalId,
-    Value<double>? litros,
+    Value<String>? lecheriaId,
+    Value<int>? orden,
+    Value<int>? diaDesde,
+    Value<int?>? diaHasta,
+    Value<double>? litrosEsperados,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
     Value<bool>? pendiente,
     Value<int>? rowid,
   }) {
-    return PesasLecheCompanion(
+    return CurvaReferenciaCompanion(
       id: id ?? this.id,
-      sesionId: sesionId ?? this.sesionId,
-      animalId: animalId ?? this.animalId,
-      litros: litros ?? this.litros,
+      lecheriaId: lecheriaId ?? this.lecheriaId,
+      orden: orden ?? this.orden,
+      diaDesde: diaDesde ?? this.diaDesde,
+      diaHasta: diaHasta ?? this.diaHasta,
+      litrosEsperados: litrosEsperados ?? this.litrosEsperados,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -5723,14 +6570,20 @@ class PesasLecheCompanion extends UpdateCompanion<PesaLecheRow> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (sesionId.present) {
-      map['sesion_id'] = Variable<String>(sesionId.value);
+    if (lecheriaId.present) {
+      map['lecheria_id'] = Variable<String>(lecheriaId.value);
     }
-    if (animalId.present) {
-      map['animal_id'] = Variable<String>(animalId.value);
+    if (orden.present) {
+      map['orden'] = Variable<int>(orden.value);
     }
-    if (litros.present) {
-      map['litros'] = Variable<double>(litros.value);
+    if (diaDesde.present) {
+      map['dia_desde'] = Variable<int>(diaDesde.value);
+    }
+    if (diaHasta.present) {
+      map['dia_hasta'] = Variable<int>(diaHasta.value);
+    }
+    if (litrosEsperados.present) {
+      map['litros_esperados'] = Variable<double>(litrosEsperados.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -5752,11 +6605,13 @@ class PesasLecheCompanion extends UpdateCompanion<PesaLecheRow> {
 
   @override
   String toString() {
-    return (StringBuffer('PesasLecheCompanion(')
+    return (StringBuffer('CurvaReferenciaCompanion(')
           ..write('id: $id, ')
-          ..write('sesionId: $sesionId, ')
-          ..write('animalId: $animalId, ')
-          ..write('litros: $litros, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('orden: $orden, ')
+          ..write('diaDesde: $diaDesde, ')
+          ..write('diaHasta: $diaHasta, ')
+          ..write('litrosEsperados: $litrosEsperados, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -5767,12 +6622,12 @@ class PesasLecheCompanion extends UpdateCompanion<PesaLecheRow> {
   }
 }
 
-class $ParametrosPeriodoTable extends ParametrosPeriodo
-    with TableInfo<$ParametrosPeriodoTable, ParametrosPeriodoRow> {
+class $ConfigReporteTable extends ConfigReporte
+    with TableInfo<$ConfigReporteTable, ConfigReporteRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $ParametrosPeriodoTable(this.attachedDatabase, [this._alias]);
+  $ConfigReporteTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -5793,46 +6648,54 @@ class $ParametrosPeriodoTable extends ParametrosPeriodo
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _anioMeta = const VerificationMeta('anio');
-  @override
-  late final GeneratedColumn<int> anio = GeneratedColumn<int>(
-    'anio',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _mesMeta = const VerificationMeta('mes');
-  @override
-  late final GeneratedColumn<int> mes = GeneratedColumn<int>(
-    'mes',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _precioLitroMeta = const VerificationMeta(
-    'precioLitro',
+  static const VerificationMeta _pctExcelenteMeta = const VerificationMeta(
+    'pctExcelente',
   );
   @override
-  late final GeneratedColumn<double> precioLitro = GeneratedColumn<double>(
-    'precio_litro',
+  late final GeneratedColumn<double> pctExcelente = GeneratedColumn<double>(
+    'pct_excelente',
     aliasedName,
     false,
     type: DriftSqlType.double,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(100),
   );
-  static const VerificationMeta _precioConcentradoKgMeta =
-      const VerificationMeta('precioConcentradoKg');
+  static const VerificationMeta _pctBuenoMeta = const VerificationMeta(
+    'pctBueno',
+  );
   @override
-  late final GeneratedColumn<double> precioConcentradoKg =
-      GeneratedColumn<double>(
-        'precio_concentrado_kg',
-        aliasedName,
-        false,
-        type: DriftSqlType.double,
-        requiredDuringInsert: true,
-      );
+  late final GeneratedColumn<double> pctBueno = GeneratedColumn<double>(
+    'pct_bueno',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(85),
+  );
+  static const VerificationMeta _pctVigilarMeta = const VerificationMeta(
+    'pctVigilar',
+  );
+  @override
+  late final GeneratedColumn<double> pctVigilar = GeneratedColumn<double>(
+    'pct_vigilar',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(70),
+  );
+  static const VerificationMeta _pctBajoMeta = const VerificationMeta(
+    'pctBajo',
+  );
+  @override
+  late final GeneratedColumn<double> pctBajo = GeneratedColumn<double>(
+    'pct_bajo',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(60),
+  );
   static const VerificationMeta _umbralSecadoLitrosMeta =
       const VerificationMeta('umbralSecadoLitros');
   @override
@@ -5897,10 +6760,10 @@ class $ParametrosPeriodoTable extends ParametrosPeriodo
   List<GeneratedColumn> get $columns => [
     id,
     lecheriaId,
-    anio,
-    mes,
-    precioLitro,
-    precioConcentradoKg,
+    pctExcelente,
+    pctBueno,
+    pctVigilar,
+    pctBajo,
     umbralSecadoLitros,
     createdAt,
     updatedAt,
@@ -5911,10 +6774,10 @@ class $ParametrosPeriodoTable extends ParametrosPeriodo
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'parametros_periodo';
+  static const String $name = 'config_reporte';
   @override
   VerificationContext validateIntegrity(
-    Insertable<ParametrosPeriodoRow> instance, {
+    Insertable<ConfigReporteRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -5932,43 +6795,32 @@ class $ParametrosPeriodoTable extends ParametrosPeriodo
     } else if (isInserting) {
       context.missing(_lecheriaIdMeta);
     }
-    if (data.containsKey('anio')) {
+    if (data.containsKey('pct_excelente')) {
       context.handle(
-        _anioMeta,
-        anio.isAcceptableOrUnknown(data['anio']!, _anioMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_anioMeta);
-    }
-    if (data.containsKey('mes')) {
-      context.handle(
-        _mesMeta,
-        mes.isAcceptableOrUnknown(data['mes']!, _mesMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_mesMeta);
-    }
-    if (data.containsKey('precio_litro')) {
-      context.handle(
-        _precioLitroMeta,
-        precioLitro.isAcceptableOrUnknown(
-          data['precio_litro']!,
-          _precioLitroMeta,
+        _pctExcelenteMeta,
+        pctExcelente.isAcceptableOrUnknown(
+          data['pct_excelente']!,
+          _pctExcelenteMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_precioLitroMeta);
     }
-    if (data.containsKey('precio_concentrado_kg')) {
+    if (data.containsKey('pct_bueno')) {
       context.handle(
-        _precioConcentradoKgMeta,
-        precioConcentradoKg.isAcceptableOrUnknown(
-          data['precio_concentrado_kg']!,
-          _precioConcentradoKgMeta,
-        ),
+        _pctBuenoMeta,
+        pctBueno.isAcceptableOrUnknown(data['pct_bueno']!, _pctBuenoMeta),
       );
-    } else if (isInserting) {
-      context.missing(_precioConcentradoKgMeta);
+    }
+    if (data.containsKey('pct_vigilar')) {
+      context.handle(
+        _pctVigilarMeta,
+        pctVigilar.isAcceptableOrUnknown(data['pct_vigilar']!, _pctVigilarMeta),
+      );
+    }
+    if (data.containsKey('pct_bajo')) {
+      context.handle(
+        _pctBajoMeta,
+        pctBajo.isAcceptableOrUnknown(data['pct_bajo']!, _pctBajoMeta),
+      );
     }
     if (data.containsKey('umbral_secado_litros')) {
       context.handle(
@@ -6013,9 +6865,9 @@ class $ParametrosPeriodoTable extends ParametrosPeriodo
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  ParametrosPeriodoRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  ConfigReporteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return ParametrosPeriodoRow(
+    return ConfigReporteRow(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -6024,21 +6876,21 @@ class $ParametrosPeriodoTable extends ParametrosPeriodo
         DriftSqlType.string,
         data['${effectivePrefix}lecheria_id'],
       )!,
-      anio: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}anio'],
-      )!,
-      mes: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}mes'],
-      )!,
-      precioLitro: attachedDatabase.typeMapping.read(
+      pctExcelente: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
-        data['${effectivePrefix}precio_litro'],
+        data['${effectivePrefix}pct_excelente'],
       )!,
-      precioConcentradoKg: attachedDatabase.typeMapping.read(
+      pctBueno: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
-        data['${effectivePrefix}precio_concentrado_kg'],
+        data['${effectivePrefix}pct_bueno'],
+      )!,
+      pctVigilar: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}pct_vigilar'],
+      )!,
+      pctBajo: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}pct_bajo'],
       )!,
       umbralSecadoLitros: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
@@ -6064,31 +6916,31 @@ class $ParametrosPeriodoTable extends ParametrosPeriodo
   }
 
   @override
-  $ParametrosPeriodoTable createAlias(String alias) {
-    return $ParametrosPeriodoTable(attachedDatabase, alias);
+  $ConfigReporteTable createAlias(String alias) {
+    return $ConfigReporteTable(attachedDatabase, alias);
   }
 }
 
-class ParametrosPeriodoRow extends DataClass
-    implements Insertable<ParametrosPeriodoRow> {
+class ConfigReporteRow extends DataClass
+    implements Insertable<ConfigReporteRow> {
   final String id;
   final String lecheriaId;
-  final int anio;
-  final int mes;
-  final double precioLitro;
-  final double precioConcentradoKg;
+  final double pctExcelente;
+  final double pctBueno;
+  final double pctVigilar;
+  final double pctBajo;
   final double umbralSecadoLitros;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
   final bool pendiente;
-  const ParametrosPeriodoRow({
+  const ConfigReporteRow({
     required this.id,
     required this.lecheriaId,
-    required this.anio,
-    required this.mes,
-    required this.precioLitro,
-    required this.precioConcentradoKg,
+    required this.pctExcelente,
+    required this.pctBueno,
+    required this.pctVigilar,
+    required this.pctBajo,
     required this.umbralSecadoLitros,
     required this.createdAt,
     required this.updatedAt,
@@ -6100,10 +6952,10 @@ class ParametrosPeriodoRow extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['lecheria_id'] = Variable<String>(lecheriaId);
-    map['anio'] = Variable<int>(anio);
-    map['mes'] = Variable<int>(mes);
-    map['precio_litro'] = Variable<double>(precioLitro);
-    map['precio_concentrado_kg'] = Variable<double>(precioConcentradoKg);
+    map['pct_excelente'] = Variable<double>(pctExcelente);
+    map['pct_bueno'] = Variable<double>(pctBueno);
+    map['pct_vigilar'] = Variable<double>(pctVigilar);
+    map['pct_bajo'] = Variable<double>(pctBajo);
     map['umbral_secado_litros'] = Variable<double>(umbralSecadoLitros);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -6114,14 +6966,14 @@ class ParametrosPeriodoRow extends DataClass
     return map;
   }
 
-  ParametrosPeriodoCompanion toCompanion(bool nullToAbsent) {
-    return ParametrosPeriodoCompanion(
+  ConfigReporteCompanion toCompanion(bool nullToAbsent) {
+    return ConfigReporteCompanion(
       id: Value(id),
       lecheriaId: Value(lecheriaId),
-      anio: Value(anio),
-      mes: Value(mes),
-      precioLitro: Value(precioLitro),
-      precioConcentradoKg: Value(precioConcentradoKg),
+      pctExcelente: Value(pctExcelente),
+      pctBueno: Value(pctBueno),
+      pctVigilar: Value(pctVigilar),
+      pctBajo: Value(pctBajo),
       umbralSecadoLitros: Value(umbralSecadoLitros),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -6132,20 +6984,18 @@ class ParametrosPeriodoRow extends DataClass
     );
   }
 
-  factory ParametrosPeriodoRow.fromJson(
+  factory ConfigReporteRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return ParametrosPeriodoRow(
+    return ConfigReporteRow(
       id: serializer.fromJson<String>(json['id']),
       lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
-      anio: serializer.fromJson<int>(json['anio']),
-      mes: serializer.fromJson<int>(json['mes']),
-      precioLitro: serializer.fromJson<double>(json['precioLitro']),
-      precioConcentradoKg: serializer.fromJson<double>(
-        json['precioConcentradoKg'],
-      ),
+      pctExcelente: serializer.fromJson<double>(json['pctExcelente']),
+      pctBueno: serializer.fromJson<double>(json['pctBueno']),
+      pctVigilar: serializer.fromJson<double>(json['pctVigilar']),
+      pctBajo: serializer.fromJson<double>(json['pctBajo']),
       umbralSecadoLitros: serializer.fromJson<double>(
         json['umbralSecadoLitros'],
       ),
@@ -6161,10 +7011,10 @@ class ParametrosPeriodoRow extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'lecheriaId': serializer.toJson<String>(lecheriaId),
-      'anio': serializer.toJson<int>(anio),
-      'mes': serializer.toJson<int>(mes),
-      'precioLitro': serializer.toJson<double>(precioLitro),
-      'precioConcentradoKg': serializer.toJson<double>(precioConcentradoKg),
+      'pctExcelente': serializer.toJson<double>(pctExcelente),
+      'pctBueno': serializer.toJson<double>(pctBueno),
+      'pctVigilar': serializer.toJson<double>(pctVigilar),
+      'pctBajo': serializer.toJson<double>(pctBajo),
       'umbralSecadoLitros': serializer.toJson<double>(umbralSecadoLitros),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -6173,45 +7023,45 @@ class ParametrosPeriodoRow extends DataClass
     };
   }
 
-  ParametrosPeriodoRow copyWith({
+  ConfigReporteRow copyWith({
     String? id,
     String? lecheriaId,
-    int? anio,
-    int? mes,
-    double? precioLitro,
-    double? precioConcentradoKg,
+    double? pctExcelente,
+    double? pctBueno,
+    double? pctVigilar,
+    double? pctBajo,
     double? umbralSecadoLitros,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
     bool? pendiente,
-  }) => ParametrosPeriodoRow(
+  }) => ConfigReporteRow(
     id: id ?? this.id,
     lecheriaId: lecheriaId ?? this.lecheriaId,
-    anio: anio ?? this.anio,
-    mes: mes ?? this.mes,
-    precioLitro: precioLitro ?? this.precioLitro,
-    precioConcentradoKg: precioConcentradoKg ?? this.precioConcentradoKg,
+    pctExcelente: pctExcelente ?? this.pctExcelente,
+    pctBueno: pctBueno ?? this.pctBueno,
+    pctVigilar: pctVigilar ?? this.pctVigilar,
+    pctBajo: pctBajo ?? this.pctBajo,
     umbralSecadoLitros: umbralSecadoLitros ?? this.umbralSecadoLitros,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     pendiente: pendiente ?? this.pendiente,
   );
-  ParametrosPeriodoRow copyWithCompanion(ParametrosPeriodoCompanion data) {
-    return ParametrosPeriodoRow(
+  ConfigReporteRow copyWithCompanion(ConfigReporteCompanion data) {
+    return ConfigReporteRow(
       id: data.id.present ? data.id.value : this.id,
       lecheriaId: data.lecheriaId.present
           ? data.lecheriaId.value
           : this.lecheriaId,
-      anio: data.anio.present ? data.anio.value : this.anio,
-      mes: data.mes.present ? data.mes.value : this.mes,
-      precioLitro: data.precioLitro.present
-          ? data.precioLitro.value
-          : this.precioLitro,
-      precioConcentradoKg: data.precioConcentradoKg.present
-          ? data.precioConcentradoKg.value
-          : this.precioConcentradoKg,
+      pctExcelente: data.pctExcelente.present
+          ? data.pctExcelente.value
+          : this.pctExcelente,
+      pctBueno: data.pctBueno.present ? data.pctBueno.value : this.pctBueno,
+      pctVigilar: data.pctVigilar.present
+          ? data.pctVigilar.value
+          : this.pctVigilar,
+      pctBajo: data.pctBajo.present ? data.pctBajo.value : this.pctBajo,
       umbralSecadoLitros: data.umbralSecadoLitros.present
           ? data.umbralSecadoLitros.value
           : this.umbralSecadoLitros,
@@ -6224,13 +7074,13 @@ class ParametrosPeriodoRow extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('ParametrosPeriodoRow(')
+    return (StringBuffer('ConfigReporteRow(')
           ..write('id: $id, ')
           ..write('lecheriaId: $lecheriaId, ')
-          ..write('anio: $anio, ')
-          ..write('mes: $mes, ')
-          ..write('precioLitro: $precioLitro, ')
-          ..write('precioConcentradoKg: $precioConcentradoKg, ')
+          ..write('pctExcelente: $pctExcelente, ')
+          ..write('pctBueno: $pctBueno, ')
+          ..write('pctVigilar: $pctVigilar, ')
+          ..write('pctBajo: $pctBajo, ')
           ..write('umbralSecadoLitros: $umbralSecadoLitros, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -6244,10 +7094,10 @@ class ParametrosPeriodoRow extends DataClass
   int get hashCode => Object.hash(
     id,
     lecheriaId,
-    anio,
-    mes,
-    precioLitro,
-    precioConcentradoKg,
+    pctExcelente,
+    pctBueno,
+    pctVigilar,
+    pctBajo,
     umbralSecadoLitros,
     createdAt,
     updatedAt,
@@ -6257,13 +7107,13 @@ class ParametrosPeriodoRow extends DataClass
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is ParametrosPeriodoRow &&
+      (other is ConfigReporteRow &&
           other.id == this.id &&
           other.lecheriaId == this.lecheriaId &&
-          other.anio == this.anio &&
-          other.mes == this.mes &&
-          other.precioLitro == this.precioLitro &&
-          other.precioConcentradoKg == this.precioConcentradoKg &&
+          other.pctExcelente == this.pctExcelente &&
+          other.pctBueno == this.pctBueno &&
+          other.pctVigilar == this.pctVigilar &&
+          other.pctBajo == this.pctBajo &&
           other.umbralSecadoLitros == this.umbralSecadoLitros &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -6271,26 +7121,26 @@ class ParametrosPeriodoRow extends DataClass
           other.pendiente == this.pendiente);
 }
 
-class ParametrosPeriodoCompanion extends UpdateCompanion<ParametrosPeriodoRow> {
+class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
   final Value<String> id;
   final Value<String> lecheriaId;
-  final Value<int> anio;
-  final Value<int> mes;
-  final Value<double> precioLitro;
-  final Value<double> precioConcentradoKg;
+  final Value<double> pctExcelente;
+  final Value<double> pctBueno;
+  final Value<double> pctVigilar;
+  final Value<double> pctBajo;
   final Value<double> umbralSecadoLitros;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
   final Value<bool> pendiente;
   final Value<int> rowid;
-  const ParametrosPeriodoCompanion({
+  const ConfigReporteCompanion({
     this.id = const Value.absent(),
     this.lecheriaId = const Value.absent(),
-    this.anio = const Value.absent(),
-    this.mes = const Value.absent(),
-    this.precioLitro = const Value.absent(),
-    this.precioConcentradoKg = const Value.absent(),
+    this.pctExcelente = const Value.absent(),
+    this.pctBueno = const Value.absent(),
+    this.pctVigilar = const Value.absent(),
+    this.pctBajo = const Value.absent(),
     this.umbralSecadoLitros = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -6298,13 +7148,13 @@ class ParametrosPeriodoCompanion extends UpdateCompanion<ParametrosPeriodoRow> {
     this.pendiente = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  ParametrosPeriodoCompanion.insert({
+  ConfigReporteCompanion.insert({
     required String id,
     required String lecheriaId,
-    required int anio,
-    required int mes,
-    required double precioLitro,
-    required double precioConcentradoKg,
+    this.pctExcelente = const Value.absent(),
+    this.pctBueno = const Value.absent(),
+    this.pctVigilar = const Value.absent(),
+    this.pctBajo = const Value.absent(),
     this.umbralSecadoLitros = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -6313,19 +7163,15 @@ class ParametrosPeriodoCompanion extends UpdateCompanion<ParametrosPeriodoRow> {
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        lecheriaId = Value(lecheriaId),
-       anio = Value(anio),
-       mes = Value(mes),
-       precioLitro = Value(precioLitro),
-       precioConcentradoKg = Value(precioConcentradoKg),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
-  static Insertable<ParametrosPeriodoRow> custom({
+  static Insertable<ConfigReporteRow> custom({
     Expression<String>? id,
     Expression<String>? lecheriaId,
-    Expression<int>? anio,
-    Expression<int>? mes,
-    Expression<double>? precioLitro,
-    Expression<double>? precioConcentradoKg,
+    Expression<double>? pctExcelente,
+    Expression<double>? pctBueno,
+    Expression<double>? pctVigilar,
+    Expression<double>? pctBajo,
     Expression<double>? umbralSecadoLitros,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -6336,11 +7182,10 @@ class ParametrosPeriodoCompanion extends UpdateCompanion<ParametrosPeriodoRow> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (lecheriaId != null) 'lecheria_id': lecheriaId,
-      if (anio != null) 'anio': anio,
-      if (mes != null) 'mes': mes,
-      if (precioLitro != null) 'precio_litro': precioLitro,
-      if (precioConcentradoKg != null)
-        'precio_concentrado_kg': precioConcentradoKg,
+      if (pctExcelente != null) 'pct_excelente': pctExcelente,
+      if (pctBueno != null) 'pct_bueno': pctBueno,
+      if (pctVigilar != null) 'pct_vigilar': pctVigilar,
+      if (pctBajo != null) 'pct_bajo': pctBajo,
       if (umbralSecadoLitros != null)
         'umbral_secado_litros': umbralSecadoLitros,
       if (createdAt != null) 'created_at': createdAt,
@@ -6351,13 +7196,13 @@ class ParametrosPeriodoCompanion extends UpdateCompanion<ParametrosPeriodoRow> {
     });
   }
 
-  ParametrosPeriodoCompanion copyWith({
+  ConfigReporteCompanion copyWith({
     Value<String>? id,
     Value<String>? lecheriaId,
-    Value<int>? anio,
-    Value<int>? mes,
-    Value<double>? precioLitro,
-    Value<double>? precioConcentradoKg,
+    Value<double>? pctExcelente,
+    Value<double>? pctBueno,
+    Value<double>? pctVigilar,
+    Value<double>? pctBajo,
     Value<double>? umbralSecadoLitros,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -6365,13 +7210,13 @@ class ParametrosPeriodoCompanion extends UpdateCompanion<ParametrosPeriodoRow> {
     Value<bool>? pendiente,
     Value<int>? rowid,
   }) {
-    return ParametrosPeriodoCompanion(
+    return ConfigReporteCompanion(
       id: id ?? this.id,
       lecheriaId: lecheriaId ?? this.lecheriaId,
-      anio: anio ?? this.anio,
-      mes: mes ?? this.mes,
-      precioLitro: precioLitro ?? this.precioLitro,
-      precioConcentradoKg: precioConcentradoKg ?? this.precioConcentradoKg,
+      pctExcelente: pctExcelente ?? this.pctExcelente,
+      pctBueno: pctBueno ?? this.pctBueno,
+      pctVigilar: pctVigilar ?? this.pctVigilar,
+      pctBajo: pctBajo ?? this.pctBajo,
       umbralSecadoLitros: umbralSecadoLitros ?? this.umbralSecadoLitros,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -6390,19 +7235,17 @@ class ParametrosPeriodoCompanion extends UpdateCompanion<ParametrosPeriodoRow> {
     if (lecheriaId.present) {
       map['lecheria_id'] = Variable<String>(lecheriaId.value);
     }
-    if (anio.present) {
-      map['anio'] = Variable<int>(anio.value);
+    if (pctExcelente.present) {
+      map['pct_excelente'] = Variable<double>(pctExcelente.value);
     }
-    if (mes.present) {
-      map['mes'] = Variable<int>(mes.value);
+    if (pctBueno.present) {
+      map['pct_bueno'] = Variable<double>(pctBueno.value);
     }
-    if (precioLitro.present) {
-      map['precio_litro'] = Variable<double>(precioLitro.value);
+    if (pctVigilar.present) {
+      map['pct_vigilar'] = Variable<double>(pctVigilar.value);
     }
-    if (precioConcentradoKg.present) {
-      map['precio_concentrado_kg'] = Variable<double>(
-        precioConcentradoKg.value,
-      );
+    if (pctBajo.present) {
+      map['pct_bajo'] = Variable<double>(pctBajo.value);
     }
     if (umbralSecadoLitros.present) {
       map['umbral_secado_litros'] = Variable<double>(umbralSecadoLitros.value);
@@ -6427,13 +7270,13 @@ class ParametrosPeriodoCompanion extends UpdateCompanion<ParametrosPeriodoRow> {
 
   @override
   String toString() {
-    return (StringBuffer('ParametrosPeriodoCompanion(')
+    return (StringBuffer('ConfigReporteCompanion(')
           ..write('id: $id, ')
           ..write('lecheriaId: $lecheriaId, ')
-          ..write('anio: $anio, ')
-          ..write('mes: $mes, ')
-          ..write('precioLitro: $precioLitro, ')
-          ..write('precioConcentradoKg: $precioConcentradoKg, ')
+          ..write('pctExcelente: $pctExcelente, ')
+          ..write('pctBueno: $pctBueno, ')
+          ..write('pctVigilar: $pctVigilar, ')
+          ..write('pctBajo: $pctBajo, ')
           ..write('umbralSecadoLitros: $umbralSecadoLitros, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -6445,12 +7288,11 @@ class ParametrosPeriodoCompanion extends UpdateCompanion<ParametrosPeriodoRow> {
   }
 }
 
-class $CostosFijosTable extends CostosFijos
-    with TableInfo<$CostosFijosTable, CostoFijoRow> {
+class $SemanasTable extends Semanas with TableInfo<$SemanasTable, SemanaRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $CostosFijosTable(this.attachedDatabase, [this._alias]);
+  $SemanasTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -6471,36 +7313,42 @@ class $CostosFijosTable extends CostosFijos
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _periodoIdMeta = const VerificationMeta(
-    'periodoId',
+  static const VerificationMeta _fechaInicioMeta = const VerificationMeta(
+    'fechaInicio',
   );
   @override
-  late final GeneratedColumn<String> periodoId = GeneratedColumn<String>(
-    'periodo_id',
+  late final GeneratedColumn<DateTime> fechaInicio = GeneratedColumn<DateTime>(
+    'fecha_inicio',
     aliasedName,
     false,
-    type: DriftSqlType.string,
+    type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _categoriaMeta = const VerificationMeta(
-    'categoria',
+  static const VerificationMeta _fechaFinMeta = const VerificationMeta(
+    'fechaFin',
   );
   @override
-  late final GeneratedColumn<String> categoria = GeneratedColumn<String>(
-    'categoria',
+  late final GeneratedColumn<DateTime> fechaFin = GeneratedColumn<DateTime>(
+    'fecha_fin',
     aliasedName,
     false,
-    type: DriftSqlType.string,
+    type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _montoMeta = const VerificationMeta('monto');
+  static const VerificationMeta _cerradaMeta = const VerificationMeta(
+    'cerrada',
+  );
   @override
-  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
-    'monto',
+  late final GeneratedColumn<bool> cerrada = GeneratedColumn<bool>(
+    'cerrada',
     aliasedName,
     false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("cerrada" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -6554,9 +7402,9 @@ class $CostosFijosTable extends CostosFijos
   List<GeneratedColumn> get $columns => [
     id,
     lecheriaId,
-    periodoId,
-    categoria,
-    monto,
+    fechaInicio,
+    fechaFin,
+    cerrada,
     createdAt,
     updatedAt,
     deletedAt,
@@ -6566,10 +7414,10 @@ class $CostosFijosTable extends CostosFijos
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'costos_fijos';
+  static const String $name = 'semanas';
   @override
   VerificationContext validateIntegrity(
-    Insertable<CostoFijoRow> instance, {
+    Insertable<SemanaRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -6587,29 +7435,30 @@ class $CostosFijosTable extends CostosFijos
     } else if (isInserting) {
       context.missing(_lecheriaIdMeta);
     }
-    if (data.containsKey('periodo_id')) {
+    if (data.containsKey('fecha_inicio')) {
       context.handle(
-        _periodoIdMeta,
-        periodoId.isAcceptableOrUnknown(data['periodo_id']!, _periodoIdMeta),
+        _fechaInicioMeta,
+        fechaInicio.isAcceptableOrUnknown(
+          data['fecha_inicio']!,
+          _fechaInicioMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_periodoIdMeta);
+      context.missing(_fechaInicioMeta);
     }
-    if (data.containsKey('categoria')) {
+    if (data.containsKey('fecha_fin')) {
       context.handle(
-        _categoriaMeta,
-        categoria.isAcceptableOrUnknown(data['categoria']!, _categoriaMeta),
+        _fechaFinMeta,
+        fechaFin.isAcceptableOrUnknown(data['fecha_fin']!, _fechaFinMeta),
       );
     } else if (isInserting) {
-      context.missing(_categoriaMeta);
+      context.missing(_fechaFinMeta);
     }
-    if (data.containsKey('monto')) {
+    if (data.containsKey('cerrada')) {
       context.handle(
-        _montoMeta,
-        monto.isAcceptableOrUnknown(data['monto']!, _montoMeta),
+        _cerradaMeta,
+        cerrada.isAcceptableOrUnknown(data['cerrada']!, _cerradaMeta),
       );
-    } else if (isInserting) {
-      context.missing(_montoMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -6645,9 +7494,9 @@ class $CostosFijosTable extends CostosFijos
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  CostoFijoRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SemanaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CostoFijoRow(
+    return SemanaRow(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -6656,17 +7505,17 @@ class $CostosFijosTable extends CostosFijos
         DriftSqlType.string,
         data['${effectivePrefix}lecheria_id'],
       )!,
-      periodoId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}periodo_id'],
+      fechaInicio: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha_inicio'],
       )!,
-      categoria: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}categoria'],
+      fechaFin: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha_fin'],
       )!,
-      monto: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}monto'],
+      cerrada: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}cerrada'],
       )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -6688,27 +7537,27 @@ class $CostosFijosTable extends CostosFijos
   }
 
   @override
-  $CostosFijosTable createAlias(String alias) {
-    return $CostosFijosTable(attachedDatabase, alias);
+  $SemanasTable createAlias(String alias) {
+    return $SemanasTable(attachedDatabase, alias);
   }
 }
 
-class CostoFijoRow extends DataClass implements Insertable<CostoFijoRow> {
+class SemanaRow extends DataClass implements Insertable<SemanaRow> {
   final String id;
   final String lecheriaId;
-  final String periodoId;
-  final String categoria;
-  final double monto;
+  final DateTime fechaInicio;
+  final DateTime fechaFin;
+  final bool cerrada;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
   final bool pendiente;
-  const CostoFijoRow({
+  const SemanaRow({
     required this.id,
     required this.lecheriaId,
-    required this.periodoId,
-    required this.categoria,
-    required this.monto,
+    required this.fechaInicio,
+    required this.fechaFin,
+    required this.cerrada,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -6719,9 +7568,9 @@ class CostoFijoRow extends DataClass implements Insertable<CostoFijoRow> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['lecheria_id'] = Variable<String>(lecheriaId);
-    map['periodo_id'] = Variable<String>(periodoId);
-    map['categoria'] = Variable<String>(categoria);
-    map['monto'] = Variable<double>(monto);
+    map['fecha_inicio'] = Variable<DateTime>(fechaInicio);
+    map['fecha_fin'] = Variable<DateTime>(fechaFin);
+    map['cerrada'] = Variable<bool>(cerrada);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -6731,13 +7580,13 @@ class CostoFijoRow extends DataClass implements Insertable<CostoFijoRow> {
     return map;
   }
 
-  CostosFijosCompanion toCompanion(bool nullToAbsent) {
-    return CostosFijosCompanion(
+  SemanasCompanion toCompanion(bool nullToAbsent) {
+    return SemanasCompanion(
       id: Value(id),
       lecheriaId: Value(lecheriaId),
-      periodoId: Value(periodoId),
-      categoria: Value(categoria),
-      monto: Value(monto),
+      fechaInicio: Value(fechaInicio),
+      fechaFin: Value(fechaFin),
+      cerrada: Value(cerrada),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -6747,17 +7596,17 @@ class CostoFijoRow extends DataClass implements Insertable<CostoFijoRow> {
     );
   }
 
-  factory CostoFijoRow.fromJson(
+  factory SemanaRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CostoFijoRow(
+    return SemanaRow(
       id: serializer.fromJson<String>(json['id']),
       lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
-      periodoId: serializer.fromJson<String>(json['periodoId']),
-      categoria: serializer.fromJson<String>(json['categoria']),
-      monto: serializer.fromJson<double>(json['monto']),
+      fechaInicio: serializer.fromJson<DateTime>(json['fechaInicio']),
+      fechaFin: serializer.fromJson<DateTime>(json['fechaFin']),
+      cerrada: serializer.fromJson<bool>(json['cerrada']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -6770,9 +7619,9 @@ class CostoFijoRow extends DataClass implements Insertable<CostoFijoRow> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'lecheriaId': serializer.toJson<String>(lecheriaId),
-      'periodoId': serializer.toJson<String>(periodoId),
-      'categoria': serializer.toJson<String>(categoria),
-      'monto': serializer.toJson<double>(monto),
+      'fechaInicio': serializer.toJson<DateTime>(fechaInicio),
+      'fechaFin': serializer.toJson<DateTime>(fechaFin),
+      'cerrada': serializer.toJson<bool>(cerrada),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -6780,36 +7629,38 @@ class CostoFijoRow extends DataClass implements Insertable<CostoFijoRow> {
     };
   }
 
-  CostoFijoRow copyWith({
+  SemanaRow copyWith({
     String? id,
     String? lecheriaId,
-    String? periodoId,
-    String? categoria,
-    double? monto,
+    DateTime? fechaInicio,
+    DateTime? fechaFin,
+    bool? cerrada,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
     bool? pendiente,
-  }) => CostoFijoRow(
+  }) => SemanaRow(
     id: id ?? this.id,
     lecheriaId: lecheriaId ?? this.lecheriaId,
-    periodoId: periodoId ?? this.periodoId,
-    categoria: categoria ?? this.categoria,
-    monto: monto ?? this.monto,
+    fechaInicio: fechaInicio ?? this.fechaInicio,
+    fechaFin: fechaFin ?? this.fechaFin,
+    cerrada: cerrada ?? this.cerrada,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     pendiente: pendiente ?? this.pendiente,
   );
-  CostoFijoRow copyWithCompanion(CostosFijosCompanion data) {
-    return CostoFijoRow(
+  SemanaRow copyWithCompanion(SemanasCompanion data) {
+    return SemanaRow(
       id: data.id.present ? data.id.value : this.id,
       lecheriaId: data.lecheriaId.present
           ? data.lecheriaId.value
           : this.lecheriaId,
-      periodoId: data.periodoId.present ? data.periodoId.value : this.periodoId,
-      categoria: data.categoria.present ? data.categoria.value : this.categoria,
-      monto: data.monto.present ? data.monto.value : this.monto,
+      fechaInicio: data.fechaInicio.present
+          ? data.fechaInicio.value
+          : this.fechaInicio,
+      fechaFin: data.fechaFin.present ? data.fechaFin.value : this.fechaFin,
+      cerrada: data.cerrada.present ? data.cerrada.value : this.cerrada,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -6819,12 +7670,12 @@ class CostoFijoRow extends DataClass implements Insertable<CostoFijoRow> {
 
   @override
   String toString() {
-    return (StringBuffer('CostoFijoRow(')
+    return (StringBuffer('SemanaRow(')
           ..write('id: $id, ')
           ..write('lecheriaId: $lecheriaId, ')
-          ..write('periodoId: $periodoId, ')
-          ..write('categoria: $categoria, ')
-          ..write('monto: $monto, ')
+          ..write('fechaInicio: $fechaInicio, ')
+          ..write('fechaFin: $fechaFin, ')
+          ..write('cerrada: $cerrada, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -6837,9 +7688,9 @@ class CostoFijoRow extends DataClass implements Insertable<CostoFijoRow> {
   int get hashCode => Object.hash(
     id,
     lecheriaId,
-    periodoId,
-    categoria,
-    monto,
+    fechaInicio,
+    fechaFin,
+    cerrada,
     createdAt,
     updatedAt,
     deletedAt,
@@ -6848,47 +7699,47 @@ class CostoFijoRow extends DataClass implements Insertable<CostoFijoRow> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is CostoFijoRow &&
+      (other is SemanaRow &&
           other.id == this.id &&
           other.lecheriaId == this.lecheriaId &&
-          other.periodoId == this.periodoId &&
-          other.categoria == this.categoria &&
-          other.monto == this.monto &&
+          other.fechaInicio == this.fechaInicio &&
+          other.fechaFin == this.fechaFin &&
+          other.cerrada == this.cerrada &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
           other.pendiente == this.pendiente);
 }
 
-class CostosFijosCompanion extends UpdateCompanion<CostoFijoRow> {
+class SemanasCompanion extends UpdateCompanion<SemanaRow> {
   final Value<String> id;
   final Value<String> lecheriaId;
-  final Value<String> periodoId;
-  final Value<String> categoria;
-  final Value<double> monto;
+  final Value<DateTime> fechaInicio;
+  final Value<DateTime> fechaFin;
+  final Value<bool> cerrada;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
   final Value<bool> pendiente;
   final Value<int> rowid;
-  const CostosFijosCompanion({
+  const SemanasCompanion({
     this.id = const Value.absent(),
     this.lecheriaId = const Value.absent(),
-    this.periodoId = const Value.absent(),
-    this.categoria = const Value.absent(),
-    this.monto = const Value.absent(),
+    this.fechaInicio = const Value.absent(),
+    this.fechaFin = const Value.absent(),
+    this.cerrada = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.pendiente = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  CostosFijosCompanion.insert({
+  SemanasCompanion.insert({
     required String id,
     required String lecheriaId,
-    required String periodoId,
-    required String categoria,
-    required double monto,
+    required DateTime fechaInicio,
+    required DateTime fechaFin,
+    this.cerrada = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -6896,17 +7747,16 @@ class CostosFijosCompanion extends UpdateCompanion<CostoFijoRow> {
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        lecheriaId = Value(lecheriaId),
-       periodoId = Value(periodoId),
-       categoria = Value(categoria),
-       monto = Value(monto),
+       fechaInicio = Value(fechaInicio),
+       fechaFin = Value(fechaFin),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
-  static Insertable<CostoFijoRow> custom({
+  static Insertable<SemanaRow> custom({
     Expression<String>? id,
     Expression<String>? lecheriaId,
-    Expression<String>? periodoId,
-    Expression<String>? categoria,
-    Expression<double>? monto,
+    Expression<DateTime>? fechaInicio,
+    Expression<DateTime>? fechaFin,
+    Expression<bool>? cerrada,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -6916,9 +7766,9 @@ class CostosFijosCompanion extends UpdateCompanion<CostoFijoRow> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (lecheriaId != null) 'lecheria_id': lecheriaId,
-      if (periodoId != null) 'periodo_id': periodoId,
-      if (categoria != null) 'categoria': categoria,
-      if (monto != null) 'monto': monto,
+      if (fechaInicio != null) 'fecha_inicio': fechaInicio,
+      if (fechaFin != null) 'fecha_fin': fechaFin,
+      if (cerrada != null) 'cerrada': cerrada,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -6927,24 +7777,24 @@ class CostosFijosCompanion extends UpdateCompanion<CostoFijoRow> {
     });
   }
 
-  CostosFijosCompanion copyWith({
+  SemanasCompanion copyWith({
     Value<String>? id,
     Value<String>? lecheriaId,
-    Value<String>? periodoId,
-    Value<String>? categoria,
-    Value<double>? monto,
+    Value<DateTime>? fechaInicio,
+    Value<DateTime>? fechaFin,
+    Value<bool>? cerrada,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
     Value<bool>? pendiente,
     Value<int>? rowid,
   }) {
-    return CostosFijosCompanion(
+    return SemanasCompanion(
       id: id ?? this.id,
       lecheriaId: lecheriaId ?? this.lecheriaId,
-      periodoId: periodoId ?? this.periodoId,
-      categoria: categoria ?? this.categoria,
-      monto: monto ?? this.monto,
+      fechaInicio: fechaInicio ?? this.fechaInicio,
+      fechaFin: fechaFin ?? this.fechaFin,
+      cerrada: cerrada ?? this.cerrada,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -6962,14 +7812,14 @@ class CostosFijosCompanion extends UpdateCompanion<CostoFijoRow> {
     if (lecheriaId.present) {
       map['lecheria_id'] = Variable<String>(lecheriaId.value);
     }
-    if (periodoId.present) {
-      map['periodo_id'] = Variable<String>(periodoId.value);
+    if (fechaInicio.present) {
+      map['fecha_inicio'] = Variable<DateTime>(fechaInicio.value);
     }
-    if (categoria.present) {
-      map['categoria'] = Variable<String>(categoria.value);
+    if (fechaFin.present) {
+      map['fecha_fin'] = Variable<DateTime>(fechaFin.value);
     }
-    if (monto.present) {
-      map['monto'] = Variable<double>(monto.value);
+    if (cerrada.present) {
+      map['cerrada'] = Variable<bool>(cerrada.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -6991,12 +7841,1846 @@ class CostosFijosCompanion extends UpdateCompanion<CostoFijoRow> {
 
   @override
   String toString() {
-    return (StringBuffer('CostosFijosCompanion(')
+    return (StringBuffer('SemanasCompanion(')
           ..write('id: $id, ')
           ..write('lecheriaId: $lecheriaId, ')
-          ..write('periodoId: $periodoId, ')
+          ..write('fechaInicio: $fechaInicio, ')
+          ..write('fechaFin: $fechaFin, ')
+          ..write('cerrada: $cerrada, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $IngresosSemanaTable extends IngresosSemana
+    with TableInfo<$IngresosSemanaTable, IngresoSemanaRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $IngresosSemanaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lecheriaIdMeta = const VerificationMeta(
+    'lecheriaId',
+  );
+  @override
+  late final GeneratedColumn<String> lecheriaId = GeneratedColumn<String>(
+    'lecheria_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _semanaIdMeta = const VerificationMeta(
+    'semanaId',
+  );
+  @override
+  late final GeneratedColumn<String> semanaId = GeneratedColumn<String>(
+    'semana_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tipoMeta = const VerificationMeta('tipo');
+  @override
+  late final GeneratedColumn<String> tipo = GeneratedColumn<String>(
+    'tipo',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montoMeta = const VerificationMeta('monto');
+  @override
+  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+    'monto',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _litrosMeta = const VerificationMeta('litros');
+  @override
+  late final GeneratedColumn<double> litros = GeneratedColumn<double>(
+    'litros',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _animalIdMeta = const VerificationMeta(
+    'animalId',
+  );
+  @override
+  late final GeneratedColumn<String> animalId = GeneratedColumn<String>(
+    'animal_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _detalleMeta = const VerificationMeta(
+    'detalle',
+  );
+  @override
+  late final GeneratedColumn<String> detalle = GeneratedColumn<String>(
+    'detalle',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    lecheriaId,
+    semanaId,
+    tipo,
+    monto,
+    litros,
+    animalId,
+    detalle,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'ingresos_semana';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<IngresoSemanaRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('lecheria_id')) {
+      context.handle(
+        _lecheriaIdMeta,
+        lecheriaId.isAcceptableOrUnknown(data['lecheria_id']!, _lecheriaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lecheriaIdMeta);
+    }
+    if (data.containsKey('semana_id')) {
+      context.handle(
+        _semanaIdMeta,
+        semanaId.isAcceptableOrUnknown(data['semana_id']!, _semanaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_semanaIdMeta);
+    }
+    if (data.containsKey('tipo')) {
+      context.handle(
+        _tipoMeta,
+        tipo.isAcceptableOrUnknown(data['tipo']!, _tipoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tipoMeta);
+    }
+    if (data.containsKey('monto')) {
+      context.handle(
+        _montoMeta,
+        monto.isAcceptableOrUnknown(data['monto']!, _montoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_montoMeta);
+    }
+    if (data.containsKey('litros')) {
+      context.handle(
+        _litrosMeta,
+        litros.isAcceptableOrUnknown(data['litros']!, _litrosMeta),
+      );
+    }
+    if (data.containsKey('animal_id')) {
+      context.handle(
+        _animalIdMeta,
+        animalId.isAcceptableOrUnknown(data['animal_id']!, _animalIdMeta),
+      );
+    }
+    if (data.containsKey('detalle')) {
+      context.handle(
+        _detalleMeta,
+        detalle.isAcceptableOrUnknown(data['detalle']!, _detalleMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  IngresoSemanaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return IngresoSemanaRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      lecheriaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lecheria_id'],
+      )!,
+      semanaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}semana_id'],
+      )!,
+      tipo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo'],
+      )!,
+      monto: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monto'],
+      )!,
+      litros: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}litros'],
+      ),
+      animalId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}animal_id'],
+      ),
+      detalle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}detalle'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $IngresosSemanaTable createAlias(String alias) {
+    return $IngresosSemanaTable(attachedDatabase, alias);
+  }
+}
+
+class IngresoSemanaRow extends DataClass
+    implements Insertable<IngresoSemanaRow> {
+  final String id;
+  final String lecheriaId;
+  final String semanaId;
+  final String tipo;
+  final double monto;
+
+  /// Solo para tipo `leche`: litros que la planta pagó. `monto / litros` da el
+  /// precio real por litro de la semana, que es lo que usa la rentabilidad
+  /// por vaca (plata real, no un precio estimado).
+  final double? litros;
+
+  /// Solo para tipo `venta_ganado`: qué animal se vendió, para su hoja de vida.
+  final String? animalId;
+  final String? detalle;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const IngresoSemanaRow({
+    required this.id,
+    required this.lecheriaId,
+    required this.semanaId,
+    required this.tipo,
+    required this.monto,
+    this.litros,
+    this.animalId,
+    this.detalle,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['lecheria_id'] = Variable<String>(lecheriaId);
+    map['semana_id'] = Variable<String>(semanaId);
+    map['tipo'] = Variable<String>(tipo);
+    map['monto'] = Variable<double>(monto);
+    if (!nullToAbsent || litros != null) {
+      map['litros'] = Variable<double>(litros);
+    }
+    if (!nullToAbsent || animalId != null) {
+      map['animal_id'] = Variable<String>(animalId);
+    }
+    if (!nullToAbsent || detalle != null) {
+      map['detalle'] = Variable<String>(detalle);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  IngresosSemanaCompanion toCompanion(bool nullToAbsent) {
+    return IngresosSemanaCompanion(
+      id: Value(id),
+      lecheriaId: Value(lecheriaId),
+      semanaId: Value(semanaId),
+      tipo: Value(tipo),
+      monto: Value(monto),
+      litros: litros == null && nullToAbsent
+          ? const Value.absent()
+          : Value(litros),
+      animalId: animalId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(animalId),
+      detalle: detalle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(detalle),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory IngresoSemanaRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return IngresoSemanaRow(
+      id: serializer.fromJson<String>(json['id']),
+      lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
+      semanaId: serializer.fromJson<String>(json['semanaId']),
+      tipo: serializer.fromJson<String>(json['tipo']),
+      monto: serializer.fromJson<double>(json['monto']),
+      litros: serializer.fromJson<double?>(json['litros']),
+      animalId: serializer.fromJson<String?>(json['animalId']),
+      detalle: serializer.fromJson<String?>(json['detalle']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'lecheriaId': serializer.toJson<String>(lecheriaId),
+      'semanaId': serializer.toJson<String>(semanaId),
+      'tipo': serializer.toJson<String>(tipo),
+      'monto': serializer.toJson<double>(monto),
+      'litros': serializer.toJson<double?>(litros),
+      'animalId': serializer.toJson<String?>(animalId),
+      'detalle': serializer.toJson<String?>(detalle),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  IngresoSemanaRow copyWith({
+    String? id,
+    String? lecheriaId,
+    String? semanaId,
+    String? tipo,
+    double? monto,
+    Value<double?> litros = const Value.absent(),
+    Value<String?> animalId = const Value.absent(),
+    Value<String?> detalle = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => IngresoSemanaRow(
+    id: id ?? this.id,
+    lecheriaId: lecheriaId ?? this.lecheriaId,
+    semanaId: semanaId ?? this.semanaId,
+    tipo: tipo ?? this.tipo,
+    monto: monto ?? this.monto,
+    litros: litros.present ? litros.value : this.litros,
+    animalId: animalId.present ? animalId.value : this.animalId,
+    detalle: detalle.present ? detalle.value : this.detalle,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  IngresoSemanaRow copyWithCompanion(IngresosSemanaCompanion data) {
+    return IngresoSemanaRow(
+      id: data.id.present ? data.id.value : this.id,
+      lecheriaId: data.lecheriaId.present
+          ? data.lecheriaId.value
+          : this.lecheriaId,
+      semanaId: data.semanaId.present ? data.semanaId.value : this.semanaId,
+      tipo: data.tipo.present ? data.tipo.value : this.tipo,
+      monto: data.monto.present ? data.monto.value : this.monto,
+      litros: data.litros.present ? data.litros.value : this.litros,
+      animalId: data.animalId.present ? data.animalId.value : this.animalId,
+      detalle: data.detalle.present ? data.detalle.value : this.detalle,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IngresoSemanaRow(')
+          ..write('id: $id, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('semanaId: $semanaId, ')
+          ..write('tipo: $tipo, ')
+          ..write('monto: $monto, ')
+          ..write('litros: $litros, ')
+          ..write('animalId: $animalId, ')
+          ..write('detalle: $detalle, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    lecheriaId,
+    semanaId,
+    tipo,
+    monto,
+    litros,
+    animalId,
+    detalle,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IngresoSemanaRow &&
+          other.id == this.id &&
+          other.lecheriaId == this.lecheriaId &&
+          other.semanaId == this.semanaId &&
+          other.tipo == this.tipo &&
+          other.monto == this.monto &&
+          other.litros == this.litros &&
+          other.animalId == this.animalId &&
+          other.detalle == this.detalle &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class IngresosSemanaCompanion extends UpdateCompanion<IngresoSemanaRow> {
+  final Value<String> id;
+  final Value<String> lecheriaId;
+  final Value<String> semanaId;
+  final Value<String> tipo;
+  final Value<double> monto;
+  final Value<double?> litros;
+  final Value<String?> animalId;
+  final Value<String?> detalle;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const IngresosSemanaCompanion({
+    this.id = const Value.absent(),
+    this.lecheriaId = const Value.absent(),
+    this.semanaId = const Value.absent(),
+    this.tipo = const Value.absent(),
+    this.monto = const Value.absent(),
+    this.litros = const Value.absent(),
+    this.animalId = const Value.absent(),
+    this.detalle = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  IngresosSemanaCompanion.insert({
+    required String id,
+    required String lecheriaId,
+    required String semanaId,
+    required String tipo,
+    required double monto,
+    this.litros = const Value.absent(),
+    this.animalId = const Value.absent(),
+    this.detalle = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       lecheriaId = Value(lecheriaId),
+       semanaId = Value(semanaId),
+       tipo = Value(tipo),
+       monto = Value(monto),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<IngresoSemanaRow> custom({
+    Expression<String>? id,
+    Expression<String>? lecheriaId,
+    Expression<String>? semanaId,
+    Expression<String>? tipo,
+    Expression<double>? monto,
+    Expression<double>? litros,
+    Expression<String>? animalId,
+    Expression<String>? detalle,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (lecheriaId != null) 'lecheria_id': lecheriaId,
+      if (semanaId != null) 'semana_id': semanaId,
+      if (tipo != null) 'tipo': tipo,
+      if (monto != null) 'monto': monto,
+      if (litros != null) 'litros': litros,
+      if (animalId != null) 'animal_id': animalId,
+      if (detalle != null) 'detalle': detalle,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  IngresosSemanaCompanion copyWith({
+    Value<String>? id,
+    Value<String>? lecheriaId,
+    Value<String>? semanaId,
+    Value<String>? tipo,
+    Value<double>? monto,
+    Value<double?>? litros,
+    Value<String?>? animalId,
+    Value<String?>? detalle,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return IngresosSemanaCompanion(
+      id: id ?? this.id,
+      lecheriaId: lecheriaId ?? this.lecheriaId,
+      semanaId: semanaId ?? this.semanaId,
+      tipo: tipo ?? this.tipo,
+      monto: monto ?? this.monto,
+      litros: litros ?? this.litros,
+      animalId: animalId ?? this.animalId,
+      detalle: detalle ?? this.detalle,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (lecheriaId.present) {
+      map['lecheria_id'] = Variable<String>(lecheriaId.value);
+    }
+    if (semanaId.present) {
+      map['semana_id'] = Variable<String>(semanaId.value);
+    }
+    if (tipo.present) {
+      map['tipo'] = Variable<String>(tipo.value);
+    }
+    if (monto.present) {
+      map['monto'] = Variable<double>(monto.value);
+    }
+    if (litros.present) {
+      map['litros'] = Variable<double>(litros.value);
+    }
+    if (animalId.present) {
+      map['animal_id'] = Variable<String>(animalId.value);
+    }
+    if (detalle.present) {
+      map['detalle'] = Variable<String>(detalle.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IngresosSemanaCompanion(')
+          ..write('id: $id, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('semanaId: $semanaId, ')
+          ..write('tipo: $tipo, ')
+          ..write('monto: $monto, ')
+          ..write('litros: $litros, ')
+          ..write('animalId: $animalId, ')
+          ..write('detalle: $detalle, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GastosSemanaTable extends GastosSemana
+    with TableInfo<$GastosSemanaTable, GastoSemanaRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GastosSemanaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lecheriaIdMeta = const VerificationMeta(
+    'lecheriaId',
+  );
+  @override
+  late final GeneratedColumn<String> lecheriaId = GeneratedColumn<String>(
+    'lecheria_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _semanaIdMeta = const VerificationMeta(
+    'semanaId',
+  );
+  @override
+  late final GeneratedColumn<String> semanaId = GeneratedColumn<String>(
+    'semana_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoriaMeta = const VerificationMeta(
+    'categoria',
+  );
+  @override
+  late final GeneratedColumn<String> categoria = GeneratedColumn<String>(
+    'categoria',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montoMeta = const VerificationMeta('monto');
+  @override
+  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+    'monto',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _detalleMeta = const VerificationMeta(
+    'detalle',
+  );
+  @override
+  late final GeneratedColumn<String> detalle = GeneratedColumn<String>(
+    'detalle',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    lecheriaId,
+    semanaId,
+    categoria,
+    monto,
+    detalle,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gastos_semana';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GastoSemanaRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('lecheria_id')) {
+      context.handle(
+        _lecheriaIdMeta,
+        lecheriaId.isAcceptableOrUnknown(data['lecheria_id']!, _lecheriaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lecheriaIdMeta);
+    }
+    if (data.containsKey('semana_id')) {
+      context.handle(
+        _semanaIdMeta,
+        semanaId.isAcceptableOrUnknown(data['semana_id']!, _semanaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_semanaIdMeta);
+    }
+    if (data.containsKey('categoria')) {
+      context.handle(
+        _categoriaMeta,
+        categoria.isAcceptableOrUnknown(data['categoria']!, _categoriaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoriaMeta);
+    }
+    if (data.containsKey('monto')) {
+      context.handle(
+        _montoMeta,
+        monto.isAcceptableOrUnknown(data['monto']!, _montoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_montoMeta);
+    }
+    if (data.containsKey('detalle')) {
+      context.handle(
+        _detalleMeta,
+        detalle.isAcceptableOrUnknown(data['detalle']!, _detalleMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GastoSemanaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GastoSemanaRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      lecheriaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lecheria_id'],
+      )!,
+      semanaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}semana_id'],
+      )!,
+      categoria: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}categoria'],
+      )!,
+      monto: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monto'],
+      )!,
+      detalle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}detalle'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $GastosSemanaTable createAlias(String alias) {
+    return $GastosSemanaTable(attachedDatabase, alias);
+  }
+}
+
+class GastoSemanaRow extends DataClass implements Insertable<GastoSemanaRow> {
+  final String id;
+  final String lecheriaId;
+  final String semanaId;
+  final String categoria;
+  final double monto;
+  final String? detalle;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const GastoSemanaRow({
+    required this.id,
+    required this.lecheriaId,
+    required this.semanaId,
+    required this.categoria,
+    required this.monto,
+    this.detalle,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['lecheria_id'] = Variable<String>(lecheriaId);
+    map['semana_id'] = Variable<String>(semanaId);
+    map['categoria'] = Variable<String>(categoria);
+    map['monto'] = Variable<double>(monto);
+    if (!nullToAbsent || detalle != null) {
+      map['detalle'] = Variable<String>(detalle);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  GastosSemanaCompanion toCompanion(bool nullToAbsent) {
+    return GastosSemanaCompanion(
+      id: Value(id),
+      lecheriaId: Value(lecheriaId),
+      semanaId: Value(semanaId),
+      categoria: Value(categoria),
+      monto: Value(monto),
+      detalle: detalle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(detalle),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory GastoSemanaRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GastoSemanaRow(
+      id: serializer.fromJson<String>(json['id']),
+      lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
+      semanaId: serializer.fromJson<String>(json['semanaId']),
+      categoria: serializer.fromJson<String>(json['categoria']),
+      monto: serializer.fromJson<double>(json['monto']),
+      detalle: serializer.fromJson<String?>(json['detalle']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'lecheriaId': serializer.toJson<String>(lecheriaId),
+      'semanaId': serializer.toJson<String>(semanaId),
+      'categoria': serializer.toJson<String>(categoria),
+      'monto': serializer.toJson<double>(monto),
+      'detalle': serializer.toJson<String?>(detalle),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  GastoSemanaRow copyWith({
+    String? id,
+    String? lecheriaId,
+    String? semanaId,
+    String? categoria,
+    double? monto,
+    Value<String?> detalle = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => GastoSemanaRow(
+    id: id ?? this.id,
+    lecheriaId: lecheriaId ?? this.lecheriaId,
+    semanaId: semanaId ?? this.semanaId,
+    categoria: categoria ?? this.categoria,
+    monto: monto ?? this.monto,
+    detalle: detalle.present ? detalle.value : this.detalle,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  GastoSemanaRow copyWithCompanion(GastosSemanaCompanion data) {
+    return GastoSemanaRow(
+      id: data.id.present ? data.id.value : this.id,
+      lecheriaId: data.lecheriaId.present
+          ? data.lecheriaId.value
+          : this.lecheriaId,
+      semanaId: data.semanaId.present ? data.semanaId.value : this.semanaId,
+      categoria: data.categoria.present ? data.categoria.value : this.categoria,
+      monto: data.monto.present ? data.monto.value : this.monto,
+      detalle: data.detalle.present ? data.detalle.value : this.detalle,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GastoSemanaRow(')
+          ..write('id: $id, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('semanaId: $semanaId, ')
           ..write('categoria: $categoria, ')
           ..write('monto: $monto, ')
+          ..write('detalle: $detalle, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    lecheriaId,
+    semanaId,
+    categoria,
+    monto,
+    detalle,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GastoSemanaRow &&
+          other.id == this.id &&
+          other.lecheriaId == this.lecheriaId &&
+          other.semanaId == this.semanaId &&
+          other.categoria == this.categoria &&
+          other.monto == this.monto &&
+          other.detalle == this.detalle &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class GastosSemanaCompanion extends UpdateCompanion<GastoSemanaRow> {
+  final Value<String> id;
+  final Value<String> lecheriaId;
+  final Value<String> semanaId;
+  final Value<String> categoria;
+  final Value<double> monto;
+  final Value<String?> detalle;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const GastosSemanaCompanion({
+    this.id = const Value.absent(),
+    this.lecheriaId = const Value.absent(),
+    this.semanaId = const Value.absent(),
+    this.categoria = const Value.absent(),
+    this.monto = const Value.absent(),
+    this.detalle = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GastosSemanaCompanion.insert({
+    required String id,
+    required String lecheriaId,
+    required String semanaId,
+    required String categoria,
+    required double monto,
+    this.detalle = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       lecheriaId = Value(lecheriaId),
+       semanaId = Value(semanaId),
+       categoria = Value(categoria),
+       monto = Value(monto),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<GastoSemanaRow> custom({
+    Expression<String>? id,
+    Expression<String>? lecheriaId,
+    Expression<String>? semanaId,
+    Expression<String>? categoria,
+    Expression<double>? monto,
+    Expression<String>? detalle,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (lecheriaId != null) 'lecheria_id': lecheriaId,
+      if (semanaId != null) 'semana_id': semanaId,
+      if (categoria != null) 'categoria': categoria,
+      if (monto != null) 'monto': monto,
+      if (detalle != null) 'detalle': detalle,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GastosSemanaCompanion copyWith({
+    Value<String>? id,
+    Value<String>? lecheriaId,
+    Value<String>? semanaId,
+    Value<String>? categoria,
+    Value<double>? monto,
+    Value<String?>? detalle,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return GastosSemanaCompanion(
+      id: id ?? this.id,
+      lecheriaId: lecheriaId ?? this.lecheriaId,
+      semanaId: semanaId ?? this.semanaId,
+      categoria: categoria ?? this.categoria,
+      monto: monto ?? this.monto,
+      detalle: detalle ?? this.detalle,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (lecheriaId.present) {
+      map['lecheria_id'] = Variable<String>(lecheriaId.value);
+    }
+    if (semanaId.present) {
+      map['semana_id'] = Variable<String>(semanaId.value);
+    }
+    if (categoria.present) {
+      map['categoria'] = Variable<String>(categoria.value);
+    }
+    if (monto.present) {
+      map['monto'] = Variable<double>(monto.value);
+    }
+    if (detalle.present) {
+      map['detalle'] = Variable<String>(detalle.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GastosSemanaCompanion(')
+          ..write('id: $id, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('semanaId: $semanaId, ')
+          ..write('categoria: $categoria, ')
+          ..write('monto: $monto, ')
+          ..write('detalle: $detalle, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CategoriasGastoTable extends CategoriasGasto
+    with TableInfo<$CategoriasGastoTable, CategoriaGastoRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CategoriasGastoTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lecheriaIdMeta = const VerificationMeta(
+    'lecheriaId',
+  );
+  @override
+  late final GeneratedColumn<String> lecheriaId = GeneratedColumn<String>(
+    'lecheria_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nombreMeta = const VerificationMeta('nombre');
+  @override
+  late final GeneratedColumn<String> nombre = GeneratedColumn<String>(
+    'nombre',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ordenMeta = const VerificationMeta('orden');
+  @override
+  late final GeneratedColumn<int> orden = GeneratedColumn<int>(
+    'orden',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    lecheriaId,
+    nombre,
+    orden,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'categorias_gasto';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CategoriaGastoRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('lecheria_id')) {
+      context.handle(
+        _lecheriaIdMeta,
+        lecheriaId.isAcceptableOrUnknown(data['lecheria_id']!, _lecheriaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lecheriaIdMeta);
+    }
+    if (data.containsKey('nombre')) {
+      context.handle(
+        _nombreMeta,
+        nombre.isAcceptableOrUnknown(data['nombre']!, _nombreMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nombreMeta);
+    }
+    if (data.containsKey('orden')) {
+      context.handle(
+        _ordenMeta,
+        orden.isAcceptableOrUnknown(data['orden']!, _ordenMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CategoriaGastoRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CategoriaGastoRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      lecheriaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lecheria_id'],
+      )!,
+      nombre: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nombre'],
+      )!,
+      orden: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}orden'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $CategoriasGastoTable createAlias(String alias) {
+    return $CategoriasGastoTable(attachedDatabase, alias);
+  }
+}
+
+class CategoriaGastoRow extends DataClass
+    implements Insertable<CategoriaGastoRow> {
+  final String id;
+  final String lecheriaId;
+  final String nombre;
+  final int orden;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const CategoriaGastoRow({
+    required this.id,
+    required this.lecheriaId,
+    required this.nombre,
+    required this.orden,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['lecheria_id'] = Variable<String>(lecheriaId);
+    map['nombre'] = Variable<String>(nombre);
+    map['orden'] = Variable<int>(orden);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  CategoriasGastoCompanion toCompanion(bool nullToAbsent) {
+    return CategoriasGastoCompanion(
+      id: Value(id),
+      lecheriaId: Value(lecheriaId),
+      nombre: Value(nombre),
+      orden: Value(orden),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory CategoriaGastoRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CategoriaGastoRow(
+      id: serializer.fromJson<String>(json['id']),
+      lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
+      nombre: serializer.fromJson<String>(json['nombre']),
+      orden: serializer.fromJson<int>(json['orden']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'lecheriaId': serializer.toJson<String>(lecheriaId),
+      'nombre': serializer.toJson<String>(nombre),
+      'orden': serializer.toJson<int>(orden),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  CategoriaGastoRow copyWith({
+    String? id,
+    String? lecheriaId,
+    String? nombre,
+    int? orden,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => CategoriaGastoRow(
+    id: id ?? this.id,
+    lecheriaId: lecheriaId ?? this.lecheriaId,
+    nombre: nombre ?? this.nombre,
+    orden: orden ?? this.orden,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  CategoriaGastoRow copyWithCompanion(CategoriasGastoCompanion data) {
+    return CategoriaGastoRow(
+      id: data.id.present ? data.id.value : this.id,
+      lecheriaId: data.lecheriaId.present
+          ? data.lecheriaId.value
+          : this.lecheriaId,
+      nombre: data.nombre.present ? data.nombre.value : this.nombre,
+      orden: data.orden.present ? data.orden.value : this.orden,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoriaGastoRow(')
+          ..write('id: $id, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('nombre: $nombre, ')
+          ..write('orden: $orden, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    lecheriaId,
+    nombre,
+    orden,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CategoriaGastoRow &&
+          other.id == this.id &&
+          other.lecheriaId == this.lecheriaId &&
+          other.nombre == this.nombre &&
+          other.orden == this.orden &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class CategoriasGastoCompanion extends UpdateCompanion<CategoriaGastoRow> {
+  final Value<String> id;
+  final Value<String> lecheriaId;
+  final Value<String> nombre;
+  final Value<int> orden;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const CategoriasGastoCompanion({
+    this.id = const Value.absent(),
+    this.lecheriaId = const Value.absent(),
+    this.nombre = const Value.absent(),
+    this.orden = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CategoriasGastoCompanion.insert({
+    required String id,
+    required String lecheriaId,
+    required String nombre,
+    this.orden = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       lecheriaId = Value(lecheriaId),
+       nombre = Value(nombre),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<CategoriaGastoRow> custom({
+    Expression<String>? id,
+    Expression<String>? lecheriaId,
+    Expression<String>? nombre,
+    Expression<int>? orden,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (lecheriaId != null) 'lecheria_id': lecheriaId,
+      if (nombre != null) 'nombre': nombre,
+      if (orden != null) 'orden': orden,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CategoriasGastoCompanion copyWith({
+    Value<String>? id,
+    Value<String>? lecheriaId,
+    Value<String>? nombre,
+    Value<int>? orden,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return CategoriasGastoCompanion(
+      id: id ?? this.id,
+      lecheriaId: lecheriaId ?? this.lecheriaId,
+      nombre: nombre ?? this.nombre,
+      orden: orden ?? this.orden,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (lecheriaId.present) {
+      map['lecheria_id'] = Variable<String>(lecheriaId.value);
+    }
+    if (nombre.present) {
+      map['nombre'] = Variable<String>(nombre.value);
+    }
+    if (orden.present) {
+      map['orden'] = Variable<int>(orden.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoriasGastoCompanion(')
+          ..write('id: $id, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('nombre: $nombre, ')
+          ..write('orden: $orden, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -7776,734 +10460,6 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
           ..write('aplicacionesEnvase: $aplicacionesEnvase, ')
           ..write('dosisFijaMl: $dosisFijaMl, ')
           ..write('diasRetiroLeche: $diasRetiroLeche, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt, ')
-          ..write('pendiente: $pendiente, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $ConfigAlertasTable extends ConfigAlertas
-    with TableInfo<$ConfigAlertasTable, ConfigAlertaRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $ConfigAlertasTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-    'id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _lecheriaIdMeta = const VerificationMeta(
-    'lecheriaId',
-  );
-  @override
-  late final GeneratedColumn<String> lecheriaId = GeneratedColumn<String>(
-    'lecheria_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _diasCeloEsperadoMeta = const VerificationMeta(
-    'diasCeloEsperado',
-  );
-  @override
-  late final GeneratedColumn<int> diasCeloEsperado = GeneratedColumn<int>(
-    'dias_celo_esperado',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(21),
-  );
-  static const VerificationMeta _diasConfirmarPreniezMeta =
-      const VerificationMeta('diasConfirmarPreniez');
-  @override
-  late final GeneratedColumn<int> diasConfirmarPreniez = GeneratedColumn<int>(
-    'dias_confirmar_preniez',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(45),
-  );
-  static const VerificationMeta _diasVaciosAltosMeta = const VerificationMeta(
-    'diasVaciosAltos',
-  );
-  @override
-  late final GeneratedColumn<int> diasVaciosAltos = GeneratedColumn<int>(
-    'dias_vacios_altos',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(150),
-  );
-  static const VerificationMeta _diasAntesSecarMeta = const VerificationMeta(
-    'diasAntesSecar',
-  );
-  @override
-  late final GeneratedColumn<int> diasAntesSecar = GeneratedColumn<int>(
-    'dias_antes_secar',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(60),
-  );
-  static const VerificationMeta _diasAntesPartoMeta = const VerificationMeta(
-    'diasAntesParto',
-  );
-  @override
-  late final GeneratedColumn<int> diasAntesParto = GeneratedColumn<int>(
-    'dias_antes_parto',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(14),
-  );
-  static const VerificationMeta _diasAvisoFinRetiroMeta =
-      const VerificationMeta('diasAvisoFinRetiro');
-  @override
-  late final GeneratedColumn<int> diasAvisoFinRetiro = GeneratedColumn<int>(
-    'dias_aviso_fin_retiro',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(1),
-  );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
-    'deletedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
-    'deleted_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _pendienteMeta = const VerificationMeta(
-    'pendiente',
-  );
-  @override
-  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
-    'pendiente',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("pendiente" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    lecheriaId,
-    diasCeloEsperado,
-    diasConfirmarPreniez,
-    diasVaciosAltos,
-    diasAntesSecar,
-    diasAntesParto,
-    diasAvisoFinRetiro,
-    createdAt,
-    updatedAt,
-    deletedAt,
-    pendiente,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'config_alertas';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<ConfigAlertaRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('lecheria_id')) {
-      context.handle(
-        _lecheriaIdMeta,
-        lecheriaId.isAcceptableOrUnknown(data['lecheria_id']!, _lecheriaIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_lecheriaIdMeta);
-    }
-    if (data.containsKey('dias_celo_esperado')) {
-      context.handle(
-        _diasCeloEsperadoMeta,
-        diasCeloEsperado.isAcceptableOrUnknown(
-          data['dias_celo_esperado']!,
-          _diasCeloEsperadoMeta,
-        ),
-      );
-    }
-    if (data.containsKey('dias_confirmar_preniez')) {
-      context.handle(
-        _diasConfirmarPreniezMeta,
-        diasConfirmarPreniez.isAcceptableOrUnknown(
-          data['dias_confirmar_preniez']!,
-          _diasConfirmarPreniezMeta,
-        ),
-      );
-    }
-    if (data.containsKey('dias_vacios_altos')) {
-      context.handle(
-        _diasVaciosAltosMeta,
-        diasVaciosAltos.isAcceptableOrUnknown(
-          data['dias_vacios_altos']!,
-          _diasVaciosAltosMeta,
-        ),
-      );
-    }
-    if (data.containsKey('dias_antes_secar')) {
-      context.handle(
-        _diasAntesSecarMeta,
-        diasAntesSecar.isAcceptableOrUnknown(
-          data['dias_antes_secar']!,
-          _diasAntesSecarMeta,
-        ),
-      );
-    }
-    if (data.containsKey('dias_antes_parto')) {
-      context.handle(
-        _diasAntesPartoMeta,
-        diasAntesParto.isAcceptableOrUnknown(
-          data['dias_antes_parto']!,
-          _diasAntesPartoMeta,
-        ),
-      );
-    }
-    if (data.containsKey('dias_aviso_fin_retiro')) {
-      context.handle(
-        _diasAvisoFinRetiroMeta,
-        diasAvisoFinRetiro.isAcceptableOrUnknown(
-          data['dias_aviso_fin_retiro']!,
-          _diasAvisoFinRetiroMeta,
-        ),
-      );
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    if (data.containsKey('deleted_at')) {
-      context.handle(
-        _deletedAtMeta,
-        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
-      );
-    }
-    if (data.containsKey('pendiente')) {
-      context.handle(
-        _pendienteMeta,
-        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  ConfigAlertaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return ConfigAlertaRow(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}id'],
-      )!,
-      lecheriaId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}lecheria_id'],
-      )!,
-      diasCeloEsperado: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}dias_celo_esperado'],
-      )!,
-      diasConfirmarPreniez: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}dias_confirmar_preniez'],
-      )!,
-      diasVaciosAltos: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}dias_vacios_altos'],
-      )!,
-      diasAntesSecar: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}dias_antes_secar'],
-      )!,
-      diasAntesParto: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}dias_antes_parto'],
-      )!,
-      diasAvisoFinRetiro: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}dias_aviso_fin_retiro'],
-      )!,
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-      deletedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}deleted_at'],
-      ),
-      pendiente: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}pendiente'],
-      )!,
-    );
-  }
-
-  @override
-  $ConfigAlertasTable createAlias(String alias) {
-    return $ConfigAlertasTable(attachedDatabase, alias);
-  }
-}
-
-class ConfigAlertaRow extends DataClass implements Insertable<ConfigAlertaRow> {
-  final String id;
-  final String lecheriaId;
-  final int diasCeloEsperado;
-  final int diasConfirmarPreniez;
-  final int diasVaciosAltos;
-  final int diasAntesSecar;
-  final int diasAntesParto;
-  final int diasAvisoFinRetiro;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final DateTime? deletedAt;
-  final bool pendiente;
-  const ConfigAlertaRow({
-    required this.id,
-    required this.lecheriaId,
-    required this.diasCeloEsperado,
-    required this.diasConfirmarPreniez,
-    required this.diasVaciosAltos,
-    required this.diasAntesSecar,
-    required this.diasAntesParto,
-    required this.diasAvisoFinRetiro,
-    required this.createdAt,
-    required this.updatedAt,
-    this.deletedAt,
-    required this.pendiente,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['lecheria_id'] = Variable<String>(lecheriaId);
-    map['dias_celo_esperado'] = Variable<int>(diasCeloEsperado);
-    map['dias_confirmar_preniez'] = Variable<int>(diasConfirmarPreniez);
-    map['dias_vacios_altos'] = Variable<int>(diasVaciosAltos);
-    map['dias_antes_secar'] = Variable<int>(diasAntesSecar);
-    map['dias_antes_parto'] = Variable<int>(diasAntesParto);
-    map['dias_aviso_fin_retiro'] = Variable<int>(diasAvisoFinRetiro);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
-    if (!nullToAbsent || deletedAt != null) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt);
-    }
-    map['pendiente'] = Variable<bool>(pendiente);
-    return map;
-  }
-
-  ConfigAlertasCompanion toCompanion(bool nullToAbsent) {
-    return ConfigAlertasCompanion(
-      id: Value(id),
-      lecheriaId: Value(lecheriaId),
-      diasCeloEsperado: Value(diasCeloEsperado),
-      diasConfirmarPreniez: Value(diasConfirmarPreniez),
-      diasVaciosAltos: Value(diasVaciosAltos),
-      diasAntesSecar: Value(diasAntesSecar),
-      diasAntesParto: Value(diasAntesParto),
-      diasAvisoFinRetiro: Value(diasAvisoFinRetiro),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-      deletedAt: deletedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(deletedAt),
-      pendiente: Value(pendiente),
-    );
-  }
-
-  factory ConfigAlertaRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return ConfigAlertaRow(
-      id: serializer.fromJson<String>(json['id']),
-      lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
-      diasCeloEsperado: serializer.fromJson<int>(json['diasCeloEsperado']),
-      diasConfirmarPreniez: serializer.fromJson<int>(
-        json['diasConfirmarPreniez'],
-      ),
-      diasVaciosAltos: serializer.fromJson<int>(json['diasVaciosAltos']),
-      diasAntesSecar: serializer.fromJson<int>(json['diasAntesSecar']),
-      diasAntesParto: serializer.fromJson<int>(json['diasAntesParto']),
-      diasAvisoFinRetiro: serializer.fromJson<int>(json['diasAvisoFinRetiro']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
-      pendiente: serializer.fromJson<bool>(json['pendiente']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'lecheriaId': serializer.toJson<String>(lecheriaId),
-      'diasCeloEsperado': serializer.toJson<int>(diasCeloEsperado),
-      'diasConfirmarPreniez': serializer.toJson<int>(diasConfirmarPreniez),
-      'diasVaciosAltos': serializer.toJson<int>(diasVaciosAltos),
-      'diasAntesSecar': serializer.toJson<int>(diasAntesSecar),
-      'diasAntesParto': serializer.toJson<int>(diasAntesParto),
-      'diasAvisoFinRetiro': serializer.toJson<int>(diasAvisoFinRetiro),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
-      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
-      'pendiente': serializer.toJson<bool>(pendiente),
-    };
-  }
-
-  ConfigAlertaRow copyWith({
-    String? id,
-    String? lecheriaId,
-    int? diasCeloEsperado,
-    int? diasConfirmarPreniez,
-    int? diasVaciosAltos,
-    int? diasAntesSecar,
-    int? diasAntesParto,
-    int? diasAvisoFinRetiro,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    Value<DateTime?> deletedAt = const Value.absent(),
-    bool? pendiente,
-  }) => ConfigAlertaRow(
-    id: id ?? this.id,
-    lecheriaId: lecheriaId ?? this.lecheriaId,
-    diasCeloEsperado: diasCeloEsperado ?? this.diasCeloEsperado,
-    diasConfirmarPreniez: diasConfirmarPreniez ?? this.diasConfirmarPreniez,
-    diasVaciosAltos: diasVaciosAltos ?? this.diasVaciosAltos,
-    diasAntesSecar: diasAntesSecar ?? this.diasAntesSecar,
-    diasAntesParto: diasAntesParto ?? this.diasAntesParto,
-    diasAvisoFinRetiro: diasAvisoFinRetiro ?? this.diasAvisoFinRetiro,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
-    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
-    pendiente: pendiente ?? this.pendiente,
-  );
-  ConfigAlertaRow copyWithCompanion(ConfigAlertasCompanion data) {
-    return ConfigAlertaRow(
-      id: data.id.present ? data.id.value : this.id,
-      lecheriaId: data.lecheriaId.present
-          ? data.lecheriaId.value
-          : this.lecheriaId,
-      diasCeloEsperado: data.diasCeloEsperado.present
-          ? data.diasCeloEsperado.value
-          : this.diasCeloEsperado,
-      diasConfirmarPreniez: data.diasConfirmarPreniez.present
-          ? data.diasConfirmarPreniez.value
-          : this.diasConfirmarPreniez,
-      diasVaciosAltos: data.diasVaciosAltos.present
-          ? data.diasVaciosAltos.value
-          : this.diasVaciosAltos,
-      diasAntesSecar: data.diasAntesSecar.present
-          ? data.diasAntesSecar.value
-          : this.diasAntesSecar,
-      diasAntesParto: data.diasAntesParto.present
-          ? data.diasAntesParto.value
-          : this.diasAntesParto,
-      diasAvisoFinRetiro: data.diasAvisoFinRetiro.present
-          ? data.diasAvisoFinRetiro.value
-          : this.diasAvisoFinRetiro,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
-      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('ConfigAlertaRow(')
-          ..write('id: $id, ')
-          ..write('lecheriaId: $lecheriaId, ')
-          ..write('diasCeloEsperado: $diasCeloEsperado, ')
-          ..write('diasConfirmarPreniez: $diasConfirmarPreniez, ')
-          ..write('diasVaciosAltos: $diasVaciosAltos, ')
-          ..write('diasAntesSecar: $diasAntesSecar, ')
-          ..write('diasAntesParto: $diasAntesParto, ')
-          ..write('diasAvisoFinRetiro: $diasAvisoFinRetiro, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt, ')
-          ..write('pendiente: $pendiente')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    lecheriaId,
-    diasCeloEsperado,
-    diasConfirmarPreniez,
-    diasVaciosAltos,
-    diasAntesSecar,
-    diasAntesParto,
-    diasAvisoFinRetiro,
-    createdAt,
-    updatedAt,
-    deletedAt,
-    pendiente,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is ConfigAlertaRow &&
-          other.id == this.id &&
-          other.lecheriaId == this.lecheriaId &&
-          other.diasCeloEsperado == this.diasCeloEsperado &&
-          other.diasConfirmarPreniez == this.diasConfirmarPreniez &&
-          other.diasVaciosAltos == this.diasVaciosAltos &&
-          other.diasAntesSecar == this.diasAntesSecar &&
-          other.diasAntesParto == this.diasAntesParto &&
-          other.diasAvisoFinRetiro == this.diasAvisoFinRetiro &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt &&
-          other.deletedAt == this.deletedAt &&
-          other.pendiente == this.pendiente);
-}
-
-class ConfigAlertasCompanion extends UpdateCompanion<ConfigAlertaRow> {
-  final Value<String> id;
-  final Value<String> lecheriaId;
-  final Value<int> diasCeloEsperado;
-  final Value<int> diasConfirmarPreniez;
-  final Value<int> diasVaciosAltos;
-  final Value<int> diasAntesSecar;
-  final Value<int> diasAntesParto;
-  final Value<int> diasAvisoFinRetiro;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
-  final Value<DateTime?> deletedAt;
-  final Value<bool> pendiente;
-  final Value<int> rowid;
-  const ConfigAlertasCompanion({
-    this.id = const Value.absent(),
-    this.lecheriaId = const Value.absent(),
-    this.diasCeloEsperado = const Value.absent(),
-    this.diasConfirmarPreniez = const Value.absent(),
-    this.diasVaciosAltos = const Value.absent(),
-    this.diasAntesSecar = const Value.absent(),
-    this.diasAntesParto = const Value.absent(),
-    this.diasAvisoFinRetiro = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-    this.deletedAt = const Value.absent(),
-    this.pendiente = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  ConfigAlertasCompanion.insert({
-    required String id,
-    required String lecheriaId,
-    this.diasCeloEsperado = const Value.absent(),
-    this.diasConfirmarPreniez = const Value.absent(),
-    this.diasVaciosAltos = const Value.absent(),
-    this.diasAntesSecar = const Value.absent(),
-    this.diasAntesParto = const Value.absent(),
-    this.diasAvisoFinRetiro = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
-    this.deletedAt = const Value.absent(),
-    this.pendiente = const Value.absent(),
-    this.rowid = const Value.absent(),
-  }) : id = Value(id),
-       lecheriaId = Value(lecheriaId),
-       createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt);
-  static Insertable<ConfigAlertaRow> custom({
-    Expression<String>? id,
-    Expression<String>? lecheriaId,
-    Expression<int>? diasCeloEsperado,
-    Expression<int>? diasConfirmarPreniez,
-    Expression<int>? diasVaciosAltos,
-    Expression<int>? diasAntesSecar,
-    Expression<int>? diasAntesParto,
-    Expression<int>? diasAvisoFinRetiro,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
-    Expression<DateTime>? deletedAt,
-    Expression<bool>? pendiente,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (lecheriaId != null) 'lecheria_id': lecheriaId,
-      if (diasCeloEsperado != null) 'dias_celo_esperado': diasCeloEsperado,
-      if (diasConfirmarPreniez != null)
-        'dias_confirmar_preniez': diasConfirmarPreniez,
-      if (diasVaciosAltos != null) 'dias_vacios_altos': diasVaciosAltos,
-      if (diasAntesSecar != null) 'dias_antes_secar': diasAntesSecar,
-      if (diasAntesParto != null) 'dias_antes_parto': diasAntesParto,
-      if (diasAvisoFinRetiro != null)
-        'dias_aviso_fin_retiro': diasAvisoFinRetiro,
-      if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
-      if (deletedAt != null) 'deleted_at': deletedAt,
-      if (pendiente != null) 'pendiente': pendiente,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  ConfigAlertasCompanion copyWith({
-    Value<String>? id,
-    Value<String>? lecheriaId,
-    Value<int>? diasCeloEsperado,
-    Value<int>? diasConfirmarPreniez,
-    Value<int>? diasVaciosAltos,
-    Value<int>? diasAntesSecar,
-    Value<int>? diasAntesParto,
-    Value<int>? diasAvisoFinRetiro,
-    Value<DateTime>? createdAt,
-    Value<DateTime>? updatedAt,
-    Value<DateTime?>? deletedAt,
-    Value<bool>? pendiente,
-    Value<int>? rowid,
-  }) {
-    return ConfigAlertasCompanion(
-      id: id ?? this.id,
-      lecheriaId: lecheriaId ?? this.lecheriaId,
-      diasCeloEsperado: diasCeloEsperado ?? this.diasCeloEsperado,
-      diasConfirmarPreniez: diasConfirmarPreniez ?? this.diasConfirmarPreniez,
-      diasVaciosAltos: diasVaciosAltos ?? this.diasVaciosAltos,
-      diasAntesSecar: diasAntesSecar ?? this.diasAntesSecar,
-      diasAntesParto: diasAntesParto ?? this.diasAntesParto,
-      diasAvisoFinRetiro: diasAvisoFinRetiro ?? this.diasAvisoFinRetiro,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      deletedAt: deletedAt ?? this.deletedAt,
-      pendiente: pendiente ?? this.pendiente,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (lecheriaId.present) {
-      map['lecheria_id'] = Variable<String>(lecheriaId.value);
-    }
-    if (diasCeloEsperado.present) {
-      map['dias_celo_esperado'] = Variable<int>(diasCeloEsperado.value);
-    }
-    if (diasConfirmarPreniez.present) {
-      map['dias_confirmar_preniez'] = Variable<int>(diasConfirmarPreniez.value);
-    }
-    if (diasVaciosAltos.present) {
-      map['dias_vacios_altos'] = Variable<int>(diasVaciosAltos.value);
-    }
-    if (diasAntesSecar.present) {
-      map['dias_antes_secar'] = Variable<int>(diasAntesSecar.value);
-    }
-    if (diasAntesParto.present) {
-      map['dias_antes_parto'] = Variable<int>(diasAntesParto.value);
-    }
-    if (diasAvisoFinRetiro.present) {
-      map['dias_aviso_fin_retiro'] = Variable<int>(diasAvisoFinRetiro.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    if (deletedAt.present) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
-    }
-    if (pendiente.present) {
-      map['pendiente'] = Variable<bool>(pendiente.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('ConfigAlertasCompanion(')
-          ..write('id: $id, ')
-          ..write('lecheriaId: $lecheriaId, ')
-          ..write('diasCeloEsperado: $diasCeloEsperado, ')
-          ..write('diasConfirmarPreniez: $diasConfirmarPreniez, ')
-          ..write('diasVaciosAltos: $diasVaciosAltos, ')
-          ..write('diasAntesSecar: $diasAntesSecar, ')
-          ..write('diasAntesParto: $diasAntesParto, ')
-          ..write('diasAvisoFinRetiro: $diasAvisoFinRetiro, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -9589,11 +11545,17 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $EventosAnimalTable eventosAnimal = $EventosAnimalTable(this);
   late final $PesasSesionesTable pesasSesiones = $PesasSesionesTable(this);
   late final $PesasLecheTable pesasLeche = $PesasLecheTable(this);
-  late final $ParametrosPeriodoTable parametrosPeriodo =
-      $ParametrosPeriodoTable(this);
-  late final $CostosFijosTable costosFijos = $CostosFijosTable(this);
+  late final $CurvaReferenciaTable curvaReferencia = $CurvaReferenciaTable(
+    this,
+  );
+  late final $ConfigReporteTable configReporte = $ConfigReporteTable(this);
+  late final $SemanasTable semanas = $SemanasTable(this);
+  late final $IngresosSemanaTable ingresosSemana = $IngresosSemanaTable(this);
+  late final $GastosSemanaTable gastosSemana = $GastosSemanaTable(this);
+  late final $CategoriasGastoTable categoriasGasto = $CategoriasGastoTable(
+    this,
+  );
   late final $MedicamentosTable medicamentos = $MedicamentosTable(this);
-  late final $ConfigAlertasTable configAlertas = $ConfigAlertasTable(this);
   late final $SyncCursoresTable syncCursores = $SyncCursoresTable(this);
   late final $SyncEstadosTable syncEstados = $SyncEstadosTable(this);
   late final $SesionesLocalesTable sesionesLocales = $SesionesLocalesTable(
@@ -9613,10 +11575,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     eventosAnimal,
     pesasSesiones,
     pesasLeche,
-    parametrosPeriodo,
-    costosFijos,
+    curvaReferencia,
+    configReporte,
+    semanas,
+    ingresosSemana,
+    gastosSemana,
+    categoriasGasto,
     medicamentos,
-    configAlertas,
     syncCursores,
     syncEstados,
     sesionesLocales,
@@ -10868,9 +12833,9 @@ typedef $$AnimalesTableCreateCompanionBuilder =
       Value<double?> precioCompra,
       Value<DateTime?> fechaCompra,
       Value<String?> madreId,
-      Value<double> concentradoKgDia,
       Value<DateTime?> fechaProbableParto,
       Value<DateTime?> retiroLecheHasta,
+      Value<DateTime?> fechaUltimoParto,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -10890,9 +12855,9 @@ typedef $$AnimalesTableUpdateCompanionBuilder =
       Value<double?> precioCompra,
       Value<DateTime?> fechaCompra,
       Value<String?> madreId,
-      Value<double> concentradoKgDia,
       Value<DateTime?> fechaProbableParto,
       Value<DateTime?> retiroLecheHasta,
+      Value<DateTime?> fechaUltimoParto,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -10964,11 +12929,6 @@ class $$AnimalesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get concentradoKgDia => $composableBuilder(
-    column: $table.concentradoKgDia,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<DateTime> get fechaProbableParto => $composableBuilder(
     column: $table.fechaProbableParto,
     builder: (column) => ColumnFilters(column),
@@ -10976,6 +12936,11 @@ class $$AnimalesTableFilterComposer
 
   ColumnFilters<DateTime> get retiroLecheHasta => $composableBuilder(
     column: $table.retiroLecheHasta,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fechaUltimoParto => $composableBuilder(
+    column: $table.fechaUltimoParto,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11064,11 +13029,6 @@ class $$AnimalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get concentradoKgDia => $composableBuilder(
-    column: $table.concentradoKgDia,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<DateTime> get fechaProbableParto => $composableBuilder(
     column: $table.fechaProbableParto,
     builder: (column) => ColumnOrderings(column),
@@ -11076,6 +13036,11 @@ class $$AnimalesTableOrderingComposer
 
   ColumnOrderings<DateTime> get retiroLecheHasta => $composableBuilder(
     column: $table.retiroLecheHasta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fechaUltimoParto => $composableBuilder(
+    column: $table.fechaUltimoParto,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -11152,11 +13117,6 @@ class $$AnimalesTableAnnotationComposer
   GeneratedColumn<String> get madreId =>
       $composableBuilder(column: $table.madreId, builder: (column) => column);
 
-  GeneratedColumn<double> get concentradoKgDia => $composableBuilder(
-    column: $table.concentradoKgDia,
-    builder: (column) => column,
-  );
-
   GeneratedColumn<DateTime> get fechaProbableParto => $composableBuilder(
     column: $table.fechaProbableParto,
     builder: (column) => column,
@@ -11164,6 +13124,11 @@ class $$AnimalesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get retiroLecheHasta => $composableBuilder(
     column: $table.retiroLecheHasta,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get fechaUltimoParto => $composableBuilder(
+    column: $table.fechaUltimoParto,
     builder: (column) => column,
   );
 
@@ -11219,9 +13184,9 @@ class $$AnimalesTableTableManager
                 Value<double?> precioCompra = const Value.absent(),
                 Value<DateTime?> fechaCompra = const Value.absent(),
                 Value<String?> madreId = const Value.absent(),
-                Value<double> concentradoKgDia = const Value.absent(),
                 Value<DateTime?> fechaProbableParto = const Value.absent(),
                 Value<DateTime?> retiroLecheHasta = const Value.absent(),
+                Value<DateTime?> fechaUltimoParto = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -11239,9 +13204,9 @@ class $$AnimalesTableTableManager
                 precioCompra: precioCompra,
                 fechaCompra: fechaCompra,
                 madreId: madreId,
-                concentradoKgDia: concentradoKgDia,
                 fechaProbableParto: fechaProbableParto,
                 retiroLecheHasta: retiroLecheHasta,
+                fechaUltimoParto: fechaUltimoParto,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -11261,9 +13226,9 @@ class $$AnimalesTableTableManager
                 Value<double?> precioCompra = const Value.absent(),
                 Value<DateTime?> fechaCompra = const Value.absent(),
                 Value<String?> madreId = const Value.absent(),
-                Value<double> concentradoKgDia = const Value.absent(),
                 Value<DateTime?> fechaProbableParto = const Value.absent(),
                 Value<DateTime?> retiroLecheHasta = const Value.absent(),
+                Value<DateTime?> fechaUltimoParto = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -11281,9 +13246,9 @@ class $$AnimalesTableTableManager
                 precioCompra: precioCompra,
                 fechaCompra: fechaCompra,
                 madreId: madreId,
-                concentradoKgDia: concentradoKgDia,
                 fechaProbableParto: fechaProbableParto,
                 retiroLecheHasta: retiroLecheHasta,
+                fechaUltimoParto: fechaUltimoParto,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -12137,8 +14102,12 @@ typedef $$PesasLecheTableCreateCompanionBuilder =
     PesasLecheCompanion Function({
       required String id,
       required String sesionId,
-      required String animalId,
+      Value<String?> animalId,
+      Value<String?> identificadorManual,
       required double litros,
+      Value<double?> litrosManana,
+      Value<double?> litrosTarde,
+      Value<double?> concentradoKg,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -12149,8 +14118,12 @@ typedef $$PesasLecheTableUpdateCompanionBuilder =
     PesasLecheCompanion Function({
       Value<String> id,
       Value<String> sesionId,
-      Value<String> animalId,
+      Value<String?> animalId,
+      Value<String?> identificadorManual,
       Value<double> litros,
+      Value<double?> litrosManana,
+      Value<double?> litrosTarde,
+      Value<double?> concentradoKg,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -12182,8 +14155,28 @@ class $$PesasLecheTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get identificadorManual => $composableBuilder(
+    column: $table.identificadorManual,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<double> get litros => $composableBuilder(
     column: $table.litros,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get litrosManana => $composableBuilder(
+    column: $table.litrosManana,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get litrosTarde => $composableBuilder(
+    column: $table.litrosTarde,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get concentradoKg => $composableBuilder(
+    column: $table.concentradoKg,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12232,8 +14225,28 @@ class $$PesasLecheTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get identificadorManual => $composableBuilder(
+    column: $table.identificadorManual,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get litros => $composableBuilder(
     column: $table.litros,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get litrosManana => $composableBuilder(
+    column: $table.litrosManana,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get litrosTarde => $composableBuilder(
+    column: $table.litrosTarde,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get concentradoKg => $composableBuilder(
+    column: $table.concentradoKg,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -12276,8 +14289,28 @@ class $$PesasLecheTableAnnotationComposer
   GeneratedColumn<String> get animalId =>
       $composableBuilder(column: $table.animalId, builder: (column) => column);
 
+  GeneratedColumn<String> get identificadorManual => $composableBuilder(
+    column: $table.identificadorManual,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<double> get litros =>
       $composableBuilder(column: $table.litros, builder: (column) => column);
+
+  GeneratedColumn<double> get litrosManana => $composableBuilder(
+    column: $table.litrosManana,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get litrosTarde => $composableBuilder(
+    column: $table.litrosTarde,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get concentradoKg => $composableBuilder(
+    column: $table.concentradoKg,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -12325,8 +14358,12 @@ class $$PesasLecheTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> sesionId = const Value.absent(),
-                Value<String> animalId = const Value.absent(),
+                Value<String?> animalId = const Value.absent(),
+                Value<String?> identificadorManual = const Value.absent(),
                 Value<double> litros = const Value.absent(),
+                Value<double?> litrosManana = const Value.absent(),
+                Value<double?> litrosTarde = const Value.absent(),
+                Value<double?> concentradoKg = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -12336,7 +14373,11 @@ class $$PesasLecheTableTableManager
                 id: id,
                 sesionId: sesionId,
                 animalId: animalId,
+                identificadorManual: identificadorManual,
                 litros: litros,
+                litrosManana: litrosManana,
+                litrosTarde: litrosTarde,
+                concentradoKg: concentradoKg,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -12347,8 +14388,12 @@ class $$PesasLecheTableTableManager
               ({
                 required String id,
                 required String sesionId,
-                required String animalId,
+                Value<String?> animalId = const Value.absent(),
+                Value<String?> identificadorManual = const Value.absent(),
                 required double litros,
+                Value<double?> litrosManana = const Value.absent(),
+                Value<double?> litrosTarde = const Value.absent(),
+                Value<double?> concentradoKg = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -12358,7 +14403,11 @@ class $$PesasLecheTableTableManager
                 id: id,
                 sesionId: sesionId,
                 animalId: animalId,
+                identificadorManual: identificadorManual,
                 litros: litros,
+                litrosManana: litrosManana,
+                litrosTarde: litrosTarde,
+                concentradoKg: concentradoKg,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -12390,30 +14439,28 @@ typedef $$PesasLecheTableProcessedTableManager =
       PesaLecheRow,
       PrefetchHooks Function()
     >;
-typedef $$ParametrosPeriodoTableCreateCompanionBuilder =
-    ParametrosPeriodoCompanion Function({
+typedef $$CurvaReferenciaTableCreateCompanionBuilder =
+    CurvaReferenciaCompanion Function({
       required String id,
       required String lecheriaId,
-      required int anio,
-      required int mes,
-      required double precioLitro,
-      required double precioConcentradoKg,
-      Value<double> umbralSecadoLitros,
+      required int orden,
+      required int diaDesde,
+      Value<int?> diaHasta,
+      required double litrosEsperados,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
       Value<bool> pendiente,
       Value<int> rowid,
     });
-typedef $$ParametrosPeriodoTableUpdateCompanionBuilder =
-    ParametrosPeriodoCompanion Function({
+typedef $$CurvaReferenciaTableUpdateCompanionBuilder =
+    CurvaReferenciaCompanion Function({
       Value<String> id,
       Value<String> lecheriaId,
-      Value<int> anio,
-      Value<int> mes,
-      Value<double> precioLitro,
-      Value<double> precioConcentradoKg,
-      Value<double> umbralSecadoLitros,
+      Value<int> orden,
+      Value<int> diaDesde,
+      Value<int?> diaHasta,
+      Value<double> litrosEsperados,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -12421,9 +14468,9 @@ typedef $$ParametrosPeriodoTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-class $$ParametrosPeriodoTableFilterComposer
-    extends Composer<_$AppDatabase, $ParametrosPeriodoTable> {
-  $$ParametrosPeriodoTableFilterComposer({
+class $$CurvaReferenciaTableFilterComposer
+    extends Composer<_$AppDatabase, $CurvaReferenciaTable> {
+  $$CurvaReferenciaTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -12440,23 +14487,334 @@ class $$ParametrosPeriodoTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get anio => $composableBuilder(
-    column: $table.anio,
+  ColumnFilters<int> get orden => $composableBuilder(
+    column: $table.orden,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get mes => $composableBuilder(
-    column: $table.mes,
+  ColumnFilters<int> get diaDesde => $composableBuilder(
+    column: $table.diaDesde,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get precioLitro => $composableBuilder(
-    column: $table.precioLitro,
+  ColumnFilters<int> get diaHasta => $composableBuilder(
+    column: $table.diaHasta,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get precioConcentradoKg => $composableBuilder(
-    column: $table.precioConcentradoKg,
+  ColumnFilters<double> get litrosEsperados => $composableBuilder(
+    column: $table.litrosEsperados,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CurvaReferenciaTableOrderingComposer
+    extends Composer<_$AppDatabase, $CurvaReferenciaTable> {
+  $$CurvaReferenciaTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orden => $composableBuilder(
+    column: $table.orden,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get diaDesde => $composableBuilder(
+    column: $table.diaDesde,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get diaHasta => $composableBuilder(
+    column: $table.diaHasta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get litrosEsperados => $composableBuilder(
+    column: $table.litrosEsperados,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CurvaReferenciaTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CurvaReferenciaTable> {
+  $$CurvaReferenciaTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get orden =>
+      $composableBuilder(column: $table.orden, builder: (column) => column);
+
+  GeneratedColumn<int> get diaDesde =>
+      $composableBuilder(column: $table.diaDesde, builder: (column) => column);
+
+  GeneratedColumn<int> get diaHasta =>
+      $composableBuilder(column: $table.diaHasta, builder: (column) => column);
+
+  GeneratedColumn<double> get litrosEsperados => $composableBuilder(
+    column: $table.litrosEsperados,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$CurvaReferenciaTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CurvaReferenciaTable,
+          CurvaReferenciaRow,
+          $$CurvaReferenciaTableFilterComposer,
+          $$CurvaReferenciaTableOrderingComposer,
+          $$CurvaReferenciaTableAnnotationComposer,
+          $$CurvaReferenciaTableCreateCompanionBuilder,
+          $$CurvaReferenciaTableUpdateCompanionBuilder,
+          (
+            CurvaReferenciaRow,
+            BaseReferences<
+              _$AppDatabase,
+              $CurvaReferenciaTable,
+              CurvaReferenciaRow
+            >,
+          ),
+          CurvaReferenciaRow,
+          PrefetchHooks Function()
+        > {
+  $$CurvaReferenciaTableTableManager(
+    _$AppDatabase db,
+    $CurvaReferenciaTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CurvaReferenciaTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CurvaReferenciaTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CurvaReferenciaTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> lecheriaId = const Value.absent(),
+                Value<int> orden = const Value.absent(),
+                Value<int> diaDesde = const Value.absent(),
+                Value<int?> diaHasta = const Value.absent(),
+                Value<double> litrosEsperados = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CurvaReferenciaCompanion(
+                id: id,
+                lecheriaId: lecheriaId,
+                orden: orden,
+                diaDesde: diaDesde,
+                diaHasta: diaHasta,
+                litrosEsperados: litrosEsperados,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String lecheriaId,
+                required int orden,
+                required int diaDesde,
+                Value<int?> diaHasta = const Value.absent(),
+                required double litrosEsperados,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CurvaReferenciaCompanion.insert(
+                id: id,
+                lecheriaId: lecheriaId,
+                orden: orden,
+                diaDesde: diaDesde,
+                diaHasta: diaHasta,
+                litrosEsperados: litrosEsperados,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CurvaReferenciaTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CurvaReferenciaTable,
+      CurvaReferenciaRow,
+      $$CurvaReferenciaTableFilterComposer,
+      $$CurvaReferenciaTableOrderingComposer,
+      $$CurvaReferenciaTableAnnotationComposer,
+      $$CurvaReferenciaTableCreateCompanionBuilder,
+      $$CurvaReferenciaTableUpdateCompanionBuilder,
+      (
+        CurvaReferenciaRow,
+        BaseReferences<
+          _$AppDatabase,
+          $CurvaReferenciaTable,
+          CurvaReferenciaRow
+        >,
+      ),
+      CurvaReferenciaRow,
+      PrefetchHooks Function()
+    >;
+typedef $$ConfigReporteTableCreateCompanionBuilder =
+    ConfigReporteCompanion Function({
+      required String id,
+      required String lecheriaId,
+      Value<double> pctExcelente,
+      Value<double> pctBueno,
+      Value<double> pctVigilar,
+      Value<double> pctBajo,
+      Value<double> umbralSecadoLitros,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$ConfigReporteTableUpdateCompanionBuilder =
+    ConfigReporteCompanion Function({
+      Value<String> id,
+      Value<String> lecheriaId,
+      Value<double> pctExcelente,
+      Value<double> pctBueno,
+      Value<double> pctVigilar,
+      Value<double> pctBajo,
+      Value<double> umbralSecadoLitros,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$ConfigReporteTableFilterComposer
+    extends Composer<_$AppDatabase, $ConfigReporteTable> {
+  $$ConfigReporteTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pctExcelente => $composableBuilder(
+    column: $table.pctExcelente,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pctBueno => $composableBuilder(
+    column: $table.pctBueno,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pctVigilar => $composableBuilder(
+    column: $table.pctVigilar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pctBajo => $composableBuilder(
+    column: $table.pctBajo,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12486,9 +14844,9 @@ class $$ParametrosPeriodoTableFilterComposer
   );
 }
 
-class $$ParametrosPeriodoTableOrderingComposer
-    extends Composer<_$AppDatabase, $ParametrosPeriodoTable> {
-  $$ParametrosPeriodoTableOrderingComposer({
+class $$ConfigReporteTableOrderingComposer
+    extends Composer<_$AppDatabase, $ConfigReporteTable> {
+  $$ConfigReporteTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -12505,23 +14863,23 @@ class $$ParametrosPeriodoTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get anio => $composableBuilder(
-    column: $table.anio,
+  ColumnOrderings<double> get pctExcelente => $composableBuilder(
+    column: $table.pctExcelente,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get mes => $composableBuilder(
-    column: $table.mes,
+  ColumnOrderings<double> get pctBueno => $composableBuilder(
+    column: $table.pctBueno,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get precioLitro => $composableBuilder(
-    column: $table.precioLitro,
+  ColumnOrderings<double> get pctVigilar => $composableBuilder(
+    column: $table.pctVigilar,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get precioConcentradoKg => $composableBuilder(
-    column: $table.precioConcentradoKg,
+  ColumnOrderings<double> get pctBajo => $composableBuilder(
+    column: $table.pctBajo,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -12551,9 +14909,9 @@ class $$ParametrosPeriodoTableOrderingComposer
   );
 }
 
-class $$ParametrosPeriodoTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ParametrosPeriodoTable> {
-  $$ParametrosPeriodoTableAnnotationComposer({
+class $$ConfigReporteTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ConfigReporteTable> {
+  $$ConfigReporteTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -12568,21 +14926,21 @@ class $$ParametrosPeriodoTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<int> get anio =>
-      $composableBuilder(column: $table.anio, builder: (column) => column);
-
-  GeneratedColumn<int> get mes =>
-      $composableBuilder(column: $table.mes, builder: (column) => column);
-
-  GeneratedColumn<double> get precioLitro => $composableBuilder(
-    column: $table.precioLitro,
+  GeneratedColumn<double> get pctExcelente => $composableBuilder(
+    column: $table.pctExcelente,
     builder: (column) => column,
   );
 
-  GeneratedColumn<double> get precioConcentradoKg => $composableBuilder(
-    column: $table.precioConcentradoKg,
+  GeneratedColumn<double> get pctBueno =>
+      $composableBuilder(column: $table.pctBueno, builder: (column) => column);
+
+  GeneratedColumn<double> get pctVigilar => $composableBuilder(
+    column: $table.pctVigilar,
     builder: (column) => column,
   );
+
+  GeneratedColumn<double> get pctBajo =>
+      $composableBuilder(column: $table.pctBajo, builder: (column) => column);
 
   GeneratedColumn<double> get umbralSecadoLitros => $composableBuilder(
     column: $table.umbralSecadoLitros,
@@ -12602,65 +14960,60 @@ class $$ParametrosPeriodoTableAnnotationComposer
       $composableBuilder(column: $table.pendiente, builder: (column) => column);
 }
 
-class $$ParametrosPeriodoTableTableManager
+class $$ConfigReporteTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $ParametrosPeriodoTable,
-          ParametrosPeriodoRow,
-          $$ParametrosPeriodoTableFilterComposer,
-          $$ParametrosPeriodoTableOrderingComposer,
-          $$ParametrosPeriodoTableAnnotationComposer,
-          $$ParametrosPeriodoTableCreateCompanionBuilder,
-          $$ParametrosPeriodoTableUpdateCompanionBuilder,
+          $ConfigReporteTable,
+          ConfigReporteRow,
+          $$ConfigReporteTableFilterComposer,
+          $$ConfigReporteTableOrderingComposer,
+          $$ConfigReporteTableAnnotationComposer,
+          $$ConfigReporteTableCreateCompanionBuilder,
+          $$ConfigReporteTableUpdateCompanionBuilder,
           (
-            ParametrosPeriodoRow,
+            ConfigReporteRow,
             BaseReferences<
               _$AppDatabase,
-              $ParametrosPeriodoTable,
-              ParametrosPeriodoRow
+              $ConfigReporteTable,
+              ConfigReporteRow
             >,
           ),
-          ParametrosPeriodoRow,
+          ConfigReporteRow,
           PrefetchHooks Function()
         > {
-  $$ParametrosPeriodoTableTableManager(
-    _$AppDatabase db,
-    $ParametrosPeriodoTable table,
-  ) : super(
+  $$ConfigReporteTableTableManager(_$AppDatabase db, $ConfigReporteTable table)
+    : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$ParametrosPeriodoTableFilterComposer($db: db, $table: table),
+              $$ConfigReporteTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$ParametrosPeriodoTableOrderingComposer($db: db, $table: table),
+              $$ConfigReporteTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$ParametrosPeriodoTableAnnotationComposer(
-                $db: db,
-                $table: table,
-              ),
+              $$ConfigReporteTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> lecheriaId = const Value.absent(),
-                Value<int> anio = const Value.absent(),
-                Value<int> mes = const Value.absent(),
-                Value<double> precioLitro = const Value.absent(),
-                Value<double> precioConcentradoKg = const Value.absent(),
+                Value<double> pctExcelente = const Value.absent(),
+                Value<double> pctBueno = const Value.absent(),
+                Value<double> pctVigilar = const Value.absent(),
+                Value<double> pctBajo = const Value.absent(),
                 Value<double> umbralSecadoLitros = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> pendiente = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => ParametrosPeriodoCompanion(
+              }) => ConfigReporteCompanion(
                 id: id,
                 lecheriaId: lecheriaId,
-                anio: anio,
-                mes: mes,
-                precioLitro: precioLitro,
-                precioConcentradoKg: precioConcentradoKg,
+                pctExcelente: pctExcelente,
+                pctBueno: pctBueno,
+                pctVigilar: pctVigilar,
+                pctBajo: pctBajo,
                 umbralSecadoLitros: umbralSecadoLitros,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -12672,23 +15025,23 @@ class $$ParametrosPeriodoTableTableManager
               ({
                 required String id,
                 required String lecheriaId,
-                required int anio,
-                required int mes,
-                required double precioLitro,
-                required double precioConcentradoKg,
+                Value<double> pctExcelente = const Value.absent(),
+                Value<double> pctBueno = const Value.absent(),
+                Value<double> pctVigilar = const Value.absent(),
+                Value<double> pctBajo = const Value.absent(),
                 Value<double> umbralSecadoLitros = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> pendiente = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => ParametrosPeriodoCompanion.insert(
+              }) => ConfigReporteCompanion.insert(
                 id: id,
                 lecheriaId: lecheriaId,
-                anio: anio,
-                mes: mes,
-                precioLitro: precioLitro,
-                precioConcentradoKg: precioConcentradoKg,
+                pctExcelente: pctExcelente,
+                pctBueno: pctBueno,
+                pctVigilar: pctVigilar,
+                pctBajo: pctBajo,
                 umbralSecadoLitros: umbralSecadoLitros,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -12704,47 +15057,43 @@ class $$ParametrosPeriodoTableTableManager
       );
 }
 
-typedef $$ParametrosPeriodoTableProcessedTableManager =
+typedef $$ConfigReporteTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $ParametrosPeriodoTable,
-      ParametrosPeriodoRow,
-      $$ParametrosPeriodoTableFilterComposer,
-      $$ParametrosPeriodoTableOrderingComposer,
-      $$ParametrosPeriodoTableAnnotationComposer,
-      $$ParametrosPeriodoTableCreateCompanionBuilder,
-      $$ParametrosPeriodoTableUpdateCompanionBuilder,
+      $ConfigReporteTable,
+      ConfigReporteRow,
+      $$ConfigReporteTableFilterComposer,
+      $$ConfigReporteTableOrderingComposer,
+      $$ConfigReporteTableAnnotationComposer,
+      $$ConfigReporteTableCreateCompanionBuilder,
+      $$ConfigReporteTableUpdateCompanionBuilder,
       (
-        ParametrosPeriodoRow,
-        BaseReferences<
-          _$AppDatabase,
-          $ParametrosPeriodoTable,
-          ParametrosPeriodoRow
-        >,
+        ConfigReporteRow,
+        BaseReferences<_$AppDatabase, $ConfigReporteTable, ConfigReporteRow>,
       ),
-      ParametrosPeriodoRow,
+      ConfigReporteRow,
       PrefetchHooks Function()
     >;
-typedef $$CostosFijosTableCreateCompanionBuilder =
-    CostosFijosCompanion Function({
+typedef $$SemanasTableCreateCompanionBuilder =
+    SemanasCompanion Function({
       required String id,
       required String lecheriaId,
-      required String periodoId,
-      required String categoria,
-      required double monto,
+      required DateTime fechaInicio,
+      required DateTime fechaFin,
+      Value<bool> cerrada,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
       Value<bool> pendiente,
       Value<int> rowid,
     });
-typedef $$CostosFijosTableUpdateCompanionBuilder =
-    CostosFijosCompanion Function({
+typedef $$SemanasTableUpdateCompanionBuilder =
+    SemanasCompanion Function({
       Value<String> id,
       Value<String> lecheriaId,
-      Value<String> periodoId,
-      Value<String> categoria,
-      Value<double> monto,
+      Value<DateTime> fechaInicio,
+      Value<DateTime> fechaFin,
+      Value<bool> cerrada,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -12752,9 +15101,9 @@ typedef $$CostosFijosTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-class $$CostosFijosTableFilterComposer
-    extends Composer<_$AppDatabase, $CostosFijosTable> {
-  $$CostosFijosTableFilterComposer({
+class $$SemanasTableFilterComposer
+    extends Composer<_$AppDatabase, $SemanasTable> {
+  $$SemanasTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -12771,18 +15120,18 @@ class $$CostosFijosTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get periodoId => $composableBuilder(
-    column: $table.periodoId,
+  ColumnFilters<DateTime> get fechaInicio => $composableBuilder(
+    column: $table.fechaInicio,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get categoria => $composableBuilder(
-    column: $table.categoria,
+  ColumnFilters<DateTime> get fechaFin => $composableBuilder(
+    column: $table.fechaFin,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get monto => $composableBuilder(
-    column: $table.monto,
+  ColumnFilters<bool> get cerrada => $composableBuilder(
+    column: $table.cerrada,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12807,9 +15156,9 @@ class $$CostosFijosTableFilterComposer
   );
 }
 
-class $$CostosFijosTableOrderingComposer
-    extends Composer<_$AppDatabase, $CostosFijosTable> {
-  $$CostosFijosTableOrderingComposer({
+class $$SemanasTableOrderingComposer
+    extends Composer<_$AppDatabase, $SemanasTable> {
+  $$SemanasTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -12826,18 +15175,18 @@ class $$CostosFijosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get periodoId => $composableBuilder(
-    column: $table.periodoId,
+  ColumnOrderings<DateTime> get fechaInicio => $composableBuilder(
+    column: $table.fechaInicio,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get categoria => $composableBuilder(
-    column: $table.categoria,
+  ColumnOrderings<DateTime> get fechaFin => $composableBuilder(
+    column: $table.fechaFin,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get monto => $composableBuilder(
-    column: $table.monto,
+  ColumnOrderings<bool> get cerrada => $composableBuilder(
+    column: $table.cerrada,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -12862,9 +15211,9 @@ class $$CostosFijosTableOrderingComposer
   );
 }
 
-class $$CostosFijosTableAnnotationComposer
-    extends Composer<_$AppDatabase, $CostosFijosTable> {
-  $$CostosFijosTableAnnotationComposer({
+class $$SemanasTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SemanasTable> {
+  $$SemanasTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -12879,14 +15228,16 @@ class $$CostosFijosTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get periodoId =>
-      $composableBuilder(column: $table.periodoId, builder: (column) => column);
+  GeneratedColumn<DateTime> get fechaInicio => $composableBuilder(
+    column: $table.fechaInicio,
+    builder: (column) => column,
+  );
 
-  GeneratedColumn<String> get categoria =>
-      $composableBuilder(column: $table.categoria, builder: (column) => column);
+  GeneratedColumn<DateTime> get fechaFin =>
+      $composableBuilder(column: $table.fechaFin, builder: (column) => column);
 
-  GeneratedColumn<double> get monto =>
-      $composableBuilder(column: $table.monto, builder: (column) => column);
+  GeneratedColumn<bool> get cerrada =>
+      $composableBuilder(column: $table.cerrada, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -12901,53 +15252,50 @@ class $$CostosFijosTableAnnotationComposer
       $composableBuilder(column: $table.pendiente, builder: (column) => column);
 }
 
-class $$CostosFijosTableTableManager
+class $$SemanasTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $CostosFijosTable,
-          CostoFijoRow,
-          $$CostosFijosTableFilterComposer,
-          $$CostosFijosTableOrderingComposer,
-          $$CostosFijosTableAnnotationComposer,
-          $$CostosFijosTableCreateCompanionBuilder,
-          $$CostosFijosTableUpdateCompanionBuilder,
-          (
-            CostoFijoRow,
-            BaseReferences<_$AppDatabase, $CostosFijosTable, CostoFijoRow>,
-          ),
-          CostoFijoRow,
+          $SemanasTable,
+          SemanaRow,
+          $$SemanasTableFilterComposer,
+          $$SemanasTableOrderingComposer,
+          $$SemanasTableAnnotationComposer,
+          $$SemanasTableCreateCompanionBuilder,
+          $$SemanasTableUpdateCompanionBuilder,
+          (SemanaRow, BaseReferences<_$AppDatabase, $SemanasTable, SemanaRow>),
+          SemanaRow,
           PrefetchHooks Function()
         > {
-  $$CostosFijosTableTableManager(_$AppDatabase db, $CostosFijosTable table)
+  $$SemanasTableTableManager(_$AppDatabase db, $SemanasTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$CostosFijosTableFilterComposer($db: db, $table: table),
+              $$SemanasTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$CostosFijosTableOrderingComposer($db: db, $table: table),
+              $$SemanasTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$CostosFijosTableAnnotationComposer($db: db, $table: table),
+              $$SemanasTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> lecheriaId = const Value.absent(),
-                Value<String> periodoId = const Value.absent(),
-                Value<String> categoria = const Value.absent(),
-                Value<double> monto = const Value.absent(),
+                Value<DateTime> fechaInicio = const Value.absent(),
+                Value<DateTime> fechaFin = const Value.absent(),
+                Value<bool> cerrada = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> pendiente = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => CostosFijosCompanion(
+              }) => SemanasCompanion(
                 id: id,
                 lecheriaId: lecheriaId,
-                periodoId: periodoId,
-                categoria: categoria,
-                monto: monto,
+                fechaInicio: fechaInicio,
+                fechaFin: fechaFin,
+                cerrada: cerrada,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -12958,20 +15306,20 @@ class $$CostosFijosTableTableManager
               ({
                 required String id,
                 required String lecheriaId,
-                required String periodoId,
-                required String categoria,
-                required double monto,
+                required DateTime fechaInicio,
+                required DateTime fechaFin,
+                Value<bool> cerrada = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> pendiente = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => CostosFijosCompanion.insert(
+              }) => SemanasCompanion.insert(
                 id: id,
                 lecheriaId: lecheriaId,
-                periodoId: periodoId,
-                categoria: categoria,
-                monto: monto,
+                fechaInicio: fechaInicio,
+                fechaFin: fechaFin,
+                cerrada: cerrada,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -12986,21 +15334,921 @@ class $$CostosFijosTableTableManager
       );
 }
 
-typedef $$CostosFijosTableProcessedTableManager =
+typedef $$SemanasTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $CostosFijosTable,
-      CostoFijoRow,
-      $$CostosFijosTableFilterComposer,
-      $$CostosFijosTableOrderingComposer,
-      $$CostosFijosTableAnnotationComposer,
-      $$CostosFijosTableCreateCompanionBuilder,
-      $$CostosFijosTableUpdateCompanionBuilder,
+      $SemanasTable,
+      SemanaRow,
+      $$SemanasTableFilterComposer,
+      $$SemanasTableOrderingComposer,
+      $$SemanasTableAnnotationComposer,
+      $$SemanasTableCreateCompanionBuilder,
+      $$SemanasTableUpdateCompanionBuilder,
+      (SemanaRow, BaseReferences<_$AppDatabase, $SemanasTable, SemanaRow>),
+      SemanaRow,
+      PrefetchHooks Function()
+    >;
+typedef $$IngresosSemanaTableCreateCompanionBuilder =
+    IngresosSemanaCompanion Function({
+      required String id,
+      required String lecheriaId,
+      required String semanaId,
+      required String tipo,
+      required double monto,
+      Value<double?> litros,
+      Value<String?> animalId,
+      Value<String?> detalle,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$IngresosSemanaTableUpdateCompanionBuilder =
+    IngresosSemanaCompanion Function({
+      Value<String> id,
+      Value<String> lecheriaId,
+      Value<String> semanaId,
+      Value<String> tipo,
+      Value<double> monto,
+      Value<double?> litros,
+      Value<String?> animalId,
+      Value<String?> detalle,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$IngresosSemanaTableFilterComposer
+    extends Composer<_$AppDatabase, $IngresosSemanaTable> {
+  $$IngresosSemanaTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get semanaId => $composableBuilder(
+    column: $table.semanaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get litros => $composableBuilder(
+    column: $table.litros,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get animalId => $composableBuilder(
+    column: $table.animalId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get detalle => $composableBuilder(
+    column: $table.detalle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$IngresosSemanaTableOrderingComposer
+    extends Composer<_$AppDatabase, $IngresosSemanaTable> {
+  $$IngresosSemanaTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get semanaId => $composableBuilder(
+    column: $table.semanaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get litros => $composableBuilder(
+    column: $table.litros,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get animalId => $composableBuilder(
+    column: $table.animalId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get detalle => $composableBuilder(
+    column: $table.detalle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$IngresosSemanaTableAnnotationComposer
+    extends Composer<_$AppDatabase, $IngresosSemanaTable> {
+  $$IngresosSemanaTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get semanaId =>
+      $composableBuilder(column: $table.semanaId, builder: (column) => column);
+
+  GeneratedColumn<String> get tipo =>
+      $composableBuilder(column: $table.tipo, builder: (column) => column);
+
+  GeneratedColumn<double> get monto =>
+      $composableBuilder(column: $table.monto, builder: (column) => column);
+
+  GeneratedColumn<double> get litros =>
+      $composableBuilder(column: $table.litros, builder: (column) => column);
+
+  GeneratedColumn<String> get animalId =>
+      $composableBuilder(column: $table.animalId, builder: (column) => column);
+
+  GeneratedColumn<String> get detalle =>
+      $composableBuilder(column: $table.detalle, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$IngresosSemanaTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $IngresosSemanaTable,
+          IngresoSemanaRow,
+          $$IngresosSemanaTableFilterComposer,
+          $$IngresosSemanaTableOrderingComposer,
+          $$IngresosSemanaTableAnnotationComposer,
+          $$IngresosSemanaTableCreateCompanionBuilder,
+          $$IngresosSemanaTableUpdateCompanionBuilder,
+          (
+            IngresoSemanaRow,
+            BaseReferences<
+              _$AppDatabase,
+              $IngresosSemanaTable,
+              IngresoSemanaRow
+            >,
+          ),
+          IngresoSemanaRow,
+          PrefetchHooks Function()
+        > {
+  $$IngresosSemanaTableTableManager(
+    _$AppDatabase db,
+    $IngresosSemanaTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$IngresosSemanaTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$IngresosSemanaTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$IngresosSemanaTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> lecheriaId = const Value.absent(),
+                Value<String> semanaId = const Value.absent(),
+                Value<String> tipo = const Value.absent(),
+                Value<double> monto = const Value.absent(),
+                Value<double?> litros = const Value.absent(),
+                Value<String?> animalId = const Value.absent(),
+                Value<String?> detalle = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => IngresosSemanaCompanion(
+                id: id,
+                lecheriaId: lecheriaId,
+                semanaId: semanaId,
+                tipo: tipo,
+                monto: monto,
+                litros: litros,
+                animalId: animalId,
+                detalle: detalle,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String lecheriaId,
+                required String semanaId,
+                required String tipo,
+                required double monto,
+                Value<double?> litros = const Value.absent(),
+                Value<String?> animalId = const Value.absent(),
+                Value<String?> detalle = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => IngresosSemanaCompanion.insert(
+                id: id,
+                lecheriaId: lecheriaId,
+                semanaId: semanaId,
+                tipo: tipo,
+                monto: monto,
+                litros: litros,
+                animalId: animalId,
+                detalle: detalle,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$IngresosSemanaTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $IngresosSemanaTable,
+      IngresoSemanaRow,
+      $$IngresosSemanaTableFilterComposer,
+      $$IngresosSemanaTableOrderingComposer,
+      $$IngresosSemanaTableAnnotationComposer,
+      $$IngresosSemanaTableCreateCompanionBuilder,
+      $$IngresosSemanaTableUpdateCompanionBuilder,
       (
-        CostoFijoRow,
-        BaseReferences<_$AppDatabase, $CostosFijosTable, CostoFijoRow>,
+        IngresoSemanaRow,
+        BaseReferences<_$AppDatabase, $IngresosSemanaTable, IngresoSemanaRow>,
       ),
-      CostoFijoRow,
+      IngresoSemanaRow,
+      PrefetchHooks Function()
+    >;
+typedef $$GastosSemanaTableCreateCompanionBuilder =
+    GastosSemanaCompanion Function({
+      required String id,
+      required String lecheriaId,
+      required String semanaId,
+      required String categoria,
+      required double monto,
+      Value<String?> detalle,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$GastosSemanaTableUpdateCompanionBuilder =
+    GastosSemanaCompanion Function({
+      Value<String> id,
+      Value<String> lecheriaId,
+      Value<String> semanaId,
+      Value<String> categoria,
+      Value<double> monto,
+      Value<String?> detalle,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$GastosSemanaTableFilterComposer
+    extends Composer<_$AppDatabase, $GastosSemanaTable> {
+  $$GastosSemanaTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get semanaId => $composableBuilder(
+    column: $table.semanaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoria => $composableBuilder(
+    column: $table.categoria,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get detalle => $composableBuilder(
+    column: $table.detalle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GastosSemanaTableOrderingComposer
+    extends Composer<_$AppDatabase, $GastosSemanaTable> {
+  $$GastosSemanaTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get semanaId => $composableBuilder(
+    column: $table.semanaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoria => $composableBuilder(
+    column: $table.categoria,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get detalle => $composableBuilder(
+    column: $table.detalle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GastosSemanaTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GastosSemanaTable> {
+  $$GastosSemanaTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get semanaId =>
+      $composableBuilder(column: $table.semanaId, builder: (column) => column);
+
+  GeneratedColumn<String> get categoria =>
+      $composableBuilder(column: $table.categoria, builder: (column) => column);
+
+  GeneratedColumn<double> get monto =>
+      $composableBuilder(column: $table.monto, builder: (column) => column);
+
+  GeneratedColumn<String> get detalle =>
+      $composableBuilder(column: $table.detalle, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$GastosSemanaTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GastosSemanaTable,
+          GastoSemanaRow,
+          $$GastosSemanaTableFilterComposer,
+          $$GastosSemanaTableOrderingComposer,
+          $$GastosSemanaTableAnnotationComposer,
+          $$GastosSemanaTableCreateCompanionBuilder,
+          $$GastosSemanaTableUpdateCompanionBuilder,
+          (
+            GastoSemanaRow,
+            BaseReferences<_$AppDatabase, $GastosSemanaTable, GastoSemanaRow>,
+          ),
+          GastoSemanaRow,
+          PrefetchHooks Function()
+        > {
+  $$GastosSemanaTableTableManager(_$AppDatabase db, $GastosSemanaTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GastosSemanaTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GastosSemanaTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GastosSemanaTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> lecheriaId = const Value.absent(),
+                Value<String> semanaId = const Value.absent(),
+                Value<String> categoria = const Value.absent(),
+                Value<double> monto = const Value.absent(),
+                Value<String?> detalle = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GastosSemanaCompanion(
+                id: id,
+                lecheriaId: lecheriaId,
+                semanaId: semanaId,
+                categoria: categoria,
+                monto: monto,
+                detalle: detalle,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String lecheriaId,
+                required String semanaId,
+                required String categoria,
+                required double monto,
+                Value<String?> detalle = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GastosSemanaCompanion.insert(
+                id: id,
+                lecheriaId: lecheriaId,
+                semanaId: semanaId,
+                categoria: categoria,
+                monto: monto,
+                detalle: detalle,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GastosSemanaTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GastosSemanaTable,
+      GastoSemanaRow,
+      $$GastosSemanaTableFilterComposer,
+      $$GastosSemanaTableOrderingComposer,
+      $$GastosSemanaTableAnnotationComposer,
+      $$GastosSemanaTableCreateCompanionBuilder,
+      $$GastosSemanaTableUpdateCompanionBuilder,
+      (
+        GastoSemanaRow,
+        BaseReferences<_$AppDatabase, $GastosSemanaTable, GastoSemanaRow>,
+      ),
+      GastoSemanaRow,
+      PrefetchHooks Function()
+    >;
+typedef $$CategoriasGastoTableCreateCompanionBuilder =
+    CategoriasGastoCompanion Function({
+      required String id,
+      required String lecheriaId,
+      required String nombre,
+      Value<int> orden,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$CategoriasGastoTableUpdateCompanionBuilder =
+    CategoriasGastoCompanion Function({
+      Value<String> id,
+      Value<String> lecheriaId,
+      Value<String> nombre,
+      Value<int> orden,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$CategoriasGastoTableFilterComposer
+    extends Composer<_$AppDatabase, $CategoriasGastoTable> {
+  $$CategoriasGastoTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orden => $composableBuilder(
+    column: $table.orden,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CategoriasGastoTableOrderingComposer
+    extends Composer<_$AppDatabase, $CategoriasGastoTable> {
+  $$CategoriasGastoTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orden => $composableBuilder(
+    column: $table.orden,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CategoriasGastoTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CategoriasGastoTable> {
+  $$CategoriasGastoTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get nombre =>
+      $composableBuilder(column: $table.nombre, builder: (column) => column);
+
+  GeneratedColumn<int> get orden =>
+      $composableBuilder(column: $table.orden, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$CategoriasGastoTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CategoriasGastoTable,
+          CategoriaGastoRow,
+          $$CategoriasGastoTableFilterComposer,
+          $$CategoriasGastoTableOrderingComposer,
+          $$CategoriasGastoTableAnnotationComposer,
+          $$CategoriasGastoTableCreateCompanionBuilder,
+          $$CategoriasGastoTableUpdateCompanionBuilder,
+          (
+            CategoriaGastoRow,
+            BaseReferences<
+              _$AppDatabase,
+              $CategoriasGastoTable,
+              CategoriaGastoRow
+            >,
+          ),
+          CategoriaGastoRow,
+          PrefetchHooks Function()
+        > {
+  $$CategoriasGastoTableTableManager(
+    _$AppDatabase db,
+    $CategoriasGastoTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CategoriasGastoTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CategoriasGastoTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CategoriasGastoTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> lecheriaId = const Value.absent(),
+                Value<String> nombre = const Value.absent(),
+                Value<int> orden = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CategoriasGastoCompanion(
+                id: id,
+                lecheriaId: lecheriaId,
+                nombre: nombre,
+                orden: orden,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String lecheriaId,
+                required String nombre,
+                Value<int> orden = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CategoriasGastoCompanion.insert(
+                id: id,
+                lecheriaId: lecheriaId,
+                nombre: nombre,
+                orden: orden,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CategoriasGastoTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CategoriasGastoTable,
+      CategoriaGastoRow,
+      $$CategoriasGastoTableFilterComposer,
+      $$CategoriasGastoTableOrderingComposer,
+      $$CategoriasGastoTableAnnotationComposer,
+      $$CategoriasGastoTableCreateCompanionBuilder,
+      $$CategoriasGastoTableUpdateCompanionBuilder,
+      (
+        CategoriaGastoRow,
+        BaseReferences<_$AppDatabase, $CategoriasGastoTable, CategoriaGastoRow>,
+      ),
+      CategoriaGastoRow,
       PrefetchHooks Function()
     >;
 typedef $$MedicamentosTableCreateCompanionBuilder =
@@ -13363,353 +16611,6 @@ typedef $$MedicamentosTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $MedicamentosTable, MedicamentoRow>,
       ),
       MedicamentoRow,
-      PrefetchHooks Function()
-    >;
-typedef $$ConfigAlertasTableCreateCompanionBuilder =
-    ConfigAlertasCompanion Function({
-      required String id,
-      required String lecheriaId,
-      Value<int> diasCeloEsperado,
-      Value<int> diasConfirmarPreniez,
-      Value<int> diasVaciosAltos,
-      Value<int> diasAntesSecar,
-      Value<int> diasAntesParto,
-      Value<int> diasAvisoFinRetiro,
-      required DateTime createdAt,
-      required DateTime updatedAt,
-      Value<DateTime?> deletedAt,
-      Value<bool> pendiente,
-      Value<int> rowid,
-    });
-typedef $$ConfigAlertasTableUpdateCompanionBuilder =
-    ConfigAlertasCompanion Function({
-      Value<String> id,
-      Value<String> lecheriaId,
-      Value<int> diasCeloEsperado,
-      Value<int> diasConfirmarPreniez,
-      Value<int> diasVaciosAltos,
-      Value<int> diasAntesSecar,
-      Value<int> diasAntesParto,
-      Value<int> diasAvisoFinRetiro,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
-      Value<DateTime?> deletedAt,
-      Value<bool> pendiente,
-      Value<int> rowid,
-    });
-
-class $$ConfigAlertasTableFilterComposer
-    extends Composer<_$AppDatabase, $ConfigAlertasTable> {
-  $$ConfigAlertasTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get lecheriaId => $composableBuilder(
-    column: $table.lecheriaId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get diasCeloEsperado => $composableBuilder(
-    column: $table.diasCeloEsperado,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get diasConfirmarPreniez => $composableBuilder(
-    column: $table.diasConfirmarPreniez,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get diasVaciosAltos => $composableBuilder(
-    column: $table.diasVaciosAltos,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get diasAntesSecar => $composableBuilder(
-    column: $table.diasAntesSecar,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get diasAntesParto => $composableBuilder(
-    column: $table.diasAntesParto,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get diasAvisoFinRetiro => $composableBuilder(
-    column: $table.diasAvisoFinRetiro,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get pendiente => $composableBuilder(
-    column: $table.pendiente,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$ConfigAlertasTableOrderingComposer
-    extends Composer<_$AppDatabase, $ConfigAlertasTable> {
-  $$ConfigAlertasTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get lecheriaId => $composableBuilder(
-    column: $table.lecheriaId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get diasCeloEsperado => $composableBuilder(
-    column: $table.diasCeloEsperado,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get diasConfirmarPreniez => $composableBuilder(
-    column: $table.diasConfirmarPreniez,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get diasVaciosAltos => $composableBuilder(
-    column: $table.diasVaciosAltos,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get diasAntesSecar => $composableBuilder(
-    column: $table.diasAntesSecar,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get diasAntesParto => $composableBuilder(
-    column: $table.diasAntesParto,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get diasAvisoFinRetiro => $composableBuilder(
-    column: $table.diasAvisoFinRetiro,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get pendiente => $composableBuilder(
-    column: $table.pendiente,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$ConfigAlertasTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ConfigAlertasTable> {
-  $$ConfigAlertasTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get lecheriaId => $composableBuilder(
-    column: $table.lecheriaId,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get diasCeloEsperado => $composableBuilder(
-    column: $table.diasCeloEsperado,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get diasConfirmarPreniez => $composableBuilder(
-    column: $table.diasConfirmarPreniez,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get diasVaciosAltos => $composableBuilder(
-    column: $table.diasVaciosAltos,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get diasAntesSecar => $composableBuilder(
-    column: $table.diasAntesSecar,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get diasAntesParto => $composableBuilder(
-    column: $table.diasAntesParto,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get diasAvisoFinRetiro => $composableBuilder(
-    column: $table.diasAvisoFinRetiro,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get deletedAt =>
-      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
-
-  GeneratedColumn<bool> get pendiente =>
-      $composableBuilder(column: $table.pendiente, builder: (column) => column);
-}
-
-class $$ConfigAlertasTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $ConfigAlertasTable,
-          ConfigAlertaRow,
-          $$ConfigAlertasTableFilterComposer,
-          $$ConfigAlertasTableOrderingComposer,
-          $$ConfigAlertasTableAnnotationComposer,
-          $$ConfigAlertasTableCreateCompanionBuilder,
-          $$ConfigAlertasTableUpdateCompanionBuilder,
-          (
-            ConfigAlertaRow,
-            BaseReferences<_$AppDatabase, $ConfigAlertasTable, ConfigAlertaRow>,
-          ),
-          ConfigAlertaRow,
-          PrefetchHooks Function()
-        > {
-  $$ConfigAlertasTableTableManager(_$AppDatabase db, $ConfigAlertasTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$ConfigAlertasTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$ConfigAlertasTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$ConfigAlertasTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> id = const Value.absent(),
-                Value<String> lecheriaId = const Value.absent(),
-                Value<int> diasCeloEsperado = const Value.absent(),
-                Value<int> diasConfirmarPreniez = const Value.absent(),
-                Value<int> diasVaciosAltos = const Value.absent(),
-                Value<int> diasAntesSecar = const Value.absent(),
-                Value<int> diasAntesParto = const Value.absent(),
-                Value<int> diasAvisoFinRetiro = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-                Value<DateTime?> deletedAt = const Value.absent(),
-                Value<bool> pendiente = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => ConfigAlertasCompanion(
-                id: id,
-                lecheriaId: lecheriaId,
-                diasCeloEsperado: diasCeloEsperado,
-                diasConfirmarPreniez: diasConfirmarPreniez,
-                diasVaciosAltos: diasVaciosAltos,
-                diasAntesSecar: diasAntesSecar,
-                diasAntesParto: diasAntesParto,
-                diasAvisoFinRetiro: diasAvisoFinRetiro,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                deletedAt: deletedAt,
-                pendiente: pendiente,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String id,
-                required String lecheriaId,
-                Value<int> diasCeloEsperado = const Value.absent(),
-                Value<int> diasConfirmarPreniez = const Value.absent(),
-                Value<int> diasVaciosAltos = const Value.absent(),
-                Value<int> diasAntesSecar = const Value.absent(),
-                Value<int> diasAntesParto = const Value.absent(),
-                Value<int> diasAvisoFinRetiro = const Value.absent(),
-                required DateTime createdAt,
-                required DateTime updatedAt,
-                Value<DateTime?> deletedAt = const Value.absent(),
-                Value<bool> pendiente = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => ConfigAlertasCompanion.insert(
-                id: id,
-                lecheriaId: lecheriaId,
-                diasCeloEsperado: diasCeloEsperado,
-                diasConfirmarPreniez: diasConfirmarPreniez,
-                diasVaciosAltos: diasVaciosAltos,
-                diasAntesSecar: diasAntesSecar,
-                diasAntesParto: diasAntesParto,
-                diasAvisoFinRetiro: diasAvisoFinRetiro,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                deletedAt: deletedAt,
-                pendiente: pendiente,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$ConfigAlertasTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $ConfigAlertasTable,
-      ConfigAlertaRow,
-      $$ConfigAlertasTableFilterComposer,
-      $$ConfigAlertasTableOrderingComposer,
-      $$ConfigAlertasTableAnnotationComposer,
-      $$ConfigAlertasTableCreateCompanionBuilder,
-      $$ConfigAlertasTableUpdateCompanionBuilder,
-      (
-        ConfigAlertaRow,
-        BaseReferences<_$AppDatabase, $ConfigAlertasTable, ConfigAlertaRow>,
-      ),
-      ConfigAlertaRow,
       PrefetchHooks Function()
     >;
 typedef $$SyncCursoresTableCreateCompanionBuilder =
@@ -14316,14 +17217,20 @@ class $AppDatabaseManager {
       $$PesasSesionesTableTableManager(_db, _db.pesasSesiones);
   $$PesasLecheTableTableManager get pesasLeche =>
       $$PesasLecheTableTableManager(_db, _db.pesasLeche);
-  $$ParametrosPeriodoTableTableManager get parametrosPeriodo =>
-      $$ParametrosPeriodoTableTableManager(_db, _db.parametrosPeriodo);
-  $$CostosFijosTableTableManager get costosFijos =>
-      $$CostosFijosTableTableManager(_db, _db.costosFijos);
+  $$CurvaReferenciaTableTableManager get curvaReferencia =>
+      $$CurvaReferenciaTableTableManager(_db, _db.curvaReferencia);
+  $$ConfigReporteTableTableManager get configReporte =>
+      $$ConfigReporteTableTableManager(_db, _db.configReporte);
+  $$SemanasTableTableManager get semanas =>
+      $$SemanasTableTableManager(_db, _db.semanas);
+  $$IngresosSemanaTableTableManager get ingresosSemana =>
+      $$IngresosSemanaTableTableManager(_db, _db.ingresosSemana);
+  $$GastosSemanaTableTableManager get gastosSemana =>
+      $$GastosSemanaTableTableManager(_db, _db.gastosSemana);
+  $$CategoriasGastoTableTableManager get categoriasGasto =>
+      $$CategoriasGastoTableTableManager(_db, _db.categoriasGasto);
   $$MedicamentosTableTableManager get medicamentos =>
       $$MedicamentosTableTableManager(_db, _db.medicamentos);
-  $$ConfigAlertasTableTableManager get configAlertas =>
-      $$ConfigAlertasTableTableManager(_db, _db.configAlertas);
   $$SyncCursoresTableTableManager get syncCursores =>
       $$SyncCursoresTableTableManager(_db, _db.syncCursores);
   $$SyncEstadosTableTableManager get syncEstados =>

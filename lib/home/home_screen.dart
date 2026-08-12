@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../ajustes/curva_screen.dart';
 import '../app/theme.dart';
 import '../data/local/database.dart';
-import '../gastos/gastos_screen.dart';
+import '../finanzas/finanzas_screen.dart';
 import '../inventario/inventario_screen.dart';
 import '../pesa/pesa_screen.dart';
-import '../rentabilidad/rentabilidad_screen.dart';
 import '../sanidad/sanidad_screen.dart';
 import '../services.dart';
 import '../trabajo/trabajo_screen.dart';
@@ -69,22 +69,17 @@ class HomeScreen extends StatelessWidget {
         icono: Icons.water_drop_outlined,
         titulo: 'Pesa de leche',
         color: kVerdeLeche,
-        onTap: () => _abrir(context, PesaScreen(lecheriaId: lecheria.id)),
+        onTap: () => _abrir(
+          context,
+          PesaScreen(lecheriaId: lecheria.id, nombreLecheria: lecheria.nombre),
+        ),
       ),
       _Modulo(
-        valueKey: 'home.gastos',
+        valueKey: 'home.finanzas',
         icono: Icons.payments_outlined,
-        titulo: 'Gastos',
+        titulo: 'Finanzas',
         color: kAzulLeche,
-        onTap: () => _abrir(context, GastosScreen(lecheriaId: lecheria.id)),
-      ),
-      _Modulo(
-        valueKey: 'home.rentabilidad',
-        icono: Icons.trending_up,
-        titulo: 'Rentabilidad',
-        color: kVerdeLeche,
-        onTap: () =>
-            _abrir(context, RentabilidadScreen(lecheriaId: lecheria.id)),
+        onTap: () => _abrir(context, FinanzasScreen(lecheriaId: lecheria.id)),
       ),
       _Modulo(
         valueKey: 'home.sanidad',
@@ -111,6 +106,13 @@ class HomeScreen extends StatelessWidget {
               builder: (context, sincronizando, _) =>
                   Icon(sincronizando ? Icons.sync : Icons.cloud_outlined),
             ),
+          ),
+          IconButton(
+            key: const ValueKey('home.curva'),
+            tooltip: 'Curva de referencia',
+            icon: const Icon(Icons.tune),
+            onPressed: () =>
+                _abrir(context, CurvaScreen(lecheriaId: lecheria.id)),
           ),
           IconButton(
             tooltip: 'Cerrar sesión',

@@ -1,39 +1,39 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/domain/grupos.dart';
+import 'package:leche_control/data/domain/semana.dart';
 import 'package:leche_control/data/local/database.dart';
 import 'package:leche_control/data/repositories/animales_repository.dart';
-import 'package:leche_control/data/repositories/gastos_repository.dart';
+import 'package:leche_control/data/repositories/curva_repository.dart';
+import 'package:leche_control/data/repositories/finanzas_repository.dart';
 import 'package:leche_control/data/repositories/lecherias_repository.dart';
 import 'package:leche_control/data/repositories/pesas_repository.dart';
-import 'package:leche_control/data/repositories/rentabilidad_repository.dart';
+import 'package:leche_control/data/repositories/reporte_repository.dart';
 
 import '../support/local_db_seed.dart';
 
-/// Ejercita el flujo completo del ganadero (alta de animal, pesa,
-/// parámetros de gastos y rentabilidad) usando solo la base local, sin
-/// tocar la red ni Supabase, tal como corre la app en modo sin conexión.
+/// Ejercita el flujo completo del ganadero (alta de animal, pesa semanal con
+/// su reporte, y finanzas de la semana) usando solo la base local, sin tocar
+/// la red ni Supabase, tal como corre la app en modo sin conexión.
 void main() {
   late AppDatabase db;
+  late CurvaRepository curvaRepo;
   late LecheriasRepository lecheriasRepo;
   late AnimalesRepository animalesRepo;
   late PesasRepository pesasRepo;
-  late GastosRepository gastosRepo;
-  late RentabilidadRepository rentabilidadRepo;
+  late FinanzasRepository finanzasRepo;
+  late ReporteRepository reporteRepo;
 
   const usuarioId = 'user-offline-1';
 
   setUp(() async {
     db = AppDatabase.forExecutor(NativeDatabase.memory());
-    lecheriasRepo = LecheriasRepository(db);
+    curvaRepo = CurvaRepository(db);
+    lecheriasRepo = LecheriasRepository(db, curva: curvaRepo);
     animalesRepo = AnimalesRepository(db);
     pesasRepo = PesasRepository(db);
-    gastosRepo = GastosRepository(db);
-    rentabilidadRepo = RentabilidadRepository(
-      db,
-      gastos: gastosRepo,
-      pesas: pesasRepo,
-    );
+    finanzasRepo = FinanzasRepository(db);
+    reporteRepo = ReporteRepository(db, curva: curvaRepo);
     await seedCuentaLocal(db, usuarioId: usuarioId);
   });
 
@@ -41,8 +41,8 @@ void main() {
     await db.close();
   });
 
-  test('alta de lechería + animal + pesa + parámetros + rentabilidad, todo '
-      'offline y sin llamadas de red', () async {
+  test('alta de lechería + animal + pesa + reporte + finanzas, todo offline '
+      'y sin llamadas de red', () async {
     // 1) Crear la lechería (Módulo 0) como haría CuentaGate.
     await lecheriasRepo.crearLecheria(
       nombre: 'Lechería El Trébol',
@@ -53,13 +53,20 @@ void main() {
     expect(lecheria!.pendiente, isTrue);
     final lecheriaId = lecheria.id;
 
-    // 2) Dar de alta un animal nuevo (Módulo 1).
+    // Al crearse, la lechería ya trae su curva de referencia y las
+    // categorías de gasto: sirve desde la primera pesa sin configurar nada.
+    expect(await curvaRepo.tramosDe(lecheriaId), hasLength(7));
+    expect((await curvaRepo.curvaDe(lecheriaId)).estaVacia, isFalse);
+
+    // 2) Dar de alta una vaca parida hace 50 días (Módulo 1).
+    final hoy = DateTime.now();
     final animalId = await animalesRepo.altaAnimal(
       lecheriaId: lecheriaId,
       identificador: 'VACA-01',
       sexo: Sexo.hembra,
       grupo: GrupoAnimal.enOrdeno,
       origen: OrigenAnimal.nacido,
+      fechaUltimoParto: hoy.subtract(const Duration(days: 50)),
     );
     final animal = await animalesRepo.buscarPorIdentificador(
       lecheriaId,
@@ -69,50 +76,71 @@ void main() {
     expect(animal!.id, animalId);
     expect(animal.pendiente, isTrue);
 
-    // 3) Pesar la vaca en la sesión del día (Módulo 3).
+    // 3) Pesarla: mañana, tarde y concentrado (Módulo 3).
     final sesion = await pesasRepo.abrirSesion(lecheriaId: lecheriaId);
     final resultadoPesa = await pesasRepo.registrarPesa(
       sesionId: sesion.id,
       animalId: animalId,
-      litros: 16.5,
+      litrosManana: 9,
+      litrosTarde: 7.5,
+      concentradoKg: 4,
     );
     expect(resultadoPesa, isNull, reason: 'null significa que se guardó');
     expect(await pesasRepo.ultimaProduccion(animalId), 16.5);
 
-    // 4) Configurar precios del mes (Módulo 4).
-    final ahora = DateTime.now();
-    await gastosRepo.upsertParametrosPeriodo(
+    // 4) El reporte de producción la compara contra la curva.
+    final reporte = await reporteRepo.generar(
       lecheriaId: lecheriaId,
-      anio: ahora.year,
-      mes: ahora.month,
-      precioLitro: 12,
-      precioConcentradoKg: 6,
-      umbralSecadoLitros: 5,
+      sesionId: sesion.id,
+      hoy: hoy,
     );
-    final periodo = await gastosRepo.obtenerPeriodo(
-      lecheriaId,
-      ahora.year,
-      ahora.month,
-    );
-    await gastosRepo.addCostoFijo(
+    final fila = reporte.filas.single;
+    expect(fila.identificador, 'VACA-01');
+    expect(fila.diasLactancia, 50);
+    expect(fila.total, 16.5);
+    expect(fila.concentradoKg, 4);
+    expect(fila.esperado, isNotNull, reason: 'tiene DLac y hay curva');
+    expect(fila.evaluacion, isNotNull);
+    expect(reporte.produccionTotal, 16.5);
+    expect(reporte.hato.enProduccion, 1);
+
+    // 5) Anotar la plata de la semana (Módulo 4).
+    final semana = await finanzasRepo.abrirSemana(lecheriaId: lecheriaId);
+    expect(semana.fechaInicio, lunesDe(hoy));
+    await finanzasRepo.agregarIngreso(
       lecheriaId: lecheriaId,
-      periodoId: periodo!.id,
-      categoria: 'Luz',
-      monto: 30,
+      semanaId: semana.id,
+      tipo: TipoIngreso.leche,
+      monto: 38000,
+      litros: 100, // ₡380/L
+    );
+    await finanzasRepo.agregarGasto(
+      lecheriaId: lecheriaId,
+      semanaId: semana.id,
+      categoria: 'Salario del peón',
+      monto: 8000,
     );
 
-    // 5) Ver la fila de rentabilidad calculada localmente (Módulo 5).
-    final filas = await rentabilidadRepo.calcularTabla(lecheriaId);
-    expect(filas, hasLength(1));
-    final fila = filas.single;
-    expect(fila.animal.id, animalId);
-    expect(fila.litrosDia, 16.5);
-    expect(fila.ingresoDia, closeTo(198, 0.001)); // 16.5 * 12
-    expect(fila.costoConcentradoDia, 0); // sin concentrado configurado
-    expect(fila.utilidadDia, greaterThan(0));
+    final resumen = await finanzasRepo.resumenDe(semana);
+    expect(resumen.totalIngresos, 38000);
+    expect(resumen.totalGastos, 8000);
+    expect(resumen.utilidad, 30000);
+    expect(resumen.precioRealPorLitro, 380);
 
-    // Todo lo anterior corrió contra `NativeDatabase.memory()`: ninguna
-    // fila salió de la base local y todas quedaron `pendiente` para que
+    // 6) La rentabilidad por vaca usa el precio real, no uno digitado.
+    final filas = await finanzasRepo.rentabilidadPorVaca(
+      lecheriaId: lecheriaId,
+      semana: semana,
+      hoy: hoy,
+    );
+    final vaca = filas.single;
+    expect(vaca.litros, 16.5);
+    expect(vaca.ingreso, 16.5 * 380);
+    expect(vaca.costoAsignado, 8000);
+    expect(vaca.utilidad, 16.5 * 380 - 8000);
+
+    // Todo lo anterior corrió contra `NativeDatabase.memory()`: ninguna fila
+    // salió de la base local y todas quedaron `pendiente` para que
     // `SyncService` las suba cuando haya conexión.
     final pendientesAnimales = await (db.select(
       db.animales,
@@ -120,7 +148,11 @@ void main() {
     final pendientesPesas = await (db.select(
       db.pesasLeche,
     )..where((t) => t.pendiente.equals(true))).get();
+    final pendientesIngresos = await (db.select(
+      db.ingresosSemana,
+    )..where((t) => t.pendiente.equals(true))).get();
     expect(pendientesAnimales, hasLength(1));
     expect(pendientesPesas, hasLength(1));
+    expect(pendientesIngresos, hasLength(1));
   });
 }

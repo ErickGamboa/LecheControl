@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../local/database.dart';
+import 'curva_repository.dart';
 
 /// Estado de la licencia de una cuenta: qué plan tiene y cuántas lecherías
 /// permite. Sirve para validar el límite al crear (spec: una lechería activa
@@ -40,9 +41,11 @@ class LicenciaNoDisponibleException implements Exception {
 /// (instantáneo y offline). La sincronización con Supabase corre por
 /// separado (SyncService).
 class LecheriasRepository {
-  LecheriasRepository(this.db);
+  LecheriasRepository(this.db, {CurvaRepository? curva})
+    : _curva = curva ?? CurvaRepository(db);
 
   final AppDatabase db;
+  final CurvaRepository _curva;
   final _uuid = const Uuid();
 
   /// Stream reactivo con la lechería del usuario (donde es miembro), no
@@ -157,6 +160,11 @@ class LecheriasRepository {
             ),
           );
     });
+
+    // Arranca con la curva de referencia, los umbrales del reporte y las
+    // categorías de gasto ya cargados, para que la app sirva desde la primera
+    // pesa sin obligar a configurar nada.
+    await _curva.sembrarSiHaceFalta(lecheriaId);
   }
 
   /// Edita el nombre de la lechería.

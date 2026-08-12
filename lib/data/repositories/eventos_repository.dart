@@ -191,6 +191,9 @@ class EventosRepository {
           grupo: const Value(GrupoAnimal.enOrdeno),
           estadoReproductivo: const Value(EstadoReproductivo.vacia),
           fechaProbableParto: const Value(null),
+          // Arranca de nuevo la cuenta de días de lactancia (DLac), que es la
+          // base del reporte de producción.
+          fechaUltimoParto: Value(ahora),
           updatedAt: Value(ahora),
           pendiente: const Value(true),
         ),
