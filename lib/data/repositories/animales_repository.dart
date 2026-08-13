@@ -82,6 +82,34 @@ class AnimalesRepository {
         .watch();
   }
 
+  /// Cuántos animales activos hay en cada grupo, en un solo stream.
+  ///
+  /// El mapa siempre trae **todos** los grupos, con cero los que no tienen
+  /// animales: así el resumen del home no cambia de forma —ni baila— cuando
+  /// la finca se queda sin terneros.
+  Stream<Map<String, int>> observarConteoPorGrupo(String lecheriaId) {
+    final grupo = db.animales.grupo;
+    final conteo = db.animales.id.count();
+    final q = db.selectOnly(db.animales)
+      ..addColumns([grupo, conteo])
+      ..where(
+        db.animales.lecheriaId.equals(lecheriaId) &
+            db.animales.deletedAt.isNull() &
+            db.animales.estado.equals(EstadoAnimal.activo),
+      )
+      ..groupBy([grupo]);
+
+    return q.watch().map((filas) {
+      final mapa = {for (final g in GrupoAnimal.todos) g: 0};
+      for (final f in filas) {
+        final codigo = f.read(grupo);
+        if (codigo == null) continue;
+        mapa[codigo] = f.read(conteo) ?? 0;
+      }
+      return mapa;
+    });
+  }
+
   /// Cuenta los animales activos de un grupo (para el contador de faltantes
   /// de la Pesa de leche).
   Future<int> contarPorGrupo(String lecheriaId, String grupo) async {

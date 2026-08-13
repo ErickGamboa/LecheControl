@@ -27,11 +27,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: LecheTheme.light,
-        home: HomeScreen(
-          lecheria: lecheria,
-          usuarioId: 'user-1',
-          sinConexion: false,
-        ),
+        home: HomeScreen(lecheria: lecheria, usuarioId: 'user-1'),
       ),
     );
     await tester.pump(const Duration(milliseconds: 50));
@@ -54,6 +50,28 @@ void main() {
         reason: 'falta la tarjeta $clave',
       );
     }
+  });
+
+  testWidgets('muestra el conteo del hato arriba de los módulos', (
+    tester,
+  ) async {
+    await montar(tester, pantalla: const Size(400, 900));
+
+    for (final grupo in ['en_ordeno', 'secas', 'novillas', 'terneros']) {
+      expect(
+        find.byKey(ValueKey('home.hato.$grupo')),
+        findsOneWidget,
+        reason: 'falta el contador de $grupo',
+      );
+    }
+
+    final hato = tester.getRect(find.byKey(const ValueKey('home.hato.secas')));
+    final grilla = tester.getRect(find.byType(GridView));
+    expect(
+      hato.bottom,
+      lessThanOrEqualTo(grilla.top),
+      reason: 'el conteo va encima de los módulos',
+    );
   });
 
   testWidgets('la grilla queda centrada en vertical', (tester) async {

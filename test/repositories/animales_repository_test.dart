@@ -239,4 +239,65 @@ void main() {
       expect(eventos.single.grupoNuevo, GrupoAnimal.enOrdeno);
     },
   );
+
+  group('observarConteoPorGrupo', () {
+    test('cuenta los animales activos de cada grupo', () async {
+      await seedAnimal(db, lecheriaId: lecheriaId, id: 'a1', identificador: '1');
+      await seedAnimal(db, lecheriaId: lecheriaId, id: 'a2', identificador: '2');
+      await seedAnimal(
+        db,
+        lecheriaId: lecheriaId,
+        id: 'a3',
+        identificador: '3',
+        grupo: GrupoAnimal.secas,
+      );
+      await seedAnimal(
+        db,
+        lecheriaId: lecheriaId,
+        id: 'a4',
+        identificador: '4',
+        grupo: GrupoAnimal.terneros,
+      );
+
+      final conteo = await repo.observarConteoPorGrupo(lecheriaId).first;
+
+      expect(conteo[GrupoAnimal.enOrdeno], 2);
+      expect(conteo[GrupoAnimal.secas], 1);
+      expect(conteo[GrupoAnimal.terneros], 1);
+    });
+
+    test('los grupos sin animales vienen en cero, no ausentes', () async {
+      await seedAnimal(db, lecheriaId: lecheriaId, id: 'a1', identificador: '1');
+
+      final conteo = await repo.observarConteoPorGrupo(lecheriaId).first;
+
+      // El resumen del home no debe cambiar de forma cuando la finca se
+      // queda sin terneros.
+      for (final g in GrupoAnimal.todos) {
+        expect(conteo[g], isNotNull, reason: 'falta el grupo $g');
+      }
+      expect(conteo[GrupoAnimal.novillas], 0);
+    });
+
+    test('no cuenta los dados de baja ni los de otra lechería', () async {
+      await seedLecheria(db, usuarioId: 'user-1', lecheriaId: 'lecheria-2');
+      await seedAnimal(db, lecheriaId: 'lecheria-2', id: 'ajeno', identificador: '9');
+      final id = await seedAnimal(
+        db,
+        lecheriaId: lecheriaId,
+        id: 'a1',
+        identificador: '1',
+      );
+      await repo.registrarBaja(
+        animalId: id,
+        lecheriaId: lecheriaId,
+        motivo: MotivoBaja.venta,
+        registradoPor: 'user-1',
+      );
+
+      final conteo = await repo.observarConteoPorGrupo(lecheriaId).first;
+
+      expect(conteo[GrupoAnimal.enOrdeno], 0);
+    });
+  });
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../ajustes/curva_screen.dart';
 import '../analisis/analisis_screen.dart';
 import '../app/theme.dart';
+import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../finanzas/finanzas_screen.dart';
 import '../inventario/inventario_screen.dart';
@@ -11,9 +12,14 @@ import '../sanidad/sanidad_screen.dart';
 import '../services.dart';
 import '../trabajo/trabajo_screen.dart';
 
-/// Pantalla principal (Módulo 0): acceso a todos los módulos en forma de
-/// grilla, estado de sincronización y aviso de modo sin conexión. Se entra
-/// directo con la lechería activa del usuario (v1: una lechería por cuenta).
+/// Pantalla principal (Módulo 0): el conteo del hato, acceso a todos los
+/// módulos en forma de grilla y el estado de sincronización. Se entra directo
+/// con la lechería activa del usuario (v1: una lechería por cuenta).
+///
+/// Ya no lleva el aviso de "trabajando sin conexión": la app es offline-first
+/// y estar sin señal es lo normal, no una anomalía que valga un cartel fijo
+/// robándole espacio a la pantalla. El ícono de nube de la barra sigue
+/// contando cómo va el sync para quien lo quiera ver.
 ///
 /// La hoja de vida no tiene tarjeta propia: se llega tocando el animal en
 /// Inventario (o desde Trabajo), que es el mismo destino.
@@ -22,12 +28,10 @@ class HomeScreen extends StatelessWidget {
     super.key,
     required this.lecheria,
     required this.usuarioId,
-    required this.sinConexion,
   });
 
   final LecheriaRow lecheria;
   final String usuarioId;
-  final bool sinConexion;
 
   Future<void> _abrir(BuildContext context, Widget pantalla) {
     return Navigator.of(
@@ -138,8 +142,7 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            if (sinConexion || !estadoConexion.hayConexion.value)
-              const _OfflineBanner(),
+            _ResumenHato(lecheriaId: lecheria.id),
             Expanded(
               // Centrada en vertical, pero dentro de un scroll: en una
               // pantalla chica (o con la letra del sistema en grande) las seis
@@ -159,9 +162,11 @@ class HomeScreen extends StatelessWidget {
                         crossAxisCount: 2,
                         mainAxisSpacing: LecheSpacing.md,
                         crossAxisSpacing: LecheSpacing.md,
-                        // Cuadradas: adentro solo va el ícono y el nombre,
-                        // centrados.
-                        childAspectRatio: 1.0,
+                        // Un poco más anchas que altas: adentro solo va el
+                        // ícono y el nombre. Cuadradas quedaban medio vacías
+                        // y, al llenar la pantalla, el centrado vertical no
+                        // se notaba.
+                        childAspectRatio: 1.15,
                         children: [
                           for (final m in modulos) _ModuloCard(modulo: m),
                         ],
@@ -169,6 +174,119 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cuántos animales hay en cada grupo, arriba de los módulos.
+///
+/// Es lo primero que se pregunta el ganadero al abrir la app, y hasta ahora
+/// había que entrar a Inventario para saberlo.
+class _ResumenHato extends StatelessWidget {
+  const _ResumenHato({required this.lecheriaId});
+
+  final String lecheriaId;
+
+  /// Los cuatro grupos del hato, cada uno con su color.
+  ///
+  /// "En tratamiento" queda afuera a propósito: no es un grupo del hato sino
+  /// una situación pasajera, y su lugar es Sanidad.
+  static const _grupos = [
+    (GrupoAnimal.enOrdeno, 'En ordeño', kVerdeLeche),
+    (GrupoAnimal.secas, 'Secas', kAzulLeche),
+    (GrupoAnimal.novillas, 'Novillas', kVerdeLeche),
+    (GrupoAnimal.terneros, 'Terneros', kAmbarLeche),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Map<String, int>>(
+      stream: animalesRepo.observarConteoPorGrupo(lecheriaId),
+      builder: (context, snap) {
+        final conteo = snap.data;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            LecheSpacing.lg,
+            LecheSpacing.md,
+            LecheSpacing.lg,
+            0,
+          ),
+          // `IntrinsicHeight` para que los cuatro cuadritos queden del mismo
+          // alto: sin esto, `stretch` no tiene contra qué estirarse (la fila
+          // no tiene altura acotada) y revienta el layout.
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (codigo, etiqueta, color) in _grupos)
+                  Expanded(
+                    child: _ContadorGrupo(
+                      valueKey: 'home.hato.$codigo',
+                      etiqueta: etiqueta,
+                      color: color,
+                      // Mientras carga se deja el hueco en vez de escribir un
+                      // cero que después salta a otro número.
+                      cantidad: conteo?[codigo],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Un cuadrito por grupo: la cantidad y el nombre.
+class _ContadorGrupo extends StatelessWidget {
+  const _ContadorGrupo({
+    required this.valueKey,
+    required this.etiqueta,
+    required this.color,
+    required this.cantidad,
+  });
+
+  final String valueKey;
+  final String etiqueta;
+  final Color color;
+  final int? cantidad;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+
+    return Card(
+      key: ValueKey(valueKey),
+      margin: const EdgeInsets.symmetric(horizontal: LecheSpacing.xs),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: LecheSpacing.sm,
+          vertical: LecheSpacing.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              cantidad == null ? '—' : '$cantidad',
+              style: textos.headlineSmall?.copyWith(color: color),
+            ),
+            const SizedBox(height: 2),
+            // Los nombres largos ("En ordeño") no caben en cuatro columnas a
+            // tamaño normal, así que se encogen en vez de cortarse con "…":
+            // un número sin saber de qué grupo es no sirve de nada.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                etiqueta,
+                textAlign: TextAlign.center,
+                style: textos.bodySmall,
+                maxLines: 1,
               ),
             ),
           ],
@@ -211,7 +329,7 @@ class _ModuloCard extends StatelessWidget {
       child: InkWell(
         onTap: modulo.onTap,
         child: Padding(
-          padding: const EdgeInsets.all(LecheSpacing.lg),
+          padding: const EdgeInsets.all(LecheSpacing.md),
           child: Column(
             // Todo al centro, horizontal y vertical: son seis tarjetas
             // iguales y alineadas al centro se leen como una grilla pareja.
@@ -219,14 +337,14 @@ class _ModuloCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(LecheSpacing.lg),
+                padding: const EdgeInsets.all(LecheSpacing.md),
                 decoration: BoxDecoration(
                   color: tinte,
                   borderRadius: BorderRadius.circular(LecheRadius.md),
                 ),
-                child: Icon(modulo.icono, size: 34, color: modulo.color),
+                child: Icon(modulo.icono, size: 32, color: modulo.color),
               ),
-              const SizedBox(height: LecheSpacing.md),
+              const SizedBox(height: LecheSpacing.sm),
               Text(
                 modulo.titulo,
                 textAlign: TextAlign.center,
@@ -237,48 +355,6 @@ class _ModuloCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final colores = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(
-        LecheSpacing.lg,
-        LecheSpacing.md,
-        LecheSpacing.lg,
-        0,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: LecheSpacing.md,
-        vertical: LecheSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: kAmbarLeche.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(LecheRadius.sm),
-        border: Border.all(color: kAmbarLeche.withValues(alpha: 0.45)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.cloud_off, color: kAviso, size: 18),
-          const SizedBox(width: LecheSpacing.sm),
-          Expanded(
-            child: Text(
-              'Trabajando sin conexión. Tus datos se guardan en el '
-              'dispositivo y se sincronizan al recuperar internet.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: colores.onSurface),
-            ),
-          ),
-        ],
       ),
     );
   }
