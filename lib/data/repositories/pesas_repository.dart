@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../domain/curva_lactancia.dart';
 import '../domain/grupos.dart';
+import '../domain/semana.dart';
 import '../local/database.dart';
 
 /// Resumen de una sesión de pesa terminada (Módulo 3).
@@ -59,6 +60,36 @@ class PesaDeSesion {
       diasLactancia(animal?.fechaUltimoParto, hoy: hoy);
 }
 
+/// Ordena identificadores como los lee una persona: la vaca 2 va antes que la
+/// 10. Comparar como texto pondría "10" antes que "2", que es justo lo que
+/// hace ilegible una lista de 36 vacas numeradas.
+///
+/// Los identificadores que no son solo números (p. ej. "A-14") se comparan
+/// como texto y quedan después de los numéricos.
+int compararIdentificadores(String a, String b) {
+  final na = int.tryParse(a.trim());
+  final nb = int.tryParse(b.trim());
+  if (na != null && nb != null) return na.compareTo(nb);
+  if (na != null) return -1;
+  if (nb != null) return 1;
+  return a.toLowerCase().compareTo(b.toLowerCase());
+}
+
+/// Una pesa del historial con sus totales ya sumados.
+class SesionConTotales {
+  const SesionConTotales({
+    required this.sesion,
+    required this.vacas,
+    required this.litros,
+  });
+
+  final PesaSesionRow sesion;
+  final int vacas;
+  final double litros;
+
+  double get promedio => vacas == 0 ? 0 : litros / vacas;
+}
+
 /// Acceso a sesiones de pesa y litros por vaca (Módulo 3). Lee y escribe en
 /// la base local; el sync corre por separado.
 class PesasRepository {
@@ -67,18 +98,27 @@ class PesasRepository {
   final AppDatabase db;
   final _uuid = const Uuid();
 
-  /// Abre (o reutiliza si ya existe una abierta hoy) una sesión de pesa.
+  /// Abre (o reutiliza si ya hay una abierta esta semana) una sesión de pesa.
+  ///
+  /// La ventana es **la semana, no el día**, porque se pesa un día por semana.
+  /// Cuando buscaba por día, entrar a la pantalla un miércoles después de
+  /// haber pesado el lunes abría una sesión nueva y vacía: la pesa del lunes
+  /// seguía guardada, pero la pantalla arrancaba en blanco y parecía que se
+  /// habían perdido los datos.
+  ///
+  /// Si de verdad se quiere una segunda pesa en la misma semana, se cierra la
+  /// abierta y la siguiente llamada crea otra.
   Future<PesaSesionRow> abrirSesion({
     required String lecheriaId,
     DateTime? fecha,
   }) async {
     final ahora = fecha ?? DateTime.now();
-    final inicioDia = DateTime(ahora.year, ahora.month, ahora.day);
-    final finDia = inicioDia.add(const Duration(days: 1));
-    // Puede haber MÁS de una sesión abierta del día: si dos dispositivos
-    // pesan sin señal y luego sincronizan, cada uno creó la suya. Se
-    // reutiliza la primera que se abrió, para seguir sumando donde ya se
-    // venía trabajando. Sin el `limit(1)` esto reventaba la pantalla.
+    final inicioSemana = lunesDe(ahora);
+    final finSemana = inicioSemana.add(const Duration(days: 7));
+    // Puede haber MÁS de una sesión abierta: si dos dispositivos pesan sin
+    // señal y luego sincronizan, cada uno creó la suya. Se reutiliza la
+    // primera que se abrió, para seguir sumando donde ya se venía
+    // trabajando. Sin el `limit(1)` esto reventaba la pantalla.
     final existente =
         await (db.select(db.pesasSesiones)
               ..where(
@@ -86,8 +126,8 @@ class PesasRepository {
                     t.lecheriaId.equals(lecheriaId) &
                     t.deletedAt.isNull() &
                     t.cerrada.equals(false) &
-                    t.fecha.isBiggerOrEqualValue(inicioDia) &
-                    t.fecha.isSmallerThanValue(finDia),
+                    t.fecha.isBiggerOrEqualValue(inicioSemana) &
+                    t.fecha.isSmallerThanValue(finSemana),
               )
               ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
               ..limit(1))
@@ -110,6 +150,45 @@ class PesasRepository {
     return (db.select(
       db.pesasSesiones,
     )..where((t) => t.id.equals(id))).getSingle();
+  }
+
+  /// Todas las pesas de la lechería, de la más reciente a la más vieja, con
+  /// cuántas vacas y cuántos litros llevó cada una.
+  ///
+  /// Existe porque se pesa **una vez por semana**: sin esto, la pantalla de
+  /// pesa solo alcanza la sesión de hoy y el trabajo de la semana pasada
+  /// queda guardado pero invisible.
+  Stream<List<SesionConTotales>> observarSesiones(String lecheriaId) {
+    final sesiones =
+        (db.select(db.pesasSesiones)
+              ..where(
+                (t) =>
+                    t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.fecha)]))
+            .watch();
+
+    // Se recalculan los totales ante cualquier cambio en las pesas: agregar
+    // una vaca a la sesión de hoy tiene que moverle el contador a la fila.
+    final pesas = (db.select(
+      db.pesasLeche,
+    )..where((t) => t.deletedAt.isNull())).watch();
+
+    return sesiones.asyncExpand(
+      (lista) => pesas.map((todas) {
+        return [
+          for (final s in lista)
+            () {
+              final suyas = todas.where((p) => p.sesionId == s.id);
+              return SesionConTotales(
+                sesion: s,
+                vacas: suyas.length,
+                litros: suyas.fold<double>(0, (a, p) => a + p.litros),
+              );
+            }(),
+        ];
+      }),
+    );
   }
 
   Stream<PesaSesionRow?> observarSesion(String sesionId) {
@@ -281,7 +360,7 @@ class PesasRepository {
     return [
       for (final a in enOrdeno)
         if (!yaPesadas.contains(a.id)) a,
-    ]..sort((a, b) => a.identificador.compareTo(b.identificador));
+    ]..sort((a, b) => compararIdentificadores(a.identificador, b.identificador));
   }
 
   Future<ResumenSesion> resumenSesion(String sesionId) async {

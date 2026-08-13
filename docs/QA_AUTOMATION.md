@@ -73,14 +73,14 @@ both integration tests and manual QA can target elements reliably:
 |---|---|
 | `auth/login_screen.dart` (pre-existing) | `login.email`, `login.password`, `login.submit`, `login.offline` |
 | `cuenta/cuenta_gate.dart` | `lecheria.nombre`, `lecheria.crear` |
-| `home/home_screen.dart` | `home.trabajo`, `home.inventario`, `home.pesa`, `home.gastos`, `home.rentabilidad`, `home.hojaVida`, `home.sanidad`, `home.alertas`, `home.syncStatus` |
+| `home/home_screen.dart` | `home.trabajo`, `home.inventario`, `home.pesa`, `home.finanzas`, `home.sanidad`, `home.syncStatus`, `home.curva` |
 | `trabajo/trabajo_screen.dart` | `trabajo.identificador`, `trabajo.buscar`, `trabajo.alta.abrir`, `trabajo.alta.identificador`, `trabajo.alta.sexoHembra`, `trabajo.alta.sexoMacho`, `trabajo.alta.grupo` (+ `trabajo.alta.grupo.<codigo>` per chip), `trabajo.alta.origenNacido`, `trabajo.alta.origenComprado`, `trabajo.alta.guardar`, `trabajo.animal.tarjeta` |
-| `pesa/pesa_screen.dart` | `pesa.identificador`, `pesa.litros`, `pesa.guardar`, `pesa.cerrar`, `pesa.contador` |
-| `gastos/gastos_screen.dart` | `gastos.editarParametros`, `gastos.precioLitro`, `gastos.precioConcentrado`, `gastos.umbralSecado`, `gastos.guardarParametros`, `gastos.agregarCosto`, `gastos.costo.categoria`, `gastos.costo.monto`, `gastos.costo.guardar` |
-| `rentabilidad/rentabilidad_screen.dart` | `rentabilidad.lista` |
+| `pesa/pesa_screen.dart` | `pesa.elegirVaca`, `pesa.cambiarVaca`, `pesa.manana`, `pesa.tarde`, `pesa.concentrado`, `pesa.guardar`, `pesa.cerrar`, `pesa.contador`, `pesa.historial`, `pesa.verReporte` |
+| `pesa/selector_vaca_sheet.dart` | `selectorVaca.busqueda`, `selectorVaca.manual` |
 
 `pesa.abrirSesion` was **not** added: `PesaScreen` opens/reuses today's
 session automatically in `initState`, there is no button for it in the UI.
+Past weeks are reached through `pesa.historial`, not by reopening a session.
 
 ## Seeding a Supabase e2e user
 

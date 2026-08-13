@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
-import '../domain/grupos.dart';
 import '../domain/semana.dart';
 import '../local/database.dart';
 
@@ -35,7 +34,7 @@ class ResumenSemana {
 
   /// **El precio real por litro de la semana**: lo que pagaron dividido entre
   /// los litros que pagaron. Es plata que entró de verdad, no un precio
-  /// estimado, y es lo que se usa para repartir el ingreso entre las vacas.
+  /// estimado ni digitado a mano.
   ///
   /// null si no se anotaron los litros junto al monto.
   double? get precioRealPorLitro {
@@ -56,43 +55,13 @@ class ResumenSemana {
   }
 }
 
-/// Cuánto aportó cada vaca en la semana (Módulo 5, ahora semanal).
-class FilaRentabilidadSemanal {
-  const FilaRentabilidadSemanal({
-    required this.animal,
-    required this.litros,
-    required this.concentradoKg,
-    required this.ingreso,
-    required this.costoAsignado,
-    required this.enRetiro,
-  });
-
-  final AnimalRow animal;
-
-  /// Litros de su última pesa dentro de la semana.
-  final double litros;
-  final double concentradoKg;
-
-  /// `litros × precio real por litro`. Cero si la vaca está en retiro: su
-  /// leche se descarta y no se vende.
-  final double ingreso;
-
-  /// Parte de los gastos de la semana que le toca (total ÷ vacas en ordeño).
-  final double costoAsignado;
-
-  final bool enRetiro;
-
-  double get utilidad => ingreso - costoAsignado;
-}
-
 /// Finanzas de la semana (Módulo 4 y 5). Reemplaza el esquema mensual de
 /// `GastosRepository` + `RentabilidadRepository`.
 ///
 /// La diferencia de fondo con el modelo viejo: **los ingresos no se calculan,
 /// se digitan**. Antes la app multiplicaba litros por un precio que había que
 /// mantener a mano; ahora se anota la plata que entró y el precio por litro
-/// sale de dividirla entre los litros pagados. Ese precio, que es el real,
-/// es el que reparte el ingreso entre las vacas.
+/// sale de dividirla entre los litros pagados.
 class FinanzasRepository {
   FinanzasRepository(this.db);
 
@@ -298,88 +267,5 @@ class FinanzasRepository {
             pendiente: const Value(true),
           ),
         );
-  }
-
-  // -------------------------------------------------- rentabilidad por vaca
-
-  /// Cuánto aportó cada vaca en ordeño durante la semana.
-  ///
-  /// El ingreso sale del **precio real** de la semana (lo que pagó la planta ÷
-  /// los litros que pagó). Si esta semana no se anotaron los litros junto al
-  /// monto, no hay con qué repartir y devuelve lista vacía: es preferible no
-  /// mostrar nada a mostrar una utilidad inventada.
-  Future<List<FilaRentabilidadSemanal>> rentabilidadPorVaca({
-    required String lecheriaId,
-    required SemanaRow semana,
-    DateTime? hoy,
-  }) async {
-    final resumen = await resumenDe(semana);
-    final precio = resumen.precioRealPorLitro;
-    if (precio == null) return const [];
-
-    final vacas =
-        await (db.select(db.animales)..where(
-              (t) =>
-                  t.lecheriaId.equals(lecheriaId) &
-                  t.deletedAt.isNull() &
-                  t.estado.equals(EstadoAnimal.activo) &
-                  t.grupo.equals(GrupoAnimal.enOrdeno),
-            ))
-            .get();
-    if (vacas.isEmpty) return const [];
-
-    final costoPorVaca = resumen.totalGastos / vacas.length;
-    final ahora = hoy ?? DateTime.now();
-    final finSemana = semana.fechaFin.add(const Duration(days: 1));
-
-    final filas = <FilaRentabilidadSemanal>[];
-    for (final vaca in vacas) {
-      final pesa = await _ultimaPesaEnRango(
-        animalId: vaca.id,
-        desde: semana.fechaInicio,
-        hasta: finSemana,
-      );
-      final litros = pesa?.litros ?? 0;
-      final enRetiro =
-          vaca.retiroLecheHasta != null &&
-          vaca.retiroLecheHasta!.isAfter(ahora);
-      filas.add(
-        FilaRentabilidadSemanal(
-          animal: vaca,
-          litros: litros,
-          concentradoKg: pesa?.concentradoKg ?? 0,
-          // En retiro la leche se descarta: no se vende, no es ingreso.
-          ingreso: enRetiro ? 0 : litros * precio,
-          costoAsignado: costoPorVaca,
-          enRetiro: enRetiro,
-        ),
-      );
-    }
-    filas.sort((a, b) => b.utilidad.compareTo(a.utilidad));
-    return filas;
-  }
-
-  Future<PesaLecheRow?> _ultimaPesaEnRango({
-    required String animalId,
-    required DateTime desde,
-    required DateTime hasta,
-  }) async {
-    final consulta =
-        db.select(db.pesasLeche).join([
-            innerJoin(
-              db.pesasSesiones,
-              db.pesasSesiones.id.equalsExp(db.pesasLeche.sesionId),
-            ),
-          ])
-          ..where(
-            db.pesasLeche.animalId.equals(animalId) &
-                db.pesasLeche.deletedAt.isNull() &
-                db.pesasSesiones.fecha.isBiggerOrEqualValue(desde) &
-                db.pesasSesiones.fecha.isSmallerThanValue(hasta),
-          )
-          ..orderBy([OrderingTerm.desc(db.pesasSesiones.fecha)])
-          ..limit(1);
-    final fila = await consulta.getSingleOrNull();
-    return fila?.readTable(db.pesasLeche);
   }
 }

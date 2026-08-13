@@ -127,18 +127,6 @@ void main() {
     expect(resumen.utilidad, 30000);
     expect(resumen.precioRealPorLitro, 380);
 
-    // 6) La rentabilidad por vaca usa el precio real, no uno digitado.
-    final filas = await finanzasRepo.rentabilidadPorVaca(
-      lecheriaId: lecheriaId,
-      semana: semana,
-      hoy: hoy,
-    );
-    final vaca = filas.single;
-    expect(vaca.litros, 16.5);
-    expect(vaca.ingreso, 16.5 * 380);
-    expect(vaca.costoAsignado, 8000);
-    expect(vaca.utilidad, 16.5 * 380 - 8000);
-
     // Todo lo anterior corrió contra `NativeDatabase.memory()`: ninguna fila
     // salió de la base local y todas quedaron `pendiente` para que
     // `SyncService` las suba cuando haya conexión.

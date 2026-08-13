@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/local/database.dart';
@@ -52,6 +53,37 @@ void main() {
       },
     );
 
+    test('sigue la misma pesa otro día de la misma semana', () async {
+      // Se pesa un día por semana: entrar el jueves después de haber pesado
+      // el martes tiene que continuar esa pesa, no arrancar una vacía.
+      final martes = await repo.abrirSesion(
+        lecheriaId: lecheriaId,
+        fecha: DateTime(2026, 3, 10, 6),
+      );
+      final jueves = await repo.abrirSesion(
+        lecheriaId: lecheriaId,
+        fecha: DateTime(2026, 3, 12, 7),
+      );
+
+      expect(jueves.id, martes.id);
+      expect(await db.select(db.pesasSesiones).get(), hasLength(1));
+    });
+
+    test('la semana siguiente sí abre una pesa nueva', () async {
+      final estaSemana = await repo.abrirSesion(
+        lecheriaId: lecheriaId,
+        fecha: DateTime(2026, 3, 10, 6),
+      );
+      final laSiguiente = await repo.abrirSesion(
+        lecheriaId: lecheriaId,
+        // Lunes de la semana siguiente.
+        fecha: DateTime(2026, 3, 16, 6),
+      );
+
+      expect(laSiguiente.id, isNot(estaSemana.id));
+      expect(await db.select(db.pesasSesiones).get(), hasLength(2));
+    });
+
     test('con dos sesiones abiertas del día, reutiliza la primera', () async {
       // Pasa de verdad: dos dispositivos pesando sin señal el mismo día,
       // cada uno crea la suya, y al sincronizar quedan las dos.
@@ -91,7 +123,7 @@ void main() {
       );
     });
 
-    test('abre una sesión nueva si la del día ya está cerrada', () async {
+    test('abre una sesión nueva si la de la semana ya está cerrada', () async {
       final primera = await repo.abrirSesion(
         lecheriaId: lecheriaId,
         fecha: DateTime(2026, 3, 10, 6),
@@ -237,6 +269,90 @@ void main() {
 
       expect(existente, isNotNull);
       expect(await db.select(db.pesasLeche).get(), hasLength(1));
+    });
+  });
+
+  group('compararIdentificadores', () {
+    test('ordena por número, no como texto', () {
+      final ids = ['10', '2', '36', '1', '9']
+        ..sort(compararIdentificadores);
+
+      expect(ids, ['1', '2', '9', '10', '36']);
+    });
+
+    test('los que no son números van después, en orden alfabético', () {
+      final ids = ['B-2', '7', 'A-14', '3']..sort(compararIdentificadores);
+
+      expect(ids, ['3', '7', 'A-14', 'B-2']);
+    });
+  });
+
+  group('observarSesiones', () {
+    test('lista las pesas de la más reciente a la más vieja', () async {
+      final vieja = await repo.abrirSesion(
+        lecheriaId: lecheriaId,
+        fecha: DateTime(2026, 3, 3, 6),
+      );
+      await repo.registrarPesa(
+        sesionId: vieja.id,
+        animalId: animalId,
+        litrosTotal: 10,
+      );
+      await repo.cerrarSesion(vieja.id);
+
+      final nueva = await repo.abrirSesion(
+        lecheriaId: lecheriaId,
+        fecha: DateTime(2026, 3, 10, 6),
+      );
+      await repo.registrarPesa(
+        sesionId: nueva.id,
+        animalId: animalId,
+        litrosTotal: 12,
+      );
+      await repo.registrarPesa(
+        sesionId: nueva.id,
+        identificadorManual: '8890',
+        litrosTotal: 8,
+      );
+
+      final historial = await repo.observarSesiones(lecheriaId).first;
+
+      expect(historial.map((s) => s.sesion.id), [nueva.id, vieja.id]);
+      expect(historial.first.vacas, 2);
+      expect(historial.first.litros, 20);
+      expect(historial.first.promedio, 10);
+      expect(historial.last.vacas, 1);
+      expect(historial.last.litros, 10);
+    });
+
+    test('deja fuera las pesas borradas', () async {
+      final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+      await (db.update(db.pesasSesiones)
+            ..where((t) => t.id.equals(sesion.id)))
+          .write(PesasSesionesCompanion(deletedAt: Value(DateTime(2026, 3, 11))));
+
+      expect(await repo.observarSesiones(lecheriaId).first, isEmpty);
+    });
+
+    test('no mezcla las pesas de otra lechería', () async {
+      await seedLecheria(db, usuarioId: 'user-1', lecheriaId: 'lecheria-2');
+      final ajena = await repo.abrirSesion(lecheriaId: 'lecheria-2');
+      await repo.registrarPesa(
+        sesionId: ajena.id,
+        identificadorManual: '99',
+        litrosTotal: 5,
+      );
+      final propia = await repo.abrirSesion(lecheriaId: lecheriaId);
+      await repo.registrarPesa(
+        sesionId: propia.id,
+        animalId: animalId,
+        litrosTotal: 7,
+      );
+
+      final historial = await repo.observarSesiones(lecheriaId).first;
+
+      expect(historial, hasLength(1));
+      expect(historial.single.litros, 7);
     });
   });
 

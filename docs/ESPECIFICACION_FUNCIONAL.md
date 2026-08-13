@@ -77,14 +77,17 @@ Cada evento queda en la **hoja de vida** con su fecha. Eventos disponibles:
 Una vez por semana el ganadero **pesa la leche** de las vacas en ordeño para sacar conclusiones. Es un flujo rápido, animal por animal.
 
 ### Registrar una pesa
-1. Se abre una **sesión de pesa** con su **fecha**.
-2. Por cada vaca en ordeño se captura el **identificador** (RFID o manual) y se digita:
+1. Se abre una **sesión de pesa** con su **fecha**. La sesión es **de la semana**, no del día: si se entra otro día de esa misma semana se **sigue la misma pesa**, no se arranca una vacía. Para hacer una segunda pesa en la semana hay que **cerrar** la abierta.
+2. Por cada vaca en ordeño se **elige la vaca de una lista con buscador** —que solo muestra las que faltan por pesar, y se va vaciando sola— y se digita:
    - **Litros de la mañana** y **litros de la tarde** (el total del día lo suma la app).
    - **Kilos de concentrado** que comió ese día.
    Basta con anotar un solo ordeño si la vaca se ordeña una vez.
 3. **Contador visible:** vacas pesadas y **faltantes** (respecto al grupo En ordeño).
-4. Si una vaca **ya se pesó en esta sesión** y se vuelve a escanear: mostrar el registro y **preguntar si se corrige** (no duplicar).
+4. Si una vaca **ya se pesó en esta sesión** y se vuelve a elegir: mostrar el registro y **preguntar si se corrige** (no duplicar).
 5. **Vacas manuales:** una vaca que no está en el inventario se puede pesar igual, con su identificador suelto. Se le anota la leche pero **no tiene días de lactancia** ni comparación contra la curva, y **no cuenta** contra el total de vacas por pesar. En los listados sale marcada con asterisco.
+
+### Historial de pesas
+Desde la pesa se llega al **historial**: todas las semanas pesadas, con vacas, litros y promedio, y desde ahí se abre el **reporte** de cualquiera. Sin esto el trabajo de la semana anterior quedaba guardado pero sin forma de consultarlo.
 
 ### Días de lactancia (DLac)
 Los días desde el **último parto** de la vaca. La app los lleva sola: el evento de parto reinicia la cuenta. Para las vacas que ya estaban en la finca antes de usar la app, la fecha del último parto se puede **cargar a mano una sola vez**. Una vaca sin esa fecha aparece sin DLac y no se compara contra la curva.
@@ -116,11 +119,11 @@ A los ~3 meses de pesas la app muestra el **promedio real del hato** por tramo j
 ### Comportamiento por vaca (histórico)
 - Por cada vaca se guarda la **serie de pesas** en el tiempo (una columna por fecha).
 - La app calcula por vaca: **Promedio**, **Tendencia** (subiendo / estable / bajando) y **Diferencia** contra la pesa anterior.
-- Todo alimenta la **Hoja de Vida** y el **Módulo 5 — Rentabilidad por vaca**.
+- Todo alimenta la **Hoja de Vida** y el **reporte de producción**.
 
 ---
 
-## Módulos 4 y 5 — Finanzas (semanal)
+## Módulo 4 — Finanzas (semanal)
 
 Una sola pantalla. El período es la **semana, de lunes a domingo**.
 
@@ -138,18 +141,6 @@ Se anota cada salida con su **categoría** (salario del peón, concentrado, medi
 
 ### Utilidad de la semana
 `Σ ingresos − Σ gastos`. Puede ser negativa, y se muestra igual.
-
-### Rentabilidad por vaca
-Con el **precio real** de la semana:
-
-| Animal | Litros | Ingreso | Costo | Utilidad |
-|---|---|---|---|---|
-
-- **Ingreso** = `litros de su última pesa de la semana × precio real por litro`. Si la vaca está **en retiro**, su leche se descarta → ingreso 0.
-- **Costo** = `gastos de la semana ÷ número de vacas en ordeño`.
-- **Utilidad** = `ingreso − costo`. Ordenadas de mayor a menor.
-
-Si esa semana no se anotaron los litros junto al monto, **no hay precio real y la tabla no se muestra**: es preferible no mostrar nada a mostrar una utilidad inventada.
 
 ---
 

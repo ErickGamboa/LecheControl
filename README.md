@@ -6,7 +6,7 @@ health, reproduction, costs, profitability, and alerts. The app is
 and is synchronized with Supabase in the background.
 
 Aplicación Flutter para el manejo de una lechería: animales, pesa de leche,
-sanidad, reproducción, gastos, rentabilidad y alertas. La app es
+sanidad, reproducción y finanzas semanales. La app es
 **offline-first**: cada operación se guarda primero en una base local
 (Drift/SQLite) y se sincroniza con Supabase en segundo plano cuando hay
 internet.
@@ -16,12 +16,10 @@ internet.
 - Módulo 0 — Cuenta y lechería (login, sin auto-registro)
 - Módulo 1 — Trabajo (identificar animal, registrar eventos)
 - Módulo 2 — Inventario del hato
-- Módulo 3 — Pesa de leche
-- Módulo 4 — Gastos (parámetros del período y costos fijos)
-- Módulo 5 — Rentabilidad por vaca
-- Módulo 6 — Hoja de vida
+- Módulo 3 — Pesa de leche semanal y reporte de producción
+- Módulo 4 — Finanzas de la semana (ingresos digitados, gastos y utilidad)
+- Módulo 6 — Hoja de vida (dentro de Inventario)
 - Módulo 7 — Sanidad (catálogo de medicamentos y aplicaciones)
-- Módulo 9 — Alertas reproductivas y de manejo
 
 ## Architecture / Arquitectura
 

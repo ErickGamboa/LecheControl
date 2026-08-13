@@ -67,7 +67,7 @@ calculan**: se digita la plata que efectivamente entró.
 | Tabla | Columnas clave | Notas |
 |---|---|---|
 | `semanas` | `id`, `lecheria_id`, `fecha_inicio`, `fecha_fin`, `cerrada` | Único por `(lecheria_id, fecha_inicio)`. `fecha_inicio` es el lunes. Columnas `date` en Postgres: el sync manda solo el día. |
-| `ingresos_semana` | `id`, `lecheria_id`, `semana_id`, `tipo`, `monto`, `litros`, `animal_id`, `detalle` | `tipo` ∈ `leche, venta_ganado, otro`. `litros` solo aplica a `leche`: `monto / litros` da el precio real por litro de la semana, que es lo que usa la rentabilidad por vaca. `animal_id` solo aplica a `venta_ganado`, para la hoja de vida del animal. |
+| `ingresos_semana` | `id`, `lecheria_id`, `semana_id`, `tipo`, `monto`, `litros`, `animal_id`, `detalle` | `tipo` ∈ `leche, venta_ganado, otro`. `litros` solo aplica a `leche`: `monto / litros` da el precio real por litro de la semana. `animal_id` solo aplica a `venta_ganado`, para la hoja de vida del animal. |
 | `gastos_semana` | `id`, `lecheria_id`, `semana_id`, `categoria`, `monto`, `detalle` | Salario del peón, concentrado, medicamentos, cerca… |
 | `categorias_gasto` | `id`, `lecheria_id`, `nombre`, `orden` | Sugerencias para que meter un gasto sea tocar y no escribir. Único por `(lecheria_id, nombre)`. |
 

@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../app/widgets/quick_number_field.dart';
-import '../app/widgets/scan_field.dart';
 import '../data/domain/curva_lactancia.dart';
 import '../data/domain/semana.dart';
 import '../data/local/database.dart';
 import '../data/repositories/pesas_repository.dart';
 import '../services.dart';
+import 'historial_pesas_screen.dart';
 import 'reporte_screen.dart';
+import 'selector_vaca_sheet.dart';
 
 /// Pesa de leche (Módulo 3). Abre o reutiliza la sesión del día y va vaca por
-/// vaca: se captura el identificador (lector RFID o a mano) y se anotan los
-/// litros de la **mañana**, los de la **tarde** y los **kilos de concentrado**
-/// que comió.
+/// vaca: se **elige** la vaca de una lista con buscador y se anotan los litros
+/// de la **mañana**, los de la **tarde** y los **kilos de concentrado**.
+///
+/// La lista solo trae las que faltan por pesar, así que se va vaciando sola
+/// conforme avanza la ordeña. Se elige en vez de digitar porque en el corral,
+/// con las manos ocupadas, teclear el número de cada vaca es la parte más
+/// lenta y la que más errores mete.
 ///
 /// Una vaca que no está en el inventario se puede pesar igual, como **vaca
 /// manual**: queda con su identificador suelto, sin días de lactancia. Es lo
@@ -36,8 +41,6 @@ class _PesaScreenState extends State<PesaScreen> {
   PesaSesionRow? _sesion;
   bool _cargando = true;
 
-  final _identCtrl = TextEditingController();
-  final _identFocus = FocusNode();
   final _mananaCtrl = TextEditingController();
   final _mananaFocus = FocusNode();
   final _tardeCtrl = TextEditingController();
@@ -61,8 +64,6 @@ class _PesaScreenState extends State<PesaScreen> {
 
   @override
   void dispose() {
-    _identCtrl.dispose();
-    _identFocus.dispose();
     _mananaCtrl.dispose();
     _mananaFocus.dispose();
     _tardeCtrl.dispose();
@@ -85,7 +86,6 @@ class _PesaScreenState extends State<PesaScreen> {
   void _limpiarCaptura() {
     _animalActual = null;
     _manualActual = null;
-    _identCtrl.clear();
     _mananaCtrl.clear();
     _tardeCtrl.clear();
     _concentradoCtrl.clear();
@@ -97,66 +97,37 @@ class _PesaScreenState extends State<PesaScreen> {
     return double.tryParse(texto);
   }
 
-  Future<void> _buscarAnimal(String identificador) async {
-    final ident = identificador.trim();
-    if (ident.isEmpty) return;
-    final animal = await animalesRepo.buscarPorIdentificador(
-      widget.lecheriaId,
-      ident,
-    );
-    if (!mounted) return;
+  Future<void> _elegirVaca() async {
+    final sesion = _sesion;
+    if (sesion == null) return;
 
-    if (animal == null) {
-      // No está en el inventario. En vez de dejar al ganadero trabado en
-      // media ordeña, se le ofrece pesarla igual como vaca manual.
-      final pesarManual = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Vaca no registrada'),
-          content: Text(
-            '"$ident" no está en el inventario.\n\n'
-            'Podés pesarla igual como vaca manual: se le anota la leche, '
-            'pero no va a tener días de lactancia ni comparación contra la '
-            'curva.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              key: const ValueKey('pesa.confirmarManual'),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Pesar como manual'),
-            ),
-          ],
-        ),
-      );
-      if (!mounted) return;
-      if (pesarManual != true) {
-        setState(() {
-          _animalActual = null;
-          _manualActual = null;
-          _mensaje = null;
-        });
-        return;
-      }
-      setState(() {
-        _animalActual = null;
-        _manualActual = ident;
-        _mensaje = null;
-      });
-      _mananaFocus.requestFocus();
-      return;
-    }
+    final elegida = await elegirVaca(
+      context,
+      lecheriaId: widget.lecheriaId,
+      sesionId: sesion.id,
+    );
+    if (!mounted || elegida == null) return;
 
     setState(() {
-      _animalActual = animal;
-      _manualActual = null;
+      _animalActual = elegida.animal;
+      _manualActual = elegida.manual;
       _mensaje = null;
-      _concentradoCtrl.text = '';
+      _mananaCtrl.clear();
+      _tardeCtrl.clear();
+      _concentradoCtrl.clear();
     });
     _mananaFocus.requestFocus();
+  }
+
+  Future<void> _abrirHistorial() {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HistorialPesasScreen(
+          lecheriaId: widget.lecheriaId,
+          nombreLecheria: widget.nombreLecheria,
+        ),
+      ),
+    );
   }
 
   Future<void> _guardar() async {
@@ -224,7 +195,9 @@ class _PesaScreenState extends State<PesaScreen> {
       _limpiarCaptura();
       _mensaje = null;
     });
-    _identFocus.requestFocus();
+    // Encadenar es lo natural en la ordeña: guardar una vaca y que salga
+    // enseguida la lista para la siguiente, sin un toque de más.
+    await _elegirVaca();
   }
 
   Future<void> _cerrarSesion() async {
@@ -295,13 +268,32 @@ class _PesaScreenState extends State<PesaScreen> {
             const Text('Pesa de leche'),
             // Se pesa un día por semana: decir de qué semana es esta pesa
             // evita confundirla con la de la semana pasada.
+            // Sin el "Semana del " delante: con tres acciones y el botón
+            // Cerrar en la barra, el texto completo no cabe y se corta.
             Text(
-              'Semana del ${etiquetaSemana(lunesDe(_sesion!.fecha), domingoDe(_sesion!.fecha))}',
-              style: const TextStyle(fontSize: 12, color: Colors.white70),
+              etiquetaSemana(
+                lunesDe(_sesion!.fecha),
+                domingoDe(_sesion!.fecha),
+              ),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+                // Hereda el color de la barra (blanco en claro, claro en
+                // oscuro) y solo le baja la intensidad.
+                color: Theme.of(
+                  context,
+                ).appBarTheme.foregroundColor?.withValues(alpha: 0.75),
+              ),
             ),
           ],
         ),
         actions: [
+          IconButton(
+            key: const ValueKey('pesa.historial'),
+            tooltip: 'Pesas anteriores',
+            onPressed: _abrirHistorial,
+            icon: const Icon(Icons.history),
+          ),
           IconButton(
             key: const ValueKey('pesa.verReporte'),
             tooltip: 'Ver reporte',
@@ -311,8 +303,11 @@ class _PesaScreenState extends State<PesaScreen> {
           TextButton.icon(
             key: const ValueKey('pesa.cerrar'),
             onPressed: _cerrarSesion,
-            icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-            label: const Text('Cerrar', style: TextStyle(color: Colors.white)),
+            icon: const Icon(Icons.check_circle_outline),
+            label: const Text('Cerrar'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+            ),
           ),
         ],
       ),
@@ -326,23 +321,38 @@ class _PesaScreenState extends State<PesaScreen> {
               sesionId: _sesion!.id,
             ),
             const SizedBox(height: 16),
-            ScanField(
-              key: const ValueKey('pesa.identificador'),
-              controller: _identCtrl,
-              focusNode: _identFocus,
-              labelText: 'Identificador',
-              prefixIcon: const Icon(Icons.nfc),
-              keyboardType: TextInputType.text,
-              textInputAction: TextInputAction.next,
-              onSubmitted: _buscarAnimal,
-            ),
+            if (!_hayVacaEnCurso)
+              FilledButton.icon(
+                key: const ValueKey('pesa.elegirVaca'),
+                onPressed: _elegirVaca,
+                icon: const Icon(Icons.search),
+                label: const Text('Elegir vaca'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(56),
+                ),
+              ),
             if (_mensaje != null) ...[
               const SizedBox(height: 8),
               Text(_mensaje!, style: TextStyle(color: Colors.red.shade700)),
             ],
             if (_hayVacaEnCurso) ...[
               const SizedBox(height: 16),
-              _CabeceraVaca(animal: _animalActual, manual: _manualActual),
+              Row(
+                children: [
+                  Expanded(
+                    child: _CabeceraVaca(
+                      animal: _animalActual,
+                      manual: _manualActual,
+                    ),
+                  ),
+                  TextButton.icon(
+                    key: const ValueKey('pesa.cambiarVaca'),
+                    onPressed: _elegirVaca,
+                    icon: const Icon(Icons.swap_horiz),
+                    label: const Text('Cambiar'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [

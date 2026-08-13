@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/domain/semana.dart';
 import 'package:leche_control/data/local/database.dart';
 import 'package:leche_control/data/repositories/finanzas_repository.dart';
-import 'package:leche_control/data/repositories/pesas_repository.dart';
 
 import '../support/local_db_seed.dart';
 
@@ -48,14 +47,12 @@ void main() {
   group('FinanzasRepository', () {
     late AppDatabase db;
     late FinanzasRepository repo;
-    late PesasRepository pesasRepo;
     const lecheriaId = 'lecheria-1';
     final miercoles = DateTime(2026, 8, 12);
 
     setUp(() async {
       db = AppDatabase.forExecutor(NativeDatabase.memory());
       repo = FinanzasRepository(db);
-      pesasRepo = PesasRepository(db);
       await seedCuentaLocal(db, usuarioId: 'user-1');
       await seedLecheria(db, usuarioId: 'user-1', lecheriaId: lecheriaId);
     });
@@ -251,176 +248,6 @@ void main() {
       await repo.eliminarGasto(gasto.id);
 
       expect((await repo.resumenDe(semana)).totalGastos, 0);
-    });
-
-    group('rentabilidad por vaca', () {
-      Future<SemanaRow> semanaConLeche({
-        required double monto,
-        required double litros,
-        double gastos = 0,
-      }) async {
-        final semana = await repo.abrirSemana(
-          lecheriaId: lecheriaId,
-          fecha: miercoles,
-        );
-        await repo.agregarIngreso(
-          lecheriaId: lecheriaId,
-          semanaId: semana.id,
-          tipo: TipoIngreso.leche,
-          monto: monto,
-          litros: litros,
-        );
-        if (gastos > 0) {
-          await repo.agregarGasto(
-            lecheriaId: lecheriaId,
-            semanaId: semana.id,
-            categoria: 'Salario del peón',
-            monto: gastos,
-          );
-        }
-        return semana;
-      }
-
-      Future<void> pesar(String animalId, double litros) async {
-        final sesion = await pesasRepo.abrirSesion(
-          lecheriaId: lecheriaId,
-          fecha: miercoles,
-        );
-        await pesasRepo.registrarPesa(
-          sesionId: sesion.id,
-          animalId: animalId,
-          litrosManana: litros,
-        );
-      }
-
-      test(
-        'reparte el ingreso con el precio real y el costo entre las vacas',
-        () async {
-          await seedAnimal(
-            db,
-            lecheriaId: lecheriaId,
-            id: 'v1',
-            identificador: 'V1',
-          );
-          await seedAnimal(
-            db,
-            lecheriaId: lecheriaId,
-            id: 'v2',
-            identificador: 'V2',
-          );
-          // ₡380 000 por 1000 L -> ₡380/L. Gastos ₡40 000 entre 2 vacas -> 20 000.
-          final semana = await semanaConLeche(
-            monto: 380000,
-            litros: 1000,
-            gastos: 40000,
-          );
-          await pesar('v1', 20);
-          await pesar('v2', 5);
-
-          final filas = await repo.rentabilidadPorVaca(
-            lecheriaId: lecheriaId,
-            semana: semana,
-            hoy: miercoles,
-          );
-
-          expect(filas, hasLength(2));
-          final v1 = filas.firstWhere((f) => f.animal.id == 'v1');
-          final v2 = filas.firstWhere((f) => f.animal.id == 'v2');
-          expect(v1.ingreso, 7600); // 20 * 380
-          expect(v1.costoAsignado, 20000);
-          expect(v1.utilidad, -12400);
-          expect(v2.ingreso, 1900); // 5 * 380
-          expect(
-            filas.first.animal.id,
-            'v1',
-            reason: 'se ordena de mayor a menor utilidad',
-          );
-        },
-      );
-
-      test('la vaca en retiro no genera ingreso pero sí costo', () async {
-        await seedAnimal(
-          db,
-          lecheriaId: lecheriaId,
-          id: 'v1',
-          identificador: 'V1',
-          retiroLecheHasta: miercoles.add(const Duration(days: 3)),
-        );
-        final semana = await semanaConLeche(
-          monto: 380000,
-          litros: 1000,
-          gastos: 10000,
-        );
-        await pesar('v1', 20);
-
-        final filas = await repo.rentabilidadPorVaca(
-          lecheriaId: lecheriaId,
-          semana: semana,
-          hoy: miercoles,
-        );
-
-        final v1 = filas.single;
-        expect(v1.enRetiro, isTrue);
-        expect(v1.ingreso, 0, reason: 'esa leche se descarta, no se vende');
-        expect(v1.costoAsignado, 10000);
-        expect(v1.utilidad, -10000);
-      });
-
-      test('sin precio real no muestra nada, en vez de inventar', () async {
-        await seedAnimal(
-          db,
-          lecheriaId: lecheriaId,
-          id: 'v1',
-          identificador: 'V1',
-        );
-        final semana = await repo.abrirSemana(
-          lecheriaId: lecheriaId,
-          fecha: miercoles,
-        );
-        await repo.agregarIngreso(
-          lecheriaId: lecheriaId,
-          semanaId: semana.id,
-          tipo: TipoIngreso.leche,
-          monto: 380000, // sin litros
-        );
-        await pesar('v1', 20);
-
-        final filas = await repo.rentabilidadPorVaca(
-          lecheriaId: lecheriaId,
-          semana: semana,
-          hoy: miercoles,
-        );
-
-        expect(filas, isEmpty);
-      });
-
-      test('no toma pesas de otra semana', () async {
-        await seedAnimal(
-          db,
-          lecheriaId: lecheriaId,
-          id: 'v1',
-          identificador: 'V1',
-        );
-        final semana = await semanaConLeche(monto: 380000, litros: 1000);
-        // Pesa de la semana anterior.
-        final vieja = await pesasRepo.abrirSesion(
-          lecheriaId: lecheriaId,
-          fecha: miercoles.subtract(const Duration(days: 7)),
-        );
-        await pesasRepo.registrarPesa(
-          sesionId: vieja.id,
-          animalId: 'v1',
-          litrosManana: 30,
-        );
-
-        final filas = await repo.rentabilidadPorVaca(
-          lecheriaId: lecheriaId,
-          semana: semana,
-          hoy: miercoles,
-        );
-
-        expect(filas.single.litros, 0);
-      });
     });
 
     test('recordarCategoria no duplica una que ya existe', () async {
