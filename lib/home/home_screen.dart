@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../ajustes/curva_screen.dart';
+import '../analisis/analisis_leche_screen.dart';
 import '../analisis/analisis_screen.dart';
 import '../app/theme.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
+import '../data/repositories/pesas_repository.dart';
 import '../finanzas/finanzas_screen.dart';
 import '../inventario/inventario_screen.dart';
 import '../pesa/pesa_screen.dart';
 import '../sanidad/sanidad_screen.dart';
 import '../services.dart';
 import '../trabajo/trabajo_screen.dart';
+import 'widgets/linea_produccion.dart';
 
-/// Pantalla principal (Módulo 0): el conteo del hato, acceso a todos los
-/// módulos en forma de grilla y el estado de sincronización. Se entra directo
-/// con la lechería activa del usuario (v1: una lechería por cuenta).
+/// Pantalla principal (Módulo 0): el conteo del hato, cómo viene la
+/// producción, acceso a todos los módulos en forma de grilla y el estado de
+/// sincronización. Se entra directo con la lechería activa del usuario (v1:
+/// una lechería por cuenta).
+///
+/// El orden es a propósito: primero cuántos animales hay (estado), después
+/// para dónde va la leche (tendencia) y al final qué se puede hacer
+/// (acciones).
 ///
 /// Ya no lleva el aviso de "trabajando sin conexión": la app es offline-first
 /// y estar sin señal es lo normal, no una anomalía que valga un cartel fijo
@@ -140,43 +148,53 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            _ResumenHato(lecheriaId: lecheria.id),
-            Expanded(
-              // Centrada en vertical, pero dentro de un scroll: en una
-              // pantalla chica (o con la letra del sistema en grande) las seis
-              // tarjetas no caben, y es mejor que se pueda bajar a que se
-              // recorten.
-              child: LayoutBuilder(
-                builder: (context, restricciones) => SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: restricciones.maxHeight,
-                    ),
-                    child: Center(
-                      child: GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(LecheSpacing.lg),
-                        crossAxisCount: 2,
-                        mainAxisSpacing: LecheSpacing.md,
-                        crossAxisSpacing: LecheSpacing.md,
-                        // Un poco más anchas que altas: adentro solo va el
-                        // ícono y el nombre. Cuadradas quedaban medio vacías
-                        // y, al llenar la pantalla, el centrado vertical no
-                        // se notaba.
-                        childAspectRatio: 1.15,
-                        children: [
-                          for (final m in modulos) _ModuloCard(modulo: m),
-                        ],
-                      ),
-                    ),
+        // Todo el aire vertical lo reparte el `spaceEvenly`: queda el mismo
+        // hueco encima del conteo, entre el conteo y la grilla, y debajo de
+        // la grilla. Así el conteo queda centrado entre la barra y los
+        // módulos, y los módulos centrados en lo que sobra —en vez de que el
+        // conteo quede pegado arriba con todo el aire abajo.
+        //
+        // Va dentro de un scroll porque en una pantalla chica (o con la letra
+        // del sistema en grande) las seis tarjetas no caben, y es mejor que se
+        // pueda bajar a que se recorten. Ahí no sobra alto, los huecos se
+        // cierran solos y el `minHeight` deja de mandar.
+        child: LayoutBuilder(
+          builder: (context, restricciones) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: restricciones.maxHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _ResumenHato(lecheriaId: lecheria.id),
+                  _ProduccionSemanal(
+                    lecheriaId: lecheria.id,
+                    nombreLecheria: lecheria.nombre,
                   ),
-                ),
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    // Solo a los lados: el alto lo pone el reparto de arriba,
+                    // si además llevara relleno vertical los huecos dejarían
+                    // de verse iguales.
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: LecheSpacing.lg,
+                    ),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: LecheSpacing.md,
+                    crossAxisSpacing: LecheSpacing.md,
+                    // Un poco más anchas que altas: adentro solo va el ícono
+                    // y el nombre. Cuadradas quedaban medio vacías y, al
+                    // llenar la pantalla, el centrado vertical no se notaba.
+                    childAspectRatio: 1.15,
+                    children: [
+                      for (final m in modulos) _ModuloCard(modulo: m),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -210,12 +228,9 @@ class _ResumenHato extends StatelessWidget {
       builder: (context, snap) {
         final conteo = snap.data;
         return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            LecheSpacing.lg,
-            LecheSpacing.md,
-            LecheSpacing.lg,
-            0,
-          ),
+          // Sin relleno arriba ni abajo a propósito: el hueco lo pone el
+          // reparto vertical del home (ver `HomeScreen.build`).
+          padding: const EdgeInsets.symmetric(horizontal: LecheSpacing.lg),
           // `IntrinsicHeight` para que los cuatro cuadritos queden del mismo
           // alto: sin esto, `stretch` no tiene contra qué estirarse (la fila
           // no tiene altura acotada) y revienta el layout.
@@ -239,6 +254,44 @@ class _ResumenHato extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// El gráfico de litros por semana, entre el conteo y los módulos.
+class _ProduccionSemanal extends StatelessWidget {
+  const _ProduccionSemanal({
+    required this.lecheriaId,
+    required this.nombreLecheria,
+  });
+
+  final String lecheriaId;
+  final String nombreLecheria;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: LecheSpacing.lg),
+      child: StreamBuilder<List<SesionConTotales>>(
+        // Un poco más que las semanas que se dibujan: puede haber pesas
+        // vacías o una semana con dos, y no quiero que empujen a una real
+        // fuera de la consulta.
+        stream: pesasRepo.observarUltimasSesiones(lecheriaId, cuantas: 8),
+        builder: (context, snap) {
+          return LineaProduccion(
+            key: const ValueKey('home.produccion'),
+            puntos: armarSemanas(snap.data ?? const []),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AnalisisLecheScreen(
+                  lecheriaId: lecheriaId,
+                  nombreLecheria: nombreLecheria,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

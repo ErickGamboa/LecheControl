@@ -325,6 +325,78 @@ void main() {
       expect(historial.last.litros, 10);
     });
 
+    test('observarUltimasSesiones corta en las más recientes', () async {
+      for (var semana = 0; semana < 6; semana++) {
+        final s = await repo.abrirSesion(
+          lecheriaId: lecheriaId,
+          fecha: DateTime(2026, 3, 3, 6).add(Duration(days: 7 * semana)),
+        );
+        await repo.registrarPesa(
+          sesionId: s.id,
+          animalId: animalId,
+          litrosTotal: 10 + semana.toDouble(),
+        );
+        await repo.cerrarSesion(s.id);
+      }
+
+      final ultimas = await repo
+          .observarUltimasSesiones(lecheriaId, cuantas: 4)
+          .first;
+
+      expect(ultimas, hasLength(4));
+      // De la más nueva a la más vieja: 15, 14, 13, 12 litros.
+      expect(ultimas.map((s) => s.litros), [15, 14, 13, 12]);
+      expect(ultimas.first.vacas, 1);
+    });
+
+    test('observarUltimasSesiones cuenta en cero la pesa recién abierta', () async {
+      // Sin `leftOuterJoin` la sesión sin vacas desaparecería de la lista, y
+      // el gráfico del home se saltaría la semana en curso.
+      final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+
+      final ultimas = await repo.observarUltimasSesiones(lecheriaId).first;
+
+      expect(ultimas.single.sesion.id, sesion.id);
+      expect(ultimas.single.vacas, 0);
+      expect(ultimas.single.litros, 0);
+    });
+
+    test('avisa cuando se abre la pesa de una semana nueva', () async {
+      // Mismo defecto que en finanzas: el stream de sesiones quedaba pausado
+      // detrás del de pesas y la semana nueva no aparecía hasta reabrir la
+      // pantalla.
+      final vieja = await repo.abrirSesion(
+        lecheriaId: lecheriaId,
+        fecha: DateTime(2026, 3, 3, 6),
+      );
+      await repo.registrarPesa(
+        sesionId: vieja.id,
+        animalId: animalId,
+        litrosTotal: 10,
+      );
+      await repo.cerrarSesion(vieja.id);
+
+      final emitidos = <List<SesionConTotales>>[];
+      final sub = repo.observarSesiones(lecheriaId).listen(emitidos.add);
+      await pumpEventQueue();
+
+      final nueva = await repo.abrirSesion(
+        lecheriaId: lecheriaId,
+        fecha: DateTime(2026, 3, 10, 6),
+      );
+      await pumpEventQueue();
+      await repo.registrarPesa(
+        sesionId: nueva.id,
+        animalId: animalId,
+        litrosTotal: 12,
+      );
+      await pumpEventQueue();
+      await sub.cancel();
+
+      expect(emitidos.last.map((s) => s.sesion.id), [nueva.id, vieja.id]);
+      expect(emitidos.last.first.litros, 12);
+    });
+
     test('deja fuera las pesas borradas', () async {
       final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
       await (db.update(db.pesasSesiones)

@@ -74,21 +74,58 @@ void main() {
     );
   });
 
-  testWidgets('la grilla queda centrada en vertical', (tester) async {
+  testWidgets('el conteo, el gráfico y la grilla reparten el alto en huecos '
+      'iguales', (tester) async {
     await montar(tester, pantalla: const Size(400, 900));
 
-    final grilla = tester.getRect(find.byType(GridView));
     final area = tester.getRect(find.byType(SingleChildScrollView));
-
-    final margenArriba = grilla.top - area.top;
-    final margenAbajo = area.bottom - grilla.bottom;
-
-    expect(margenArriba, greaterThan(0), reason: 'no está pegada arriba');
-    expect(
-      (margenArriba - margenAbajo).abs(),
-      lessThan(1),
-      reason: 'los márgenes de arriba y abajo deben ser iguales',
+    final hato = tester.getRect(find.byKey(const ValueKey('home.hato.secas')));
+    final grafico = tester.getRect(
+      find.byKey(const ValueKey('home.produccion')),
     );
+    final grilla = tester.getRect(find.byType(GridView));
+
+    final huecos = [
+      hato.top - area.top,
+      grafico.top - hato.bottom,
+      grilla.top - grafico.bottom,
+      area.bottom - grilla.bottom,
+    ];
+
+    expect(huecos.first, greaterThan(0), reason: 'nada pegado a la barra');
+    for (final hueco in huecos) {
+      expect(
+        (hueco - huecos.first).abs(),
+        lessThan(1),
+        reason: 'los cuatro huecos verticales deben medir lo mismo: $huecos',
+      );
+    }
+  });
+
+  testWidgets('el gráfico de producción va entre el conteo y los módulos', (
+    tester,
+  ) async {
+    await montar(tester, pantalla: const Size(400, 900));
+
+    final hato = tester.getRect(find.byKey(const ValueKey('home.hato.secas')));
+    final grafico = tester.getRect(
+      find.byKey(const ValueKey('home.produccion')),
+    );
+    final grilla = tester.getRect(find.byType(GridView));
+
+    expect(grafico.top, greaterThanOrEqualTo(hato.bottom));
+    expect(grafico.bottom, lessThanOrEqualTo(grilla.top));
+  });
+
+  testWidgets('el gráfico se dibuja aunque todavía no haya pesas', (
+    tester,
+  ) async {
+    // "Siempre está pintado": sin datos el marco sigue ahí, con las cuatro
+    // semanas rotuladas, en vez de desaparecer y mover todo lo demás.
+    await montar(tester, pantalla: const Size(400, 900));
+
+    expect(find.byKey(const ValueKey('home.produccion')), findsOneWidget);
+    expect(find.text('PRODUCCIÓN SEMANAL'), findsOneWidget);
   });
 
   testWidgets('en una pantalla baja se puede bajar en vez de recortar', (

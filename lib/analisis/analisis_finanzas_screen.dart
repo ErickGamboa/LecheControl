@@ -217,8 +217,8 @@ class _FilaSemana extends StatelessWidget {
             if (precio != null) ...[
               const SizedBox(height: 2),
               Text(
-                '${resumen.litrosLeche.toStringAsFixed(0)} L pagados a '
-                '${colones(precio)}/L',
+                '${resumen.litrosLeche.toStringAsFixed(0)} kg entregados a '
+                '${colones(precio)}/kg',
                 style: textos.bodySmall,
               ),
             ],
