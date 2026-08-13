@@ -144,6 +144,22 @@ Se anota cada salida con su **categoría** (salario del peón, concentrado, medi
 
 ---
 
+## Módulo 8 — Análisis
+
+El resto de la app trabaja sobre **la semana en curso**: se pesa esta semana, se anotan los gastos de esta semana. Análisis abre **todas las semanas juntas**, que es lo que hace falta para saber si la finca va bien o mal. Se elige qué mirar:
+
+### Leche
+Todas las pesas, semana por semana: **vacas, litros y promedio**, con un gráfico de litros por semana y cuánto **subió o bajó** contra la semana anterior. Tocando una semana se abre su **reporte de producción**.
+
+Las sesiones sin ninguna vaca pesada no se listan: son las que la app abre sola al entrar a la pantalla de pesa, y contarlas torcería los promedios.
+
+### Finanzas
+**Ingresos, gastos y utilidad de todas las semanas**, con el acumulado, el promedio semanal y el precio real por litro de cada una. Las semanas con pérdida salen en rojo, también en el gráfico.
+
+Igual que en leche, una semana sin ingresos ni gastos no cuenta.
+
+---
+
 ## Módulo 6 — Hoja de Vida del animal
 
 Módulo para **consultar la hoja de vida** de cualquier animal (además del acceso directo tocándolo en inventario o en la Pantalla de Trabajo).

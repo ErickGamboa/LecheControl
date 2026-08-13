@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
 
-/// Colores de marca de LecheControl.
-///
-/// La paleta arranca en un verde esmeralda vivo —el campo, no el verde
-/// apagado de las apps agrícolas de hace diez años— y se apoya en un ámbar
-/// cálido para los acentos. El fondo es un gris muy claro con una gota de
-/// verde: se lee bien bajo el sol y no cansa en el galerón.
-const Color kVerdeLeche = Color(0xFF00875A); // esmeralda, color primario
-const Color kAzulLeche = Color(0xFF0B6E99); // azul profundo, secundario
-const Color kAmbarLeche = Color(0xFFF2A104); // ámbar cálido, acento
-const Color kCremaLeche = Color(0xFFF6F8F6); // fondo claro, casi blanco
-const Color kCarbonLeche = Color(0xFF101614); // fondo oscuro
+/// Colores de marca de LecheControl, tomados del logo (la vaca y el
+/// tarro sobre la "LC"): el azul marino de la "L" manda y el verde de la
+/// "C" acompaña. Están muestreados del archivo del ícono, no elegidos a
+/// ojo, para que la app y su ícono se vean de la misma familia.
+const Color kAzulLeche = Color(0xFF00234B); // azul marino de la "L"
+const Color kVerdeLeche = Color(0xFF217030); // verde de la "C" y la hoja
+const Color kAmbarLeche = Color(0xFFC98A00); // ámbar de apoyo, para avisos
+const Color kCremaLeche = Color(0xFFF5F7FA); // fondo claro, azulado
+const Color kCarbonLeche = Color(0xFF0B1220); // fondo oscuro, azulado
 
 /// Colores de estado, para no repetir `Colors.red.shade700` por toda la app.
-const Color kExito = Color(0xFF00875A);
-const Color kAviso = Color(0xFFB25E02);
+const Color kExito = kVerdeLeche;
+const Color kAviso = Color(0xFF9A6700);
 const Color kPeligro = Color(0xFFC5303B);
 
 /// Espaciados estándar de la app (múltiplos de 4).
@@ -43,12 +41,14 @@ abstract final class LecheTheme {
     final claro = brightness == Brightness.light;
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: kVerdeLeche,
+          seedColor: kAzulLeche,
           brightness: brightness,
         ).copyWith(
-          primary: claro ? kVerdeLeche : const Color(0xFF4CD9A0),
-          secondary: claro ? kAzulLeche : const Color(0xFF6FC5E8),
-          tertiary: claro ? kAmbarLeche : const Color(0xFFFFC65C),
+          // En oscuro el marino y el verde del logo se hunden contra el
+          // fondo, así que se usan versiones aclaradas de los mismos tonos.
+          primary: claro ? kAzulLeche : const Color(0xFF8FB4E8),
+          secondary: claro ? kVerdeLeche : const Color(0xFF6FCB7E),
+          tertiary: claro ? kVerdeLeche : const Color(0xFF6FCB7E),
           error: claro ? kPeligro : const Color(0xFFFF8A8A),
           surface: claro ? kCremaLeche : kCarbonLeche,
         );
@@ -61,7 +61,7 @@ abstract final class LecheTheme {
       // La barra va del color de la marca y con el título alineado a la
       // izquierda: en Android es lo que la gente espera.
       appBarTheme: AppBarTheme(
-        backgroundColor: claro ? kVerdeLeche : scheme.surfaceContainerHigh,
+        backgroundColor: claro ? kAzulLeche : scheme.surfaceContainerHigh,
         foregroundColor: claro ? Colors.white : scheme.onSurface,
         elevation: 0,
         scrolledUnderElevation: 2,
@@ -131,7 +131,7 @@ abstract final class LecheTheme {
       ),
 
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: claro ? kVerdeLeche : scheme.primaryContainer,
+        backgroundColor: claro ? kAzulLeche : scheme.primaryContainer,
         foregroundColor: claro ? Colors.white : scheme.onPrimaryContainer,
         elevation: 2,
         shape: RoundedRectangleBorder(

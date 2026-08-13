@@ -73,7 +73,8 @@ both integration tests and manual QA can target elements reliably:
 |---|---|
 | `auth/login_screen.dart` (pre-existing) | `login.email`, `login.password`, `login.submit`, `login.offline` |
 | `cuenta/cuenta_gate.dart` | `lecheria.nombre`, `lecheria.crear` |
-| `home/home_screen.dart` | `home.trabajo`, `home.inventario`, `home.pesa`, `home.finanzas`, `home.sanidad`, `home.syncStatus`, `home.curva` |
+| `home/home_screen.dart` | `home.trabajo`, `home.inventario`, `home.pesa`, `home.finanzas`, `home.sanidad`, `home.analisis`, `home.syncStatus`, `home.curva` |
+| `analisis/analisis_screen.dart` | `analisis.leche`, `analisis.finanzas` |
 | `trabajo/trabajo_screen.dart` | `trabajo.identificador`, `trabajo.buscar`, `trabajo.alta.abrir`, `trabajo.alta.identificador`, `trabajo.alta.sexoHembra`, `trabajo.alta.sexoMacho`, `trabajo.alta.grupo` (+ `trabajo.alta.grupo.<codigo>` per chip), `trabajo.alta.origenNacido`, `trabajo.alta.origenComprado`, `trabajo.alta.guardar`, `trabajo.animal.tarjeta` |
 | `pesa/pesa_screen.dart` | `pesa.elegirVaca`, `pesa.cambiarVaca`, `pesa.manana`, `pesa.tarde`, `pesa.concentrado`, `pesa.guardar`, `pesa.cerrar`, `pesa.contador`, `pesa.historial`, `pesa.verReporte` |
 | `pesa/selector_vaca_sheet.dart` | `selectorVaca.busqueda`, `selectorVaca.manual` |

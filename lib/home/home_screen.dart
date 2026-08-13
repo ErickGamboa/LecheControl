@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../ajustes/curva_screen.dart';
+import '../analisis/analisis_screen.dart';
 import '../app/theme.dart';
 import '../data/local/database.dart';
 import '../finanzas/finanzas_screen.dart';
@@ -96,6 +97,20 @@ class HomeScreen extends StatelessWidget {
           SanidadScreen(lecheriaId: lecheria.id, usuarioId: usuarioId),
         ),
       ),
+      _Modulo(
+        valueKey: 'home.analisis',
+        icono: Icons.insights_outlined,
+        titulo: 'Análisis',
+        detalle: 'Todas las semanas: leche y utilidades',
+        color: kVerdeLeche,
+        onTap: () => _abrir(
+          context,
+          AnalisisScreen(
+            lecheriaId: lecheria.id,
+            nombreLecheria: lecheria.nombre,
+          ),
+        ),
+      ),
     ];
 
     return Scaffold(
@@ -132,16 +147,35 @@ class HomeScreen extends StatelessWidget {
             if (sinConexion || !estadoConexion.hayConexion.value)
               const _OfflineBanner(),
             Expanded(
-              child: GridView.count(
-                padding: const EdgeInsets.all(16),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                // Justo lo que necesitan ícono + título + dos líneas de
-                // explicación. Más alto deja un hueco muerto en el medio de
-                // cada tarjeta; más bajo corta el texto.
-                childAspectRatio: 1.0,
-                children: [for (final m in modulos) _ModuloCard(modulo: m)],
+              // Centrada en vertical, pero dentro de un scroll: en una
+              // pantalla chica (o con la letra del sistema en grande) las seis
+              // tarjetas no caben, y es mejor que se pueda bajar a que se
+              // recorten.
+              child: LayoutBuilder(
+                builder: (context, restricciones) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: restricciones.maxHeight,
+                    ),
+                    child: Center(
+                      child: GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(LecheSpacing.lg),
+                        crossAxisCount: 2,
+                        mainAxisSpacing: LecheSpacing.md,
+                        crossAxisSpacing: LecheSpacing.md,
+                        // Justo lo que necesitan ícono + título + dos líneas
+                        // de explicación. Más alto deja un hueco muerto en el
+                        // medio de cada tarjeta; más bajo corta el texto.
+                        childAspectRatio: 1.0,
+                        children: [
+                          for (final m in modulos) _ModuloCard(modulo: m),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

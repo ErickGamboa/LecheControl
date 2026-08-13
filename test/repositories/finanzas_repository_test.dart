@@ -250,6 +250,87 @@ void main() {
       expect((await repo.resumenDe(semana)).totalGastos, 0);
     });
 
+    group('resumenesDe', () {
+      test('trae todas las semanas, de la más nueva a la más vieja', () async {
+        final vieja = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: DateTime(2026, 8, 5),
+        );
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: vieja.id,
+          tipo: TipoIngreso.leche,
+          monto: 30000,
+          litros: 100,
+        );
+        await repo.agregarGasto(
+          lecheriaId: lecheriaId,
+          semanaId: vieja.id,
+          categoria: 'Concentrado',
+          monto: 10000,
+        );
+
+        final nueva = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: nueva.id,
+          tipo: TipoIngreso.leche,
+          monto: 50000,
+          litros: 125,
+        );
+
+        final resumenes = await repo.resumenesDe(lecheriaId);
+
+        expect(resumenes.map((r) => r.semana.id), [nueva.id, vieja.id]);
+        expect(resumenes.first.totalIngresos, 50000);
+        expect(resumenes.first.precioRealPorLitro, 400);
+        expect(resumenes.last.utilidad, 20000);
+      });
+
+      test('cada semana lleva solo sus movimientos', () async {
+        final a = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: DateTime(2026, 8, 5),
+        );
+        final b = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        await repo.agregarGasto(
+          lecheriaId: lecheriaId,
+          semanaId: a.id,
+          categoria: 'Cerca',
+          monto: 7000,
+        );
+
+        final resumenes = await repo.resumenesDe(lecheriaId);
+        final deA = resumenes.firstWhere((r) => r.semana.id == a.id);
+        final deB = resumenes.firstWhere((r) => r.semana.id == b.id);
+
+        expect(deA.totalGastos, 7000);
+        expect(deB.gastos, isEmpty, reason: 'no se le pegan los de la otra');
+      });
+
+      test('no mezcla las semanas de otra lechería', () async {
+        await seedLecheria(db, usuarioId: 'user-1', lecheriaId: 'lecheria-2');
+        final ajena = await repo.abrirSemana(
+          lecheriaId: 'lecheria-2',
+          fecha: miercoles,
+        );
+        await repo.agregarGasto(
+          lecheriaId: 'lecheria-2',
+          semanaId: ajena.id,
+          categoria: 'Cerca',
+          monto: 9999,
+        );
+
+        expect(await repo.resumenesDe(lecheriaId), isEmpty);
+      });
+    });
+
     test('recordarCategoria no duplica una que ya existe', () async {
       await repo.recordarCategoria(
         lecheriaId: lecheriaId,

@@ -136,6 +136,51 @@ class FinanzasRepository {
     );
   }
 
+  /// Resumen de **todas** las semanas de la lechería, de la más reciente a la
+  /// más vieja. Es lo que mira el módulo de Análisis para comparar una semana
+  /// contra otra en vez de verlas de una en una.
+  ///
+  /// Se traen los ingresos y gastos de la lechería en dos consultas y se
+  /// reparten por semana en memoria: con una consulta por semana, un año de
+  /// historia serían más de cien viajes a la base.
+  Future<List<ResumenSemana>> resumenesDe(String lecheriaId) async {
+    final semanas =
+        await (db.select(db.semanas)
+              ..where(
+                (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.fechaInicio)]))
+            .get();
+    if (semanas.isEmpty) return const [];
+
+    final ingresos = await (db.select(db.ingresosSemana)..where(
+          (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+        ))
+        .get();
+    final gastos = await (db.select(db.gastosSemana)..where(
+          (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+        ))
+        .get();
+
+    final ingresosPorSemana = <String, List<IngresoSemanaRow>>{};
+    for (final i in ingresos) {
+      (ingresosPorSemana[i.semanaId] ??= []).add(i);
+    }
+    final gastosPorSemana = <String, List<GastoSemanaRow>>{};
+    for (final g in gastos) {
+      (gastosPorSemana[g.semanaId] ??= []).add(g);
+    }
+
+    return [
+      for (final s in semanas)
+        ResumenSemana(
+          semana: s,
+          ingresos: ingresosPorSemana[s.id] ?? const [],
+          gastos: gastosPorSemana[s.id] ?? const [],
+        ),
+    ];
+  }
+
   Future<ResumenSemana> resumenDe(SemanaRow semana) async {
     final ingresos = await (db.select(
       db.ingresosSemana,

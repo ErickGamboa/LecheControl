@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../analisis/analisis_leche_screen.dart';
 import '../app/theme.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../data/domain/curva_lactancia.dart';
@@ -7,11 +8,10 @@ import '../data/domain/semana.dart';
 import '../data/local/database.dart';
 import '../data/repositories/pesas_repository.dart';
 import '../services.dart';
-import 'historial_pesas_screen.dart';
 import 'reporte_screen.dart';
 import 'selector_vaca_sheet.dart';
 
-/// Pesa de leche (Módulo 3). Abre o reutiliza la sesión del día y va vaca por
+/// Pesa de leche (Módulo 3). Abre o reutiliza la sesión de la semana y va vaca a
 /// vaca: se **elige** la vaca de una lista con buscador y se anotan los litros
 /// de la **mañana**, los de la **tarde** y los **kilos de concentrado**.
 ///
@@ -122,7 +122,7 @@ class _PesaScreenState extends State<PesaScreen> {
   Future<void> _abrirHistorial() {
     return Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => HistorialPesasScreen(
+        builder: (_) => AnalisisLecheScreen(
           lecheriaId: widget.lecheriaId,
           nombreLecheria: widget.nombreLecheria,
         ),

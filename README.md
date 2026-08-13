@@ -20,6 +20,7 @@ internet.
 - Módulo 4 — Finanzas de la semana (ingresos digitados, gastos y utilidad)
 - Módulo 6 — Hoja de vida (dentro de Inventario)
 - Módulo 7 — Sanidad (catálogo de medicamentos y aplicaciones)
+- Módulo 8 — Análisis (todas las semanas: leche y finanzas)
 
 ## Architecture / Arquitectura
 

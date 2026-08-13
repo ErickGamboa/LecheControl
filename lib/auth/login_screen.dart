@@ -216,26 +216,28 @@ class _MarcaLecheControl extends StatelessWidget {
     final theme = Theme.of(context);
     return Column(
       children: [
+        // El logo viene sobre fondo blanco, así que en modo oscuro se le pone
+        // su propio recuadro claro en vez de dejarlo flotando sobre el fondo.
         Container(
-          height: 96,
-          width: 96,
+          height: 120,
+          width: 120,
           decoration: BoxDecoration(
-            color: kVerdeLeche,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: const Icon(
-            Icons.water_drop_outlined,
             color: Colors.white,
-            size: 52,
+            borderRadius: BorderRadius.circular(LecheRadius.lg),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.asset(
+            'assets/logo_lechecontrol.png',
+            fit: BoxFit.contain,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: LecheSpacing.lg),
         Text(
           'LecheControl',
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: kVerdeLeche,
+            color: theme.colorScheme.primary,
           ),
         ),
       ],
