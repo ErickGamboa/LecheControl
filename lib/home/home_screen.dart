@@ -49,7 +49,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.trabajo',
         icono: Icons.nfc,
         titulo: 'Trabajo',
-        detalle: 'Leer el arete y anotar en el corral',
         color: kVerdeLeche,
         onTap: () => _abrir(
           context,
@@ -60,7 +59,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.inventario',
         icono: Icons.list_alt,
         titulo: 'Inventario',
-        detalle: 'El hato, sus fichas y sus eventos',
         color: kAzulLeche,
         onTap: () => _abrir(
           context,
@@ -71,7 +69,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.pesa',
         icono: Icons.water_drop_outlined,
         titulo: 'Pesa de leche',
-        detalle: 'Pesa semanal y reporte de producción',
         color: kVerdeLeche,
         onTap: () => _abrir(
           context,
@@ -82,7 +79,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.finanzas',
         icono: Icons.payments_outlined,
         titulo: 'Finanzas',
-        detalle: 'Ingresos, gastos y utilidad de la semana',
         color: kAmbarLeche,
         onTap: () => _abrir(context, FinanzasScreen(lecheriaId: lecheria.id)),
       ),
@@ -90,7 +86,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.sanidad',
         icono: Icons.medical_services_outlined,
         titulo: 'Sanidad',
-        detalle: 'Tratamientos y retiros de leche',
         color: kAzulLeche,
         onTap: () => _abrir(
           context,
@@ -101,7 +96,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.analisis',
         icono: Icons.insights_outlined,
         titulo: 'Análisis',
-        detalle: 'Todas las semanas: leche y utilidades',
         color: kVerdeLeche,
         onTap: () => _abrir(
           context,
@@ -165,9 +159,8 @@ class HomeScreen extends StatelessWidget {
                         crossAxisCount: 2,
                         mainAxisSpacing: LecheSpacing.md,
                         crossAxisSpacing: LecheSpacing.md,
-                        // Justo lo que necesitan ícono + título + dos líneas
-                        // de explicación. Más alto deja un hueco muerto en el
-                        // medio de cada tarjeta; más bajo corta el texto.
+                        // Cuadradas: adentro solo va el ícono y el nombre,
+                        // centrados.
                         childAspectRatio: 1.0,
                         children: [
                           for (final m in modulos) _ModuloCard(modulo: m),
@@ -190,7 +183,6 @@ class _Modulo {
     required this.valueKey,
     required this.icono,
     required this.titulo,
-    required this.detalle,
     required this.color,
     required this.onTap,
   });
@@ -198,10 +190,6 @@ class _Modulo {
   final String valueKey;
   final IconData icono;
   final String titulo;
-
-  /// Una línea que dice para qué sirve el módulo. Con cinco tarjetas iguales
-  /// el título solo no alcanza para saber dónde tocar.
-  final String detalle;
   final Color color;
   final VoidCallback onTap;
 }
@@ -213,7 +201,6 @@ class _ModuloCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textos = Theme.of(context).textTheme;
     final oscuro = Theme.of(context).brightness == Brightness.dark;
     // El color del módulo tiñe apenas el fondo: distingue las tarjetas de un
     // vistazo sin convertir la pantalla en un semáforo.
@@ -226,38 +213,26 @@ class _ModuloCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(LecheSpacing.lg),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            // Centrado y no `spaceBetween`: la grilla fija el alto de la
-            // tarjeta, así que separar los extremos abría un hueco muerto
-            // entre el ícono y el título.
+            // Todo al centro, horizontal y vertical: son seis tarjetas
+            // iguales y alineadas al centro se leen como una grilla pareja.
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(LecheSpacing.md),
+                padding: const EdgeInsets.all(LecheSpacing.lg),
                 decoration: BoxDecoration(
                   color: tinte,
                   borderRadius: BorderRadius.circular(LecheRadius.md),
                 ),
-                child: Icon(modulo.icono, size: 26, color: modulo.color),
+                child: Icon(modulo.icono, size: 34, color: modulo.color),
               ),
               const SizedBox(height: LecheSpacing.md),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    modulo.titulo,
-                    style: textos.titleMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    modulo.detalle,
-                    style: textos.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              Text(
+                modulo.titulo,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

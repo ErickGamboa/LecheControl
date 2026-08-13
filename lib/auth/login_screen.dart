@@ -208,6 +208,39 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+/// El logo del login. Grande y sin recuadro: el PNG es transparente.
+class _LogoLogin extends StatelessWidget {
+  const _LogoLogin();
+
+  static const double _lado = 180;
+
+  @override
+  Widget build(BuildContext context) {
+    final logo = Image.asset(
+      'assets/logo_lechecontrol.png',
+      width: _lado,
+      height: _lado,
+      fit: BoxFit.contain,
+    );
+
+    if (Theme.of(context).brightness == Brightness.light) return logo;
+
+    // En oscuro el azul marino del logo se pierde contra el fondo, así que
+    // se le pone un disco claro detrás. Disco y no cuadro: el borde recto
+    // era justo lo que se veía como una caja pegada encima.
+    return Container(
+      width: _lado + 24,
+      height: _lado + 24,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: logo,
+    );
+  }
+}
+
 class _MarcaLecheControl extends StatelessWidget {
   const _MarcaLecheControl();
 
@@ -216,21 +249,11 @@ class _MarcaLecheControl extends StatelessWidget {
     final theme = Theme.of(context);
     return Column(
       children: [
-        // El logo viene sobre fondo blanco, así que en modo oscuro se le pone
-        // su propio recuadro claro en vez de dejarlo flotando sobre el fondo.
-        Container(
-          height: 120,
-          width: 120,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(LecheRadius.lg),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Image.asset(
-            'assets/logo_lechecontrol.png',
-            fit: BoxFit.contain,
-          ),
-        ),
+        // Sin recuadro: el PNG tiene fondo transparente y se apoya directo en
+        // el fondo de la pantalla. En oscuro sí lleva un disco claro detrás,
+        // porque el logo es azul marino y verde y contra el fondo negro no se
+        // lee; un círculo no deja el borde cuadrado que sí se notaba antes.
+        const _LogoLogin(),
         const SizedBox(height: LecheSpacing.lg),
         Text(
           'LecheControl',

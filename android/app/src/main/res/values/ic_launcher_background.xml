@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo del ícono adaptativo. Blanco: el logo es azul marino y verde,
+         y sobre blanco es como está diseñado. -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>
