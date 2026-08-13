@@ -97,6 +97,32 @@ void main() {
     });
   });
 
+  group('ticksDeEje', () {
+    test('marca números redondos que envuelven al rango', () {
+      final marcas = ticksDeEje(290, 312);
+
+      expect(marcas, [280, 300, 320]);
+    });
+
+    test('siempre deja los datos adentro del eje', () {
+      for (final (minimo, maximo) in [
+        (0.0, 7.0),
+        (293.0, 317.0),
+        (1180.0, 1240.0),
+        (12.5, 13.5),
+      ]) {
+        final marcas = ticksDeEje(minimo, maximo);
+        expect(marcas.first, lessThanOrEqualTo(minimo), reason: '$marcas');
+        expect(marcas.last, greaterThanOrEqualTo(maximo), reason: '$marcas');
+        expect(marcas.length, greaterThanOrEqualTo(2), reason: '$marcas');
+      }
+    });
+
+    test('con una sola semana no inventa un rango', () {
+      expect(ticksDeEje(618, 618), [618]);
+    });
+  });
+
   group('LineaProduccion', () {
     Future<void> montar(WidgetTester tester, List<PuntoProduccion> puntos) {
       return tester.pumpWidget(

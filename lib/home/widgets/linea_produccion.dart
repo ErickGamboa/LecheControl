@@ -62,6 +62,48 @@ List<PuntoProduccion> armarSemanas(
   ];
 }
 
+/// Las marcas del eje vertical para un rango de litros: números redondos que
+/// contienen a [minimo] y [maximo].
+///
+/// Se redondean hacia afuera a propósito. Poner el mínimo y el máximo exactos
+/// (p. ej. 293 y 317) obliga a leer dos números raros para entender la
+/// escala; con 280, 300 y 320 se lee de un vistazo, y de paso la línea deja
+/// de tocar el borde de la tarjeta.
+///
+/// Con una sola semana —o con todas iguales— no hay rango que marcar y
+/// devuelve ese único valor.
+List<double> ticksDeEje(double minimo, double maximo) {
+  if (maximo - minimo < 0.01) return [maximo];
+
+  final paso = _pasoLindo((maximo - minimo) / 2);
+  final desde = (minimo / paso).floorToDouble() * paso;
+  final hasta = (maximo / paso).ceilToDouble() * paso;
+
+  final marcas = <double>[];
+  // El margen contra el error de coma flotante evita perder la última marca
+  // cuando la suma cae un pelo por encima.
+  for (var v = desde; v <= hasta + paso / 1000; v += paso) {
+    marcas.add(v);
+  }
+  return marcas;
+}
+
+/// El número redondo más cercano a [bruto] de la familia 1-2-5-10.
+double _pasoLindo(double bruto) {
+  if (bruto <= 0) return 1;
+  final magnitud = math.pow(10, (math.log(bruto) / math.ln10).floor())
+      .toDouble();
+  final normalizado = bruto / magnitud;
+  final multiplo = normalizado <= 1
+      ? 1.0
+      : normalizado <= 2
+      ? 2.0
+      : normalizado <= 5
+      ? 5.0
+      : 10.0;
+  return multiplo * magnitud;
+}
+
 /// Litros por semana de las últimas semanas, en puntos unidos por una línea.
 ///
 /// No arranca en cero a propósito. Con cuatro semanas entre 300 y 320 L, un
@@ -102,6 +144,13 @@ class LineaProduccion extends StatelessWidget {
     final theme = Theme.of(context);
     final ultimo = _ultimo;
     final variacion = _variacion;
+    // Mismo gris y mismo tamaño para las fechas de abajo y los litros del
+    // eje: son la misma clase de dato, la regla contra la que se lee.
+    final estiloEje =
+        theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.outline,
+        ) ??
+        const TextStyle(fontSize: 12);
 
     return Card(
       child: InkWell(
@@ -148,16 +197,14 @@ class LineaProduccion extends StatelessWidget {
               ),
               const SizedBox(height: LecheSpacing.md),
               SizedBox(
-                height: 78,
+                height: 104,
                 child: ultimo == null
                     ? Center(
                         child: Text(
                           'Cuando peses la primera vaca, acá se ve la '
                           'producción de cada semana.',
                           textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.outline,
-                          ),
+                          style: estiloEje,
                         ),
                       )
                     : CustomPaint(
@@ -167,24 +214,31 @@ class LineaProduccion extends StatelessWidget {
                           color: kVerdeLeche,
                           // El punto de la pesa en curso va hueco: se pinta
                           // el fondo de la tarjeta adentro del círculo.
-                          fondo: theme.cardTheme.color ?? theme.colorScheme.surface,
+                          fondo:
+                              theme.cardTheme.color ?? theme.colorScheme.surface,
+                          lineaGuia: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.5),
+                          estiloEje: estiloEje,
                         ),
                       ),
               ),
               const SizedBox(height: LecheSpacing.sm),
-              Row(
-                children: [
-                  for (final p in puntos)
-                    Expanded(
-                      child: Text(
-                        p.etiqueta,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
+              Padding(
+                // El mismo hueco que el pintor le deja al eje vertical, para
+                // que cada fecha caiga debajo de su punto.
+                padding: const EdgeInsets.only(left: _PinturaLinea.anchoEje),
+                child: Row(
+                  children: [
+                    for (final p in puntos)
+                      Expanded(
+                        child: Text(
+                          p.etiqueta,
+                          textAlign: TextAlign.center,
+                          style: estiloEje,
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -224,11 +278,22 @@ class _PinturaLinea extends CustomPainter {
     required this.puntos,
     required this.color,
     required this.fondo,
+    required this.lineaGuia,
+    required this.estiloEje,
   });
 
   final List<PuntoProduccion> puntos;
   final Color color;
   final Color fondo;
+  final Color lineaGuia;
+  final TextStyle estiloEje;
+
+  /// Lo que se reserva a la izquierda para los litros del eje. Da para cuatro
+  /// cifras, que es lo que produce en una semana un hato grande.
+  static const double anchoEje = 40;
+
+  /// Separación entre el número del eje y el inicio del gráfico.
+  static const double _respiroEje = 6;
 
   static const double _radio = 3.5;
   static const double _radioUltimo = 5.5;
@@ -242,22 +307,29 @@ class _PinturaLinea extends CustomPainter {
     ];
     if (valores.isEmpty) return;
 
-    final columna = size.width / puntos.length;
-    // El margen deja entrar el punto más gordo sin que se coma el borde.
-    const margen = _radioUltimo + 2;
+    final columna = (size.width - anchoEje) / puntos.length;
+    // El margen deja entrar el punto más gordo sin que se coma el borde, y
+    // que el número de arriba del eje no quede cortado.
+    const margen = _radioUltimo + 4;
     final arriba = margen;
     final abajo = size.height - margen;
 
-    final minimo = valores.reduce(math.min);
-    final maximo = valores.reduce(math.max);
+    final marcas = ticksDeEje(
+      valores.reduce(math.min),
+      valores.reduce(math.max),
+    );
+    final ejeMin = marcas.first;
+    final ejeMax = marcas.last;
 
-    double x(int i) => columna * (i + 0.5);
+    double x(int i) => anchoEje + columna * (i + 0.5);
     double y(double valor) {
       // Con un solo punto —o con todas las semanas iguales— no hay rango que
       // repartir: va a media altura en vez de dividir entre cero.
-      if (maximo - minimo < 0.01) return (arriba + abajo) / 2;
-      return abajo - (valor - minimo) / (maximo - minimo) * (abajo - arriba);
+      if (ejeMax - ejeMin < 0.01) return (arriba + abajo) / 2;
+      return abajo - (valor - ejeMin) / (ejeMax - ejeMin) * (abajo - arriba);
     }
+
+    _pintarEje(canvas, size, marcas, y);
 
     final trazo = Paint()
       ..color = color
@@ -307,6 +379,45 @@ class _PinturaLinea extends CustomPainter {
     }
   }
 
+  /// Los litros de cada marca, con su guía tenue cruzando el gráfico.
+  void _pintarEje(
+    Canvas canvas,
+    Size size,
+    List<double> marcas,
+    double Function(double) y,
+  ) {
+    final guia = Paint()
+      ..color = lineaGuia
+      ..strokeWidth = 1;
+
+    for (final marca in marcas) {
+      final altura = y(marca);
+      canvas.drawLine(
+        Offset(anchoEje, altura),
+        Offset(size.width, altura),
+        guia,
+      );
+
+      // Una sola línea siempre: un número partido en dos renglones se lee
+      // como dos números distintos.
+      final texto = TextPainter(
+        text: TextSpan(text: marca.toStringAsFixed(0), style: estiloEje),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: anchoEje - _respiroEje);
+      // Pegados a la línea y alineados a la derecha, para que el eje se lea
+      // como una columna y no como números sueltos.
+      texto.paint(
+        canvas,
+        Offset(
+          anchoEje - _respiroEje - texto.width,
+          altura - texto.height / 2,
+        ),
+      );
+    }
+  }
+
   void _punteado(Canvas canvas, Offset a, Offset b, Paint pincel) {
     const guion = 5.0;
     const hueco = 4.0;
@@ -323,7 +434,12 @@ class _PinturaLinea extends CustomPainter {
 
   @override
   bool shouldRepaint(_PinturaLinea anterior) {
-    if (anterior.color != color || anterior.fondo != fondo) return true;
+    if (anterior.color != color ||
+        anterior.fondo != fondo ||
+        anterior.lineaGuia != lineaGuia ||
+        anterior.estiloEje != estiloEje) {
+      return true;
+    }
     if (anterior.puntos.length != puntos.length) return true;
     for (var i = 0; i < puntos.length; i++) {
       final a = anterior.puntos[i];

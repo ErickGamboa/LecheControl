@@ -183,10 +183,10 @@ class HomeScreen extends StatelessWidget {
                     crossAxisCount: 2,
                     mainAxisSpacing: LecheSpacing.md,
                     crossAxisSpacing: LecheSpacing.md,
-                    // Un poco más anchas que altas: adentro solo va el ícono
-                    // y el nombre. Cuadradas quedaban medio vacías y, al
-                    // llenar la pantalla, el centrado vertical no se notaba.
-                    childAspectRatio: 1.15,
+                    // Bastante más anchas que altas: adentro solo va el ícono
+                    // y el nombre, y lo que se les recorta de alto es lo que
+                    // gana el gráfico, que sí tiene qué mostrar ahí.
+                    childAspectRatio: 1.3,
                     children: [
                       for (final m in modulos) _ModuloCard(modulo: m),
                     ],
@@ -390,7 +390,7 @@ class _ModuloCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(LecheSpacing.md),
+                padding: const EdgeInsets.all(LecheSpacing.sm),
                 decoration: BoxDecoration(
                   color: tinte,
                   borderRadius: BorderRadius.circular(LecheRadius.md),
@@ -398,12 +398,17 @@ class _ModuloCard extends StatelessWidget {
                 child: Icon(modulo.icono, size: 32, color: modulo.color),
               ),
               const SizedBox(height: LecheSpacing.sm),
-              Text(
-                modulo.titulo,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              // En una sola línea, encogiéndose si hace falta. Partir "Pesa
+              // de leche" en dos renglones le pedía a la tarjeta un alto que
+              // ya no tiene: ese espacio se lo llevó el gráfico.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  modulo.titulo,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                ),
               ),
             ],
           ),
