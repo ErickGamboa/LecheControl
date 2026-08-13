@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 /// tarro sobre la "LC"): el azul marino de la "L" manda y el verde de la
 /// "C" acompaña. Están muestreados del archivo del ícono, no elegidos a
 /// ojo, para que la app y su ícono se vean de la misma familia.
-const Color kAzulLeche = Color(0xFF00234B); // azul marino de la "L"
-const Color kVerdeLeche = Color(0xFF217030); // verde de la "C" y la hoja
+const Color kAzulLeche = Color(0xFF082850); // azul marino de la "L"
+const Color kVerdeLeche = Color(0xFF287038); // verde de la "C" y la hoja
 const Color kAmbarLeche = Color(0xFFC98A00); // ámbar de apoyo, para avisos
 const Color kCremaLeche = Color(0xFFF5F7FA); // fondo claro, azulado
 const Color kCarbonLeche = Color(0xFF0B1220); // fondo oscuro, azulado

@@ -255,12 +255,27 @@ class _MarcaLecheControl extends StatelessWidget {
         // lee; un círculo no deja el borde cuadrado que sí se notaba antes.
         const _LogoLogin(),
         const SizedBox(height: LecheSpacing.lg),
-        Text(
-          'LecheControl',
+        // Cada palabra con el color de su letra en el logo: LECHE con el azul
+        // de la "L" y CONTROL con el verde de la "C". Se toman del esquema y
+        // no de las constantes para que en modo oscuro usen las versiones
+        // aclaradas, que son las que se leen contra el fondo negro.
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: 'LECHE ',
+                style: TextStyle(color: theme.colorScheme.primary),
+              ),
+              TextSpan(
+                text: 'CONTROL',
+                style: TextStyle(color: theme.colorScheme.secondary),
+              ),
+            ],
+          ),
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: theme.colorScheme.primary,
+            letterSpacing: 0.5,
           ),
         ),
       ],
