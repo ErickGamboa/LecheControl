@@ -240,9 +240,7 @@ class _TarjetaAnimal extends StatelessWidget {
   final VoidCallback onLimpiar;
   final VoidCallback onCambio;
 
-  bool get _enRetiro =>
-      animal.retiroLecheHasta != null &&
-      animal.retiroLecheHasta!.isAfter(DateTime.now());
+  bool get _pronta => esPronta(animal.fechaProbableParto);
 
   @override
   Widget build(BuildContext context) {
@@ -315,31 +313,34 @@ class _TarjetaAnimal extends StatelessWidget {
                         );
                       },
                     ),
-                    if (_enRetiro) ...[
+                    // Que se vea de una que la vaca está por parir, sin tener
+                    // que abrir la hoja de vida ni sacar la cuenta.
+                    if (_pronta) ...[
                       const SizedBox(height: 8),
                       Container(
+                        key: const ValueKey('trabajo.animal.pronta'),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.errorContainer,
+                          color: theme.colorScheme.tertiaryContainer,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.warning_amber,
+                              Icons.child_friendly_outlined,
                               size: 16,
-                              color: theme.colorScheme.onErrorContainer,
+                              color: theme.colorScheme.onTertiaryContainer,
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'En retiro de leche hasta '
-                              '${_fmtFecha(animal.retiroLecheHasta!)}',
+                              '${etiquetaPronta(animal.fechaProbableParto)} '
+                              '(${_fmtFecha(animal.fechaProbableParto!)})',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onErrorContainer,
+                                color: theme.colorScheme.onTertiaryContainer,
                               ),
                             ),
                           ],

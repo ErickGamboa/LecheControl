@@ -101,11 +101,7 @@ class _LecheriaGate extends StatelessWidget {
             sinConexion: sinConexion,
           );
         }
-        return HomeScreen(
-          lecheria: lecheria,
-          usuarioId: usuarioId,
-          sinConexion: sinConexion,
-        );
+        return HomeScreen(lecheria: lecheria, usuarioId: usuarioId);
       },
     );
   }

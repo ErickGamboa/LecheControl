@@ -23,6 +23,10 @@ class InventarioScreen extends StatefulWidget {
 
 class _InventarioScreenState extends State<InventarioScreen> {
   String? _grupo;
+
+  /// "Prontas" es un filtro aparte, no un grupo: la vaca pronta sigue estando
+  /// en Secas y por eso no puede ser una opción más de la fila de grupos.
+  bool _soloProntas = false;
   final _busquedaCtrl = TextEditingController();
   String _busqueda = '';
 
@@ -110,9 +114,9 @@ class _InventarioScreenState extends State<InventarioScreen> {
               onChanged: (v) => setState(() => _busqueda = v),
             ),
           ),
-          // Wrap y no un ListView horizontal: los 6 filtros no caben en el
-          // ancho de un teléfono y los últimos ("Terneros", "En tratamiento")
-          // quedaban fuera de pantalla sin ninguna pista de que había más.
+          // Wrap y no un ListView horizontal: los filtros no caben en el ancho
+          // de un teléfono y los últimos quedaban fuera de pantalla sin
+          // ninguna pista de que había más.
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Wrap(
@@ -121,8 +125,11 @@ class _InventarioScreenState extends State<InventarioScreen> {
               children: [
                 ChoiceChip(
                   label: const Text('Todos'),
-                  selected: _grupo == null,
-                  onSelected: (_) => setState(() => _grupo = null),
+                  selected: _grupo == null && !_soloProntas,
+                  onSelected: (_) => setState(() {
+                    _grupo = null;
+                    _soloProntas = false;
+                  }),
                 ),
                 for (final g in GrupoAnimal.todos)
                   ChoiceChip(
@@ -130,6 +137,13 @@ class _InventarioScreenState extends State<InventarioScreen> {
                     selected: _grupo == g,
                     onSelected: (_) => setState(() => _grupo = g),
                   ),
+                ChoiceChip(
+                  key: const ValueKey('inventario.filtro.prontas'),
+                  avatar: const Icon(Icons.child_friendly_outlined, size: 18),
+                  label: const Text('Prontas'),
+                  selected: _soloProntas,
+                  onSelected: (v) => setState(() => _soloProntas = v),
+                ),
               ],
             ),
           ),
@@ -140,12 +154,17 @@ class _InventarioScreenState extends State<InventarioScreen> {
                 widget.lecheriaId,
                 grupo: _grupo,
                 busqueda: _busqueda,
+                soloProntas: _soloProntas,
               ),
               builder: (context, snapshot) {
                 final animales = snapshot.data ?? const [];
                 if (animales.isEmpty) {
-                  return const Center(
-                    child: Text('No hay animales con ese filtro.'),
+                  return Center(
+                    child: Text(
+                      _soloProntas
+                          ? 'Ninguna vaca está pronta por ahora.'
+                          : 'No hay animales con ese filtro.',
+                    ),
                   );
                 }
                 return ListView.builder(
@@ -153,9 +172,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                   itemCount: animales.length,
                   itemBuilder: (context, i) {
                     final a = animales[i];
-                    final enRetiro =
-                        a.retiroLecheHasta != null &&
-                        a.retiroLecheHasta!.isAfter(DateTime.now());
+                    final pronta = esPronta(a.fechaProbableParto);
                     return Card(
                       child: ListTile(
                         leading: CircleAvatar(
@@ -167,9 +184,11 @@ class _InventarioScreenState extends State<InventarioScreen> {
                         ),
                         title: Text(a.identificador),
                         subtitle: Text(
-                          '${GrupoAnimal.etiqueta(a.grupo)} · '
-                          '${EstadoReproductivo.etiqueta(a.estadoReproductivo)}'
-                          '${enRetiro ? ' · En retiro' : ''}',
+                          [
+                            GrupoAnimal.etiqueta(a.grupo),
+                            EstadoReproductivo.etiqueta(a.estadoReproductivo),
+                            if (pronta) etiquetaPronta(a.fechaProbableParto),
+                          ].join(' · '),
                         ),
                         trailing: PopupMenuButton<String>(
                           onSelected: (v) {

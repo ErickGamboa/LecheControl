@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../app/formato.dart';
 import '../app/widgets/pedir_identificador_dialog.dart';
-import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../services.dart';
 import 'sanidad_aplicar_sheet.dart';
 
-/// Pantalla de Sanidad (Módulo 7): catálogo de medicamentos (con costo por
-/// envase y días de retiro) y acceso rápido para aplicar uno a un animal.
+/// Pantalla de Sanidad (Módulo 7): catálogo de medicamentos (nombre, dosis y
+/// ml del envase) y acceso rápido para aplicarlos a un animal.
 class SanidadScreen extends StatefulWidget {
   const SanidadScreen({
     super.key,
@@ -127,11 +125,7 @@ class _SanidadScreenState extends State<SanidadScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.medical_services_outlined),
                         title: Text(m.nombre),
-                        subtitle: Text(
-                          '${TipoDosisMedicamento.etiqueta(m.tipoDosis)} · '
-                          'Costo envase: ${colones(m.costoEnvase)}'
-                          '${m.diasRetiroLeche > 0 ? ' · ${m.diasRetiroLeche}d retiro' : ''}',
-                        ),
+                        subtitle: Text(descripcionMedicamento(m)),
                         trailing: PopupMenuButton<String>(
                           onSelected: (v) {
                             if (v == 'editar') _crearOEditar(m);
@@ -161,6 +155,24 @@ class _SanidadScreenState extends State<SanidadScreen> {
   }
 }
 
+/// Cómo se lee un medicamento en una lista: la dosis primero, que es lo que
+/// se necesita saber a la hora de aplicarlo, y el envase después.
+String descripcionMedicamento(MedicamentoRow m) {
+  final partes = <String>[
+    if (m.dosisAplicacion != null) m.dosisAplicacion!,
+    if (m.mlEnvase != null) 'Envase de ${_sinCeros(m.mlEnvase!)} ml',
+  ];
+  return partes.isEmpty ? 'Sin dosis anotada' : partes.join(' · ');
+}
+
+String _sinCeros(double valor) {
+  final texto = valor.toStringAsFixed(1);
+  return texto.endsWith('.0') ? texto.substring(0, texto.length - 2) : texto;
+}
+
+/// Alta/edición de un medicamento del catálogo: nombre, cómo se dosifica y
+/// cuántos ml trae el envase. Nada más — el costo entra por Finanzas como
+/// gasto de la semana.
 class _MedicamentoSheet extends StatefulWidget {
   const _MedicamentoSheet({required this.lecheriaId, this.existente});
 
@@ -175,79 +187,46 @@ class _MedicamentoSheetState extends State<_MedicamentoSheet> {
   late final _nombreCtrl = TextEditingController(
     text: widget.existente?.nombre,
   );
-  late final _costoCtrl = TextEditingController(
-    text: widget.existente?.costoEnvase.toStringAsFixed(0),
+  late final _dosisCtrl = TextEditingController(
+    text: widget.existente?.dosisAplicacion,
   );
   late final _mlEnvaseCtrl = TextEditingController(
-    text: widget.existente?.mlEnvase?.toStringAsFixed(0),
+    text: widget.existente?.mlEnvase == null
+        ? null
+        : _sinCeros(widget.existente!.mlEnvase!),
   );
-  late final _dosisFijaCtrl = TextEditingController(
-    text: widget.existente?.dosisFijaMl?.toStringAsFixed(1),
-  );
-  late final _aplicacionesCtrl = TextEditingController(
-    text: widget.existente?.aplicacionesEnvase?.toStringAsFixed(0),
-  );
-  late final _retiroCtrl = TextEditingController(
-    text: widget.existente?.diasRetiroLeche.toString() ?? '0',
-  );
-  late String _tipoDosis =
-      widget.existente?.tipoDosis ?? TipoDosisMedicamento.fija;
   bool _guardando = false;
 
   @override
   void dispose() {
     _nombreCtrl.dispose();
-    _costoCtrl.dispose();
+    _dosisCtrl.dispose();
     _mlEnvaseCtrl.dispose();
-    _dosisFijaCtrl.dispose();
-    _aplicacionesCtrl.dispose();
-    _retiroCtrl.dispose();
     super.dispose();
   }
-
-  double? _num(TextEditingController c) =>
-      double.tryParse(c.text.replaceAll(',', '.'));
 
   Future<void> _guardar() async {
     if (_nombreCtrl.text.trim().isEmpty) return;
     setState(() => _guardando = true);
-    final costo = _num(_costoCtrl) ?? 0;
-    final diasRetiro = int.tryParse(_retiroCtrl.text) ?? 0;
+    final mlEnvase = double.tryParse(
+      _mlEnvaseCtrl.text.trim().replaceAll(',', '.'),
+    );
     if (widget.existente != null) {
       await medicamentosRepo.editarMedicamento(
         medicamentoId: widget.existente!.id,
         nombre: _nombreCtrl.text,
-        costoEnvase: costo,
-        tipoDosis: _tipoDosis,
-        mlEnvase: _tipoDosis == TipoDosisMedicamento.fija
-            ? _num(_mlEnvaseCtrl)
-            : null,
-        dosisFijaMl: _tipoDosis == TipoDosisMedicamento.fija
-            ? _num(_dosisFijaCtrl)
-            : null,
-        aplicacionesEnvase: _tipoDosis == TipoDosisMedicamento.porAplicacion
-            ? _num(_aplicacionesCtrl)
-            : null,
-        diasRetiroLeche: diasRetiro,
+        dosisAplicacion: _dosisCtrl.text,
+        mlEnvase: mlEnvase,
       );
     } else {
       await medicamentosRepo.crearMedicamento(
         lecheriaId: widget.lecheriaId,
         nombre: _nombreCtrl.text,
-        costoEnvase: costo,
-        tipoDosis: _tipoDosis,
-        mlEnvase: _tipoDosis == TipoDosisMedicamento.fija
-            ? _num(_mlEnvaseCtrl)
-            : null,
-        dosisFijaMl: _tipoDosis == TipoDosisMedicamento.fija
-            ? _num(_dosisFijaCtrl)
-            : null,
-        aplicacionesEnvase: _tipoDosis == TipoDosisMedicamento.porAplicacion
-            ? _num(_aplicacionesCtrl)
-            : null,
-        diasRetiroLeche: diasRetiro,
+        dosisAplicacion: _dosisCtrl.text,
+        mlEnvase: mlEnvase,
       );
     }
+    sincronizarSiSePuede();
     if (mounted) Navigator.pop(context);
   }
 
@@ -273,6 +252,7 @@ class _MedicamentoSheetState extends State<_MedicamentoSheet> {
             ),
             const SizedBox(height: 16),
             TextField(
+              key: const ValueKey('sanidad.medicamento.nombre'),
               controller: _nombreCtrl,
               decoration: const InputDecoration(
                 labelText: 'Nombre',
@@ -280,73 +260,33 @@ class _MedicamentoSheetState extends State<_MedicamentoSheet> {
               ),
             ),
             const SizedBox(height: 12),
+            // Texto libre y no números: en el frasco la dosis viene escrita
+            // así, y así se la lee el que la aplica.
             TextField(
-              controller: _costoCtrl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              key: const ValueKey('sanidad.medicamento.dosis'),
+              controller: _dosisCtrl,
               decoration: const InputDecoration(
-                labelText: 'Costo del envase',
+                labelText: 'Dosis de aplicación',
+                hintText: '10 ml cada 50 kilos',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
-            SegmentedButton<String>(
-              segments: [
-                for (final t in TipoDosisMedicamento.todos)
-                  ButtonSegment(
-                    value: t,
-                    label: Text(TipoDosisMedicamento.etiqueta(t)),
-                  ),
-              ],
-              selected: {_tipoDosis},
-              onSelectionChanged: (s) => setState(() => _tipoDosis = s.first),
-            ),
-            const SizedBox(height: 12),
-            if (_tipoDosis == TipoDosisMedicamento.fija) ...[
-              TextField(
-                controller: _mlEnvaseCtrl,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Ml del envase',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _dosisFijaCtrl,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Dosis habitual (ml)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ] else
-              TextField(
-                controller: _aplicacionesCtrl,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Aplicaciones que rinde el envase',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            const SizedBox(height: 12),
             TextField(
-              controller: _retiroCtrl,
-              keyboardType: TextInputType.number,
+              key: const ValueKey('sanidad.medicamento.mlEnvase'),
+              controller: _mlEnvaseCtrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
-                labelText: 'Días de retiro de leche',
+                labelText: 'Ml del envase',
+                suffixText: 'ml',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
             FilledButton(
+              key: const ValueKey('sanidad.medicamento.guardar'),
               onPressed: _guardando ? null : _guardar,
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),

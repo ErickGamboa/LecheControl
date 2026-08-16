@@ -236,30 +236,6 @@ class CurvaRepository {
             ),
           );
     }
-
-    final categorias =
-        await (db.select(db.categoriasGasto)..where(
-              (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
-            ))
-            .get();
-    if (categorias.isEmpty) {
-      var orden = 1;
-      for (final nombre in categoriasGastoPorDefecto) {
-        await db
-            .into(db.categoriasGasto)
-            .insert(
-              CategoriasGastoCompanion.insert(
-                id: _uuid.v4(),
-                lecheriaId: lecheriaId,
-                nombre: nombre,
-                orden: Value(orden++),
-                createdAt: ahora,
-                updatedAt: ahora,
-                pendiente: const Value(true),
-              ),
-            );
-      }
-    }
   }
 }
 
@@ -284,15 +260,3 @@ class PromedioRealTramo {
   /// true cuando hay suficientes pesas como para tomárselo en serio.
   final bool confiable;
 }
-
-/// Categorías con las que arranca una lechería nueva. El ganadero agrega las
-/// suyas; estas son las que mencionó el cliente.
-const categoriasGastoPorDefecto = <String>[
-  'Salario del peón',
-  'Concentrado',
-  'Medicamentos',
-  'Cerca',
-  'Combustible',
-  'Transporte de leche',
-  'Otros',
-];

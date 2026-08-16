@@ -22,11 +22,14 @@ final AppDatabase db = AppDatabase();
 final CurvaRepository curvaRepo = CurvaRepository(db);
 final LecheriasRepository lecheriasRepo = LecheriasRepository(db);
 final CuentasRepository cuentasRepo = CuentasRepository(db);
-final AnimalesRepository animalesRepo = AnimalesRepository(db);
+final FinanzasRepository finanzasRepo = FinanzasRepository(db);
+final AnimalesRepository animalesRepo = AnimalesRepository(
+  db,
+  finanzasRepository: finanzasRepo,
+);
 final EventosRepository eventosRepo = EventosRepository(db);
 final PesasRepository pesasRepo = PesasRepository(db);
 final ReporteRepository reporteRepo = ReporteRepository(db, curva: curvaRepo);
-final FinanzasRepository finanzasRepo = FinanzasRepository(db);
 final MedicamentosRepository medicamentosRepo = MedicamentosRepository(db);
 final SanidadRepository sanidadRepo = SanidadRepository(
   db,

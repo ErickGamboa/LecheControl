@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ícono adaptativo (Android 8+). El launcher recorta el primer plano con la
+  forma que tenga configurada el sistema (círculo, cuadrado redondeado…), así
+  que el logo va sobre un fondo blanco propio en vez de quedar recortado
+  contra el fondo de pantalla.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

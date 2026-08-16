@@ -52,3 +52,24 @@ abstract final class TipoIngreso {
     _ => 'Otro',
   };
 }
+
+/// En qué se va la plata de la semana.
+///
+/// [todos] son los botones que ve el ganadero: se toca uno y listo, sin
+/// escribir. Si el gasto no es ninguno de esos, todavía puede escribirlo a
+/// mano.
+///
+/// [compraGanado] no está entre los botones a propósito: no se anota a mano.
+/// Lo mete la app sola cuando se registra un animal comprado con su precio
+/// (ver `AnimalesRepository.altaAnimal`).
+abstract final class CategoriaGasto {
+  static const salarios = 'Salarios';
+  static const luz = 'Luz';
+  static const concentrado = 'Concentrado';
+  static const medicamentos = 'Medicamentos';
+  static const combustible = 'Combustible';
+
+  static const todos = [salarios, luz, concentrado, medicamentos, combustible];
+
+  static const compraGanado = 'Compra de ganado';
+}

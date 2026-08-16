@@ -134,7 +134,7 @@ class Animales extends Table {
   @override
   List<String> get customConstraints => [
     "CHECK (sexo IN ('hembra','macho'))",
-    "CHECK (grupo IN ('en_ordeno','secas','novillas','terneros','en_tratamiento'))",
+    "CHECK (grupo IN ('en_ordeno','secas','novillas','terneros'))",
     "CHECK (estado IN ('activo','vendido','muerto','descartado'))",
     "CHECK (estado_reproductivo IN ('vacia','preñada','desconocido'))",
     "CHECK (origen IN ('comprado','nacido'))",
@@ -376,17 +376,19 @@ class CategoriasGasto extends Table {
 }
 
 /// Catálogo de medicamentos de la lechería (Módulo 7).
+///
+/// Se registra lo mínimo: nombre, cómo se dosifica y cuántos ml trae el
+/// envase. La dosis es **texto libre** porque así se lee en la etiqueta del
+/// frasco ("10 ml cada 50 kilos"), y así se muestra a la hora de aplicar: la
+/// app no calcula ml ni costos por aplicación. La plata de los medicamentos se
+/// anota como gasto de la semana (categoría "Medicamentos").
 @DataClassName('MedicamentoRow')
 class Medicamentos extends Table {
   TextColumn get id => text()();
   TextColumn get lecheriaId => text()();
   TextColumn get nombre => text()();
-  RealColumn get costoEnvase => real()();
-  TextColumn get tipoDosis => text()(); // 'fija' | 'por_aplicacion'
+  TextColumn get dosisAplicacion => text().nullable()();
   RealColumn get mlEnvase => real().nullable()();
-  RealColumn get aplicacionesEnvase => real().nullable()();
-  RealColumn get dosisFijaMl => real().nullable()();
-  IntColumn get diasRetiroLeche => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -397,9 +399,7 @@ class Medicamentos extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (tipo_dosis IN ('fija','por_aplicacion'))",
-    'CHECK (costo_envase >= 0)',
-    'CHECK (dias_retiro_leche >= 0)',
+    'CHECK (ml_envase IS NULL OR ml_envase >= 0)',
   ];
 }
 
@@ -475,7 +475,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -521,6 +521,28 @@ class AppDatabase extends _$AppDatabase {
       // acá haría fallar la subida de cada animal.
       if (from < 4) {
         await m.alterTable(TableMigration(animales));
+      }
+      // v4 -> v5: el medicamento se registra con nombre, dosis (texto, como
+      // dice la etiqueta) y ml del envase; se van el costo por envase, el
+      // tipo de dosis y los días de retiro. Y el grupo "en tratamiento"
+      // desaparece: los animales que quedaron ahí vuelven a ordeño.
+      if (from < 5) {
+        await m.addColumn(medicamentos, medicamentos.dosisAplicacion);
+        // La dosis fija que ya estaba cargada pasa a leerse como texto
+        // ("10 ml") antes de que la columna desaparezca.
+        await customStatement(
+          'UPDATE medicamentos SET dosis_aplicacion = CASE '
+          'WHEN dosis_fija_ml = CAST(dosis_fija_ml AS INTEGER) '
+          'THEN CAST(CAST(dosis_fija_ml AS INTEGER) AS TEXT) '
+          'ELSE CAST(dosis_fija_ml AS TEXT) END || \' ml\' '
+          'WHERE dosis_aplicacion IS NULL AND dosis_fija_ml IS NOT NULL '
+          'AND dosis_fija_ml > 0',
+        );
+        await m.alterTable(TableMigration(medicamentos));
+        await customStatement(
+          "UPDATE animales SET grupo = 'en_ordeno', pendiente = 1 "
+          "WHERE grupo = 'en_tratamiento'",
+        );
       }
     },
   );

@@ -331,6 +331,110 @@ void main() {
       });
     });
 
+    // Lo que se anota tiene que verse sin salir de la pantalla: el ganadero
+    // anota el gasto, cierra la hoja y espera ver la utilidad al día.
+    group('observarResumen se refresca solo', () {
+      test('al anotar un ingreso', () async {
+        final semana = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        final emitidos = <ResumenSemana>[];
+        final sub = repo.observarResumen(semana).listen(emitidos.add);
+        await pumpEventQueue();
+
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          tipo: TipoIngreso.leche,
+          monto: 400000,
+          litros: 1000,
+        );
+        await pumpEventQueue();
+        await sub.cancel();
+
+        expect(emitidos.last.totalIngresos, 400000);
+      });
+
+      test('al anotar un gasto', () async {
+        final semana = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        final emitidos = <ResumenSemana>[];
+        final sub = repo.observarResumen(semana).listen(emitidos.add);
+        await pumpEventQueue();
+
+        await repo.agregarGasto(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          categoria: 'Concentrado',
+          monto: 75000,
+        );
+        await pumpEventQueue();
+        await sub.cancel();
+
+        expect(emitidos.last.totalGastos, 75000);
+      });
+
+      test('al anotar de los dos lados, uno tras otro', () async {
+        // Este es el que se caía: con `asyncExpand`, el stream de ingresos
+        // quedaba pausado a la espera del de gastos —que nunca termina— y a
+        // partir del primer gasto los ingresos nuevos no volvían a llegar.
+        final semana = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        final emitidos = <ResumenSemana>[];
+        final sub = repo.observarResumen(semana).listen(emitidos.add);
+        await pumpEventQueue();
+
+        await repo.agregarGasto(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          categoria: 'Concentrado',
+          monto: 75000,
+        );
+        await pumpEventQueue();
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          tipo: TipoIngreso.leche,
+          monto: 400000,
+          litros: 1000,
+        );
+        await pumpEventQueue();
+        await sub.cancel();
+
+        expect(emitidos.last.totalGastos, 75000);
+        expect(emitidos.last.totalIngresos, 400000);
+        expect(emitidos.last.utilidad, 325000);
+      });
+
+      test('al borrar lo que se había anotado', () async {
+        final semana = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        await repo.agregarGasto(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          categoria: 'Concentrado',
+          monto: 75000,
+        );
+        final emitidos = <ResumenSemana>[];
+        final sub = repo.observarResumen(semana).listen(emitidos.add);
+        await pumpEventQueue();
+
+        final gasto = (await db.select(db.gastosSemana).get()).single;
+        await repo.eliminarGasto(gasto.id);
+        await pumpEventQueue();
+        await sub.cancel();
+
+        expect(emitidos.last.gastos, isEmpty);
+      });
+    });
+
     test('recordarCategoria no duplica una que ya existe', () async {
       await repo.recordarCategoria(
         lecheriaId: lecheriaId,

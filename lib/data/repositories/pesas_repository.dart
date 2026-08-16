@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../combinar_streams.dart';
 import '../domain/curva_lactancia.dart';
 import '../domain/grupos.dart';
 import '../domain/semana.dart';
@@ -152,6 +153,49 @@ class PesasRepository {
     )..where((t) => t.id.equals(id))).getSingle();
   }
 
+  /// Las últimas [cuantas] pesas, de la más reciente a la más vieja, con sus
+  /// totales sumados **en la base**.
+  ///
+  /// La versión completa ([observarSesiones]) se trae todas las pesas de la
+  /// finca a memoria para sumarlas; en Análisis está bien, pero el home se
+  /// abre veinte veces al día y solo necesita cuatro puntos. Acá el `SUM` lo
+  /// hace SQLite y vuelven cuatro filas.
+  Stream<List<SesionConTotales>> observarUltimasSesiones(
+    String lecheriaId, {
+    int cuantas = 4,
+  }) {
+    final litros = db.pesasLeche.litros.sum();
+    final vacas = db.pesasLeche.id.count();
+
+    final consulta =
+        db.select(db.pesasSesiones).join([
+            leftOuterJoin(
+              db.pesasLeche,
+              db.pesasLeche.sesionId.equalsExp(db.pesasSesiones.id) &
+                  db.pesasLeche.deletedAt.isNull(),
+            ),
+          ])
+          ..addColumns([litros, vacas])
+          ..where(
+            db.pesasSesiones.lecheriaId.equals(lecheriaId) &
+                db.pesasSesiones.deletedAt.isNull(),
+          )
+          ..groupBy([db.pesasSesiones.id])
+          ..orderBy([OrderingTerm.desc(db.pesasSesiones.fecha)])
+          ..limit(cuantas);
+
+    return consulta.watch().map(
+      (filas) => [
+        for (final f in filas)
+          SesionConTotales(
+            sesion: f.readTable(db.pesasSesiones),
+            vacas: f.read(vacas) ?? 0,
+            litros: f.read(litros) ?? 0,
+          ),
+      ],
+    );
+  }
+
   /// Todas las pesas de la lechería, de la más reciente a la más vieja, con
   /// cuántas vacas y cuántos litros llevó cada una.
   ///
@@ -162,8 +206,7 @@ class PesasRepository {
     final sesiones =
         (db.select(db.pesasSesiones)
               ..where(
-                (t) =>
-                    t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+                (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
               )
               ..orderBy([(t) => OrderingTerm.desc(t.fecha)]))
             .watch();
@@ -174,21 +217,19 @@ class PesasRepository {
       db.pesasLeche,
     )..where((t) => t.deletedAt.isNull())).watch();
 
-    return sesiones.asyncExpand(
-      (lista) => pesas.map((todas) {
-        return [
-          for (final s in lista)
-            () {
-              final suyas = todas.where((p) => p.sesionId == s.id);
-              return SesionConTotales(
-                sesion: s,
-                vacas: suyas.length,
-                litros: suyas.fold<double>(0, (a, p) => a + p.litros),
-              );
-            }(),
-        ];
-      }),
-    );
+    return combinarUltimos(sesiones, pesas, (lista, todas) {
+      return [
+        for (final s in lista)
+          () {
+            final suyas = todas.where((p) => p.sesionId == s.id);
+            return SesionConTotales(
+              sesion: s,
+              vacas: suyas.length,
+              litros: suyas.fold<double>(0, (a, p) => a + p.litros),
+            );
+          }(),
+      ];
+    });
   }
 
   Stream<PesaSesionRow?> observarSesion(String sesionId) {
@@ -360,7 +401,9 @@ class PesasRepository {
     return [
       for (final a in enOrdeno)
         if (!yaPesadas.contains(a.id)) a,
-    ]..sort((a, b) => compararIdentificadores(a.identificador, b.identificador));
+    ]..sort(
+      (a, b) => compararIdentificadores(a.identificador, b.identificador),
+    );
   }
 
   Future<ResumenSesion> resumenSesion(String sesionId) async {

@@ -74,28 +74,18 @@ class DemoSeed {
     await _medicamentos.crearMedicamento(
       lecheriaId: lecheriaId,
       nombre: 'Oxitetraciclina',
-      costoEnvase: 12000,
-      tipoDosis: TipoDosisMedicamento.fija,
+      dosisAplicacion: '10 ml cada 50 kilos',
       mlEnvase: 100,
-      dosisFijaMl: 10,
-      diasRetiroLeche: 4,
     );
     await _medicamentos.crearMedicamento(
       lecheriaId: lecheriaId,
       nombre: 'Vitaminas AD3E',
-      costoEnvase: 8000,
-      tipoDosis: TipoDosisMedicamento.fija,
+      dosisAplicacion: '5 ml por animal',
       mlEnvase: 100,
-      dosisFijaMl: 5,
-      diasRetiroLeche: 0,
     );
     await _medicamentos.crearMedicamento(
       lecheriaId: lecheriaId,
       nombre: 'Desparasitante spray',
-      costoEnvase: 15000,
-      tipoDosis: TipoDosisMedicamento.porAplicacion,
-      aplicacionesEnvase: 20,
-      diasRetiroLeche: 0,
     );
   }
 

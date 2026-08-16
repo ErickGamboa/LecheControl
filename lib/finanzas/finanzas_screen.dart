@@ -13,8 +13,14 @@ import '../services.dart';
 /// medicamentos, cerca…— y la app muestra la utilidad de la semana.
 ///
 /// Los ingresos **no se calculan**: se digita lo que efectivamente entró. El
-/// precio por litro sale de dividir lo que pagó la planta entre los litros
-/// que pagó, y con ese precio real se reparte el ingreso entre las vacas.
+/// precio por kilo sale de dividir lo que pagó la planta entre los kilos que
+/// se le entregaron, y con ese precio real se reparte el ingreso entre las
+/// vacas.
+///
+/// La leche se le entrega a la planta en kilos —así la pesa y así la paga—,
+/// aunque en la finca se ordeñe y se anote en litros. La columna sigue
+/// llamándose `litros` en la base para no forzar una migración; lo que se ve
+/// en pantalla son kilos.
 class FinanzasScreen extends StatefulWidget {
   const FinanzasScreen({super.key, required this.lecheriaId});
 
@@ -240,7 +246,7 @@ class _TarjetaUtilidad extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 'La planta pagó ${colones(resumen.precioRealPorLitro!)} por '
-                'litro (${resumen.litrosLeche.toStringAsFixed(0)} L).',
+                'kilo (${resumen.litrosLeche.toStringAsFixed(0)} kg).',
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
@@ -362,7 +368,7 @@ class _SeccionIngresos extends StatelessWidget {
                       subtitle: Text(
                         [
                           if (i.litros != null)
-                            '${i.litros!.toStringAsFixed(0)} L',
+                            '${i.litros!.toStringAsFixed(0)} kg',
                           if (i.detalle != null) i.detalle!,
                         ].join(' · '),
                       ),
@@ -548,13 +554,13 @@ class _IngresoSheetState extends State<_IngresoSheet> {
               QuickNumberField(
                 key: const ValueKey('finanzas.ingreso.litros'),
                 controller: _litrosCtrl,
-                labelText: 'Litros que pagaron',
-                suffixText: 'L',
+                labelText: 'Kilos entregados',
+                suffixText: 'kg',
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 6),
               Text(
-                'Con los litros, la app saca el precio real por litro y '
+                'Con los kilos, la app saca el precio real por kilo y '
                 'reparte el ingreso entre las vacas.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -632,11 +638,6 @@ class _GastoSheetState extends State<_GastoSheet> {
       monto: monto,
       detalle: _detalleCtrl.text,
     );
-    // Si escribió una categoría nueva, la próxima vez le sale como botón.
-    await finanzasRepo.recordarCategoria(
-      lecheriaId: widget.lecheriaId,
-      nombre: categoria,
-    );
     if (mounted) Navigator.pop(context, true);
   }
 
@@ -659,33 +660,32 @@ class _GastoSheetState extends State<_GastoSheet> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            StreamBuilder<List<CategoriaGastoRow>>(
-              stream: finanzasRepo.observarCategorias(widget.lecheriaId),
-              builder: (context, snap) {
-                final categorias = snap.data ?? const <CategoriaGastoRow>[];
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final c in categorias)
-                      ChoiceChip(
-                        key: ValueKey('finanzas.gasto.cat.${c.nombre}'),
-                        label: Text(c.nombre),
-                        selected: _categoriaCtrl.text == c.nombre,
-                        onSelected: (_) =>
-                            setState(() => _categoriaCtrl.text = c.nombre),
-                      ),
-                  ],
-                );
-              },
+            // Los cinco gastos de todas las semanas, para tocar y seguir. La
+            // compra de ganado no está: esa la anota sola la app cuando se
+            // registra un animal comprado.
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final c in CategoriaGasto.todos)
+                  ChoiceChip(
+                    key: ValueKey('finanzas.gasto.cat.$c'),
+                    label: Text(c),
+                    selected: _categoriaCtrl.text == c,
+                    onSelected: (_) => setState(() => _categoriaCtrl.text = c),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
+            // Escape para lo que no cae en ninguno de los cinco (una cerca,
+            // un repuesto). Se sigue pudiendo escribir, pero el camino
+            // corto son los botones de arriba.
             TextField(
               key: const ValueKey('finanzas.gasto.categoria'),
               controller: _categoriaCtrl,
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
-                labelText: 'En qué se gastó',
+                labelText: 'Otro (si no está en la lista)',
                 border: OutlineInputBorder(),
               ),
             ),

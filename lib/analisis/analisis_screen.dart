@@ -59,7 +59,7 @@ class AnalisisScreen extends StatelessWidget {
               titulo: 'Finanzas',
               detalle:
                   'Ingresos, gastos y utilidad de todas las semanas, con el '
-                  'acumulado y el precio real por litro.',
+                  'acumulado y el precio real por kilo.',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) =>
@@ -120,10 +120,7 @@ class _OpcionAnalisis extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      detalle,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text(detalle, style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
               ),

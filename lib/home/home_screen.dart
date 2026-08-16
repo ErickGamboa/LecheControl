@@ -1,19 +1,33 @@
 import 'package:flutter/material.dart';
 
 import '../ajustes/curva_screen.dart';
+import '../analisis/analisis_leche_screen.dart';
 import '../analisis/analisis_screen.dart';
 import '../app/theme.dart';
+import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
+import '../data/repositories/pesas_repository.dart';
 import '../finanzas/finanzas_screen.dart';
 import '../inventario/inventario_screen.dart';
 import '../pesa/pesa_screen.dart';
 import '../sanidad/sanidad_screen.dart';
 import '../services.dart';
 import '../trabajo/trabajo_screen.dart';
+import 'widgets/linea_produccion.dart';
 
-/// Pantalla principal (Módulo 0): acceso a todos los módulos en forma de
-/// grilla, estado de sincronización y aviso de modo sin conexión. Se entra
-/// directo con la lechería activa del usuario (v1: una lechería por cuenta).
+/// Pantalla principal (Módulo 0): el conteo del hato, cómo viene la
+/// producción, acceso a todos los módulos en forma de grilla y el estado de
+/// sincronización. Se entra directo con la lechería activa del usuario (v1:
+/// una lechería por cuenta).
+///
+/// El orden es a propósito: primero cuántos animales hay (estado), después
+/// para dónde va la leche (tendencia) y al final qué se puede hacer
+/// (acciones).
+///
+/// Ya no lleva el aviso de "trabajando sin conexión": la app es offline-first
+/// y estar sin señal es lo normal, no una anomalía que valga un cartel fijo
+/// robándole espacio a la pantalla. El ícono de nube de la barra sigue
+/// contando cómo va el sync para quien lo quiera ver.
 ///
 /// La hoja de vida no tiene tarjeta propia: se llega tocando el animal en
 /// Inventario (o desde Trabajo), que es el mismo destino.
@@ -22,12 +36,10 @@ class HomeScreen extends StatelessWidget {
     super.key,
     required this.lecheria,
     required this.usuarioId,
-    required this.sinConexion,
   });
 
   final LecheriaRow lecheria;
   final String usuarioId;
-  final bool sinConexion;
 
   Future<void> _abrir(BuildContext context, Widget pantalla) {
     return Navigator.of(
@@ -49,7 +61,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.trabajo',
         icono: Icons.nfc,
         titulo: 'Trabajo',
-        detalle: 'Leer el arete y anotar en el corral',
         color: kVerdeLeche,
         onTap: () => _abrir(
           context,
@@ -60,7 +71,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.inventario',
         icono: Icons.list_alt,
         titulo: 'Inventario',
-        detalle: 'El hato, sus fichas y sus eventos',
         color: kAzulLeche,
         onTap: () => _abrir(
           context,
@@ -71,7 +81,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.pesa',
         icono: Icons.water_drop_outlined,
         titulo: 'Pesa de leche',
-        detalle: 'Pesa semanal y reporte de producción',
         color: kVerdeLeche,
         onTap: () => _abrir(
           context,
@@ -82,7 +91,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.finanzas',
         icono: Icons.payments_outlined,
         titulo: 'Finanzas',
-        detalle: 'Ingresos, gastos y utilidad de la semana',
         color: kAmbarLeche,
         onTap: () => _abrir(context, FinanzasScreen(lecheriaId: lecheria.id)),
       ),
@@ -90,7 +98,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.sanidad',
         icono: Icons.medical_services_outlined,
         titulo: 'Sanidad',
-        detalle: 'Tratamientos y retiros de leche',
         color: kAzulLeche,
         onTap: () => _abrir(
           context,
@@ -101,7 +108,6 @@ class HomeScreen extends StatelessWidget {
         valueKey: 'home.analisis',
         icono: Icons.insights_outlined,
         titulo: 'Análisis',
-        detalle: 'Todas las semanas: leche y utilidades',
         color: kVerdeLeche,
         onTap: () => _abrir(
           context,
@@ -142,40 +148,196 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            if (sinConexion || !estadoConexion.hayConexion.value)
-              const _OfflineBanner(),
-            Expanded(
-              // Centrada en vertical, pero dentro de un scroll: en una
-              // pantalla chica (o con la letra del sistema en grande) las seis
-              // tarjetas no caben, y es mejor que se pueda bajar a que se
-              // recorten.
-              child: LayoutBuilder(
-                builder: (context, restricciones) => SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: restricciones.maxHeight,
+        // Todo el aire vertical lo reparte el `spaceEvenly`: queda el mismo
+        // hueco encima del conteo, entre el conteo y la grilla, y debajo de
+        // la grilla. Así el conteo queda centrado entre la barra y los
+        // módulos, y los módulos centrados en lo que sobra —en vez de que el
+        // conteo quede pegado arriba con todo el aire abajo.
+        //
+        // Va dentro de un scroll porque en una pantalla chica (o con la letra
+        // del sistema en grande) las seis tarjetas no caben, y es mejor que se
+        // pueda bajar a que se recorten. Ahí no sobra alto, los huecos se
+        // cierran solos y el `minHeight` deja de mandar.
+        child: LayoutBuilder(
+          builder: (context, restricciones) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: restricciones.maxHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _ResumenHato(lecheriaId: lecheria.id),
+                  _ProduccionSemanal(
+                    lecheriaId: lecheria.id,
+                    nombreLecheria: lecheria.nombre,
+                  ),
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    // Solo a los lados: el alto lo pone el reparto de arriba,
+                    // si además llevara relleno vertical los huecos dejarían
+                    // de verse iguales.
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: LecheSpacing.lg,
                     ),
-                    child: Center(
-                      child: GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(LecheSpacing.lg),
-                        crossAxisCount: 2,
-                        mainAxisSpacing: LecheSpacing.md,
-                        crossAxisSpacing: LecheSpacing.md,
-                        // Justo lo que necesitan ícono + título + dos líneas
-                        // de explicación. Más alto deja un hueco muerto en el
-                        // medio de cada tarjeta; más bajo corta el texto.
-                        childAspectRatio: 1.0,
-                        children: [
-                          for (final m in modulos) _ModuloCard(modulo: m),
-                        ],
-                      ),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: LecheSpacing.md,
+                    crossAxisSpacing: LecheSpacing.md,
+                    // Bastante más anchas que altas: adentro solo va el ícono
+                    // y el nombre, y lo que se les recorta de alto es lo que
+                    // gana el gráfico, que sí tiene qué mostrar ahí.
+                    childAspectRatio: 1.3,
+                    children: [for (final m in modulos) _ModuloCard(modulo: m)],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Cuántos animales hay en cada grupo, arriba de los módulos.
+///
+/// Es lo primero que se pregunta el ganadero al abrir la app, y hasta ahora
+/// había que entrar a Inventario para saberlo.
+class _ResumenHato extends StatelessWidget {
+  const _ResumenHato({required this.lecheriaId});
+
+  final String lecheriaId;
+
+  /// Los cuatro grupos del hato, cada uno con su color.
+  ///
+  /// "En tratamiento" queda afuera a propósito: no es un grupo del hato sino
+  /// una situación pasajera, y su lugar es Sanidad.
+  static const _grupos = [
+    (GrupoAnimal.enOrdeno, 'En ordeño', kVerdeLeche),
+    (GrupoAnimal.secas, 'Secas', kAzulLeche),
+    (GrupoAnimal.novillas, 'Novillas', kVerdeLeche),
+    (GrupoAnimal.terneros, 'Terneros', kAmbarLeche),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Map<String, int>>(
+      stream: animalesRepo.observarConteoPorGrupo(lecheriaId),
+      builder: (context, snap) {
+        final conteo = snap.data;
+        return Padding(
+          // Sin relleno arriba ni abajo a propósito: el hueco lo pone el
+          // reparto vertical del home (ver `HomeScreen.build`).
+          padding: const EdgeInsets.symmetric(horizontal: LecheSpacing.lg),
+          // `IntrinsicHeight` para que los cuatro cuadritos queden del mismo
+          // alto: sin esto, `stretch` no tiene contra qué estirarse (la fila
+          // no tiene altura acotada) y revienta el layout.
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (codigo, etiqueta, color) in _grupos)
+                  Expanded(
+                    child: _ContadorGrupo(
+                      valueKey: 'home.hato.$codigo',
+                      etiqueta: etiqueta,
+                      color: color,
+                      // Mientras carga se deja el hueco en vez de escribir un
+                      // cero que después salta a otro número.
+                      cantidad: conteo?[codigo],
                     ),
                   ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// El gráfico de litros por semana, entre el conteo y los módulos.
+class _ProduccionSemanal extends StatelessWidget {
+  const _ProduccionSemanal({
+    required this.lecheriaId,
+    required this.nombreLecheria,
+  });
+
+  final String lecheriaId;
+  final String nombreLecheria;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: LecheSpacing.lg),
+      child: StreamBuilder<List<SesionConTotales>>(
+        // Un poco más que las semanas que se dibujan: puede haber pesas
+        // vacías o una semana con dos, y no quiero que empujen a una real
+        // fuera de la consulta.
+        stream: pesasRepo.observarUltimasSesiones(lecheriaId, cuantas: 8),
+        builder: (context, snap) {
+          return LineaProduccion(
+            key: const ValueKey('home.produccion'),
+            puntos: armarSemanas(snap.data ?? const []),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AnalisisLecheScreen(
+                  lecheriaId: lecheriaId,
+                  nombreLecheria: nombreLecheria,
                 ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Un cuadrito por grupo: la cantidad y el nombre.
+class _ContadorGrupo extends StatelessWidget {
+  const _ContadorGrupo({
+    required this.valueKey,
+    required this.etiqueta,
+    required this.color,
+    required this.cantidad,
+  });
+
+  final String valueKey;
+  final String etiqueta;
+  final Color color;
+  final int? cantidad;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+
+    return Card(
+      key: ValueKey(valueKey),
+      margin: const EdgeInsets.symmetric(horizontal: LecheSpacing.xs),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: LecheSpacing.sm,
+          vertical: LecheSpacing.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              cantidad == null ? '—' : '$cantidad',
+              style: textos.headlineSmall?.copyWith(color: color),
+            ),
+            const SizedBox(height: 2),
+            // Los nombres largos ("En ordeño") no caben en cuatro columnas a
+            // tamaño normal, así que se encogen en vez de cortarse con "…":
+            // un número sin saber de qué grupo es no sirve de nada.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                etiqueta,
+                textAlign: TextAlign.center,
+                style: textos.bodySmall,
+                maxLines: 1,
               ),
             ),
           ],
@@ -190,7 +352,6 @@ class _Modulo {
     required this.valueKey,
     required this.icono,
     required this.titulo,
-    required this.detalle,
     required this.color,
     required this.onTap,
   });
@@ -198,10 +359,6 @@ class _Modulo {
   final String valueKey;
   final IconData icono;
   final String titulo;
-
-  /// Una línea que dice para qué sirve el módulo. Con cinco tarjetas iguales
-  /// el título solo no alcanza para saber dónde tocar.
-  final String detalle;
   final Color color;
   final VoidCallback onTap;
 }
@@ -213,7 +370,6 @@ class _ModuloCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textos = Theme.of(context).textTheme;
     final oscuro = Theme.of(context).brightness == Brightness.dark;
     // El color del módulo tiñe apenas el fondo: distingue las tarjetas de un
     // vistazo sin convertir la pantalla en un semáforo.
@@ -224,86 +380,37 @@ class _ModuloCard extends StatelessWidget {
       child: InkWell(
         onTap: modulo.onTap,
         child: Padding(
-          padding: const EdgeInsets.all(LecheSpacing.lg),
+          padding: const EdgeInsets.all(LecheSpacing.md),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            // Centrado y no `spaceBetween`: la grilla fija el alto de la
-            // tarjeta, así que separar los extremos abría un hueco muerto
-            // entre el ícono y el título.
+            // Todo al centro, horizontal y vertical: son seis tarjetas
+            // iguales y alineadas al centro se leen como una grilla pareja.
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(LecheSpacing.md),
+                padding: const EdgeInsets.all(LecheSpacing.sm),
                 decoration: BoxDecoration(
                   color: tinte,
                   borderRadius: BorderRadius.circular(LecheRadius.md),
                 ),
-                child: Icon(modulo.icono, size: 26, color: modulo.color),
+                child: Icon(modulo.icono, size: 32, color: modulo.color),
               ),
-              const SizedBox(height: LecheSpacing.md),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    modulo.titulo,
-                    style: textos.titleMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    modulo.detalle,
-                    style: textos.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              const SizedBox(height: LecheSpacing.sm),
+              // En una sola línea, encogiéndose si hace falta. Partir "Pesa
+              // de leche" en dos renglones le pedía a la tarjeta un alto que
+              // ya no tiene: ese espacio se lo llevó el gráfico.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  modulo.titulo,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final colores = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(
-        LecheSpacing.lg,
-        LecheSpacing.md,
-        LecheSpacing.lg,
-        0,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: LecheSpacing.md,
-        vertical: LecheSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: kAmbarLeche.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(LecheRadius.sm),
-        border: Border.all(color: kAmbarLeche.withValues(alpha: 0.45)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.cloud_off, color: kAviso, size: 18),
-          const SizedBox(width: LecheSpacing.sm),
-          Expanded(
-            child: Text(
-              'Trabajando sin conexión. Tus datos se guardan en el '
-              'dispositivo y se sincronizan al recuperar internet.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: colores.onSurface),
-            ),
-          ),
-        ],
       ),
     );
   }

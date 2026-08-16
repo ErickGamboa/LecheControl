@@ -176,8 +176,10 @@ class _SelectorVacaSheetState extends State<_SelectorVacaSheet> {
                             'Sin ficha: se le anota la leche, pero no tiene '
                             'días de lactancia',
                           ),
-                          onTap: () =>
-                              Navigator.pop(context, VacaElegida.manual(_filtro)),
+                          onTap: () => Navigator.pop(
+                            context,
+                            VacaElegida.manual(_filtro),
+                          ),
                         ),
                       ],
                     ],

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../combinar_streams.dart';
 import '../domain/semana.dart';
 import '../local/database.dart';
 
@@ -27,16 +28,21 @@ class ResumenSemana {
 
   double get montoLeche => totalIngresosDe(TipoIngreso.leche);
 
-  /// Litros de leche que la planta pagó esta semana.
+  /// Leche que la planta recibió y pagó esta semana.
+  ///
+  /// El nombre dice litros por historia —así nació la columna—, pero la
+  /// unidad que se digita y se muestra es **kilos**: la planta pesa y paga
+  /// por kilo. Renombrar la columna obligaría a migrar la base y a tocar el
+  /// sync sin que cambie ni un número.
   double get litrosLeche => ingresos
       .where((i) => i.tipo == TipoIngreso.leche)
       .fold(0, (a, i) => a + (i.litros ?? 0));
 
-  /// **El precio real por litro de la semana**: lo que pagaron dividido entre
-  /// los litros que pagaron. Es plata que entró de verdad, no un precio
-  /// estimado ni digitado a mano.
+  /// **El precio real de la semana**: lo que pagaron dividido entre los kilos
+  /// entregados (ver [litrosLeche]). Es plata que entró de verdad, no un
+  /// precio estimado ni digitado a mano.
   ///
-  /// null si no se anotaron los litros junto al monto.
+  /// null si no se anotaron los kilos junto al monto.
   double? get precioRealPorLitro {
     final litros = litrosLeche;
     return litros <= 0 ? null : montoLeche / litros;
@@ -129,10 +135,10 @@ class FinanzasRepository {
             .watch();
 
     // Un cambio en cualquiera de las dos listas rehace el resumen.
-    return ingresos.asyncExpand(
-      (i) => gastos.map(
-        (g) => ResumenSemana(semana: semana, ingresos: i, gastos: g),
-      ),
+    return combinarUltimos(
+      ingresos,
+      gastos,
+      (i, g) => ResumenSemana(semana: semana, ingresos: i, gastos: g),
     );
   }
 
@@ -153,14 +159,16 @@ class FinanzasRepository {
             .get();
     if (semanas.isEmpty) return const [];
 
-    final ingresos = await (db.select(db.ingresosSemana)..where(
-          (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
-        ))
-        .get();
-    final gastos = await (db.select(db.gastosSemana)..where(
-          (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
-        ))
-        .get();
+    final ingresos =
+        await (db.select(db.ingresosSemana)..where(
+              (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+            ))
+            .get();
+    final gastos =
+        await (db.select(db.gastosSemana)..where(
+              (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+            ))
+            .get();
 
     final ingresosPorSemana = <String, List<IngresoSemanaRow>>{};
     for (final i in ingresos) {
