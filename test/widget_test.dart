@@ -29,14 +29,8 @@ void main() {
     // La marca son dos tramos de distinto color dentro de un mismo texto
     // (LECHE en azul, CONTROL en verde), así que hay que mirar adentro del
     // texto enriquecido en vez de buscar la cadena entera.
-    expect(
-      find.textContaining('LECHE', findRichText: true),
-      findsOneWidget,
-    );
-    expect(
-      find.textContaining('CONTROL', findRichText: true),
-      findsOneWidget,
-    );
+    expect(find.textContaining('LECHE', findRichText: true), findsOneWidget);
+    expect(find.textContaining('CONTROL', findRichText: true), findsOneWidget);
     expect(find.text('Iniciá sesión'), findsOneWidget);
   });
 }

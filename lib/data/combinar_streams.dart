@@ -30,22 +30,16 @@ Stream<R> combinarUltimos<A, B, R>(
 
   control = StreamController<R>(
     onListen: () {
-      subA = a.listen(
-        (valor) {
-          ultimoA = valor;
-          hayA = true;
-          emitir();
-        },
-        onError: control.addError,
-      );
-      subB = b.listen(
-        (valor) {
-          ultimoB = valor;
-          hayB = true;
-          emitir();
-        },
-        onError: control.addError,
-      );
+      subA = a.listen((valor) {
+        ultimoA = valor;
+        hayA = true;
+        emitir();
+      }, onError: control.addError);
+      subB = b.listen((valor) {
+        ultimoB = valor;
+        hayB = true;
+        emitir();
+      }, onError: control.addError);
     },
     onPause: () {
       subA?.pause();

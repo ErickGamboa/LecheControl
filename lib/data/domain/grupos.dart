@@ -4,27 +4,65 @@
 library;
 
 /// Grupos/estados del hato (Módulo 1 y 2). Sin grupos libres ni de toros.
+///
+/// "En tratamiento" ya no existe: aplicar un medicamento no saca a la vaca de
+/// su grupo, solo le deja el evento en la hoja de vida.
 abstract final class GrupoAnimal {
   static const enOrdeno = 'en_ordeno';
   static const secas = 'secas';
   static const novillas = 'novillas';
   static const terneros = 'terneros';
-  static const enTratamiento = 'en_tratamiento';
 
-  static const todos = [enOrdeno, secas, novillas, terneros, enTratamiento];
+  static const todos = [enOrdeno, secas, novillas, terneros];
 
-  /// Grupos donde se puede dar de alta un animal nuevo (no incluye
-  /// "en tratamiento", que se llega solo por evento sanitario).
-  static const altaDisponibles = [enOrdeno, secas, novillas, terneros];
+  /// Grupos donde se puede dar de alta un animal nuevo.
+  static const altaDisponibles = todos;
 
   static String etiqueta(String codigo) => switch (codigo) {
     enOrdeno => 'En ordeño',
     secas => 'Secas',
     novillas => 'Novillas',
     terneros => 'Terneros',
-    enTratamiento => 'En tratamiento',
     _ => codigo,
   };
+}
+
+/// Cuántos días antes del parto una vaca se considera **pronta**.
+const diasParaPronta = 21;
+
+/// Días que faltan para el parto probable. Negativo si ya se pasó de la
+/// fecha. null si no hay fecha probable (vaca vacía o sin palpar).
+int? diasParaParto(DateTime? fechaProbableParto, {DateTime? hoy}) {
+  if (fechaProbableParto == null) return null;
+  final referencia = hoy ?? DateTime.now();
+  final dia = DateTime(referencia.year, referencia.month, referencia.day);
+  final parto = DateTime(
+    fechaProbableParto.year,
+    fechaProbableParto.month,
+    fechaProbableParto.day,
+  );
+  return parto.difference(dia).inDays;
+}
+
+/// **Pronta**: le falta poco para parir.
+///
+/// No es un grupo del hato sino un estado que se deduce de la fecha probable
+/// de parto, justamente para que la vaca **no salga de Secas** cuando entra en
+/// él. Una vaca que ya se pasó de la fecha sigue pronta: todavía no parió.
+bool esPronta(DateTime? fechaProbableParto, {DateTime? hoy}) {
+  final dias = diasParaParto(fechaProbableParto, hoy: hoy);
+  return dias != null && dias <= diasParaPronta;
+}
+
+/// Cómo se lee el estado de pronta en pantalla, p. ej. "Pronta · faltan 9
+/// días" o "Pronta · pasada de fecha".
+String etiquetaPronta(DateTime? fechaProbableParto, {DateTime? hoy}) {
+  final dias = diasParaParto(fechaProbableParto, hoy: hoy);
+  if (dias == null) return 'Pronta';
+  if (dias < 0) return 'Pronta · pasada de fecha';
+  if (dias == 0) return 'Pronta · pare hoy';
+  if (dias == 1) return 'Pronta · falta 1 día';
+  return 'Pronta · faltan $dias días';
 }
 
 /// Sexo del animal.
@@ -156,20 +194,6 @@ abstract final class ResultadoPalpacion {
   static String etiqueta(String codigo) => switch (codigo) {
     preniada => 'Preñada',
     vacia => 'Vacía',
-    _ => codigo,
-  };
-}
-
-/// Tipo de dosis de un medicamento (Módulo 7).
-abstract final class TipoDosisMedicamento {
-  static const fija = 'fija';
-  static const porAplicacion = 'por_aplicacion';
-
-  static const todos = [fija, porAplicacion];
-
-  static String etiqueta(String codigo) => switch (codigo) {
-    fija => 'Dosis fija (ml)',
-    porAplicacion => 'Por aplicación',
     _ => codigo,
   };
 }

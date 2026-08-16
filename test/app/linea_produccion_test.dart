@@ -69,8 +69,12 @@ void main() {
     test('la pesa abierta sin vacas todavía no cuenta como semana', () {
       // Es la que la app abre sola al entrar a la pantalla de pesa.
       final puntos = armarSemanas([
-        sesion(fecha: DateTime(2026, 8, 10, 6), litros: 0, vacas: 0,
-            cerrada: false),
+        sesion(
+          fecha: DateTime(2026, 8, 10, 6),
+          litros: 0,
+          vacas: 0,
+          cerrada: false,
+        ),
         sesion(fecha: DateTime(2026, 8, 3, 6), litros: 304),
       ], hoy: hoy);
 
@@ -80,8 +84,12 @@ void main() {
 
     test('la pesa abierta con vacas se marca en curso', () {
       final puntos = armarSemanas([
-        sesion(fecha: DateTime(2026, 8, 10, 6), litros: 120, vacas: 12,
-            cerrada: false),
+        sesion(
+          fecha: DateTime(2026, 8, 10, 6),
+          litros: 120,
+          vacas: 12,
+          cerrada: false,
+        ),
       ], hoy: hoy);
 
       expect(puntos.last.litros, 120);
@@ -135,9 +143,12 @@ void main() {
 
     testWidgets('con una sola pesa muestra el punto y su número, sin '
         'variación', (tester) async {
-      await montar(tester, armarSemanas([
-        sesion(fecha: DateTime(2026, 8, 10, 6), litros: 312),
-      ], hoy: hoy));
+      await montar(
+        tester,
+        armarSemanas([
+          sesion(fecha: DateTime(2026, 8, 10, 6), litros: 312),
+        ], hoy: hoy),
+      );
 
       expect(find.text('312 L'), findsOneWidget);
       expect(find.textContaining('+'), findsNothing);
@@ -147,10 +158,13 @@ void main() {
     });
 
     testWidgets('compara contra la última semana con pesa', (tester) async {
-      await montar(tester, armarSemanas([
-        sesion(fecha: DateTime(2026, 8, 10, 6), litros: 312),
-        sesion(fecha: DateTime(2026, 8, 3, 6), litros: 290),
-      ], hoy: hoy));
+      await montar(
+        tester,
+        armarSemanas([
+          sesion(fecha: DateTime(2026, 8, 10, 6), litros: 312),
+          sesion(fecha: DateTime(2026, 8, 3, 6), litros: 290),
+        ], hoy: hoy),
+      );
 
       expect(find.text('312 L'), findsOneWidget);
       expect(find.text('+22 L'), findsOneWidget);
@@ -159,19 +173,25 @@ void main() {
     testWidgets('unos litros arriba o abajo son ruido, no tendencia', (
       tester,
     ) async {
-      await montar(tester, armarSemanas([
-        sesion(fecha: DateTime(2026, 8, 10, 6), litros: 312),
-        sesion(fecha: DateTime(2026, 8, 3, 6), litros: 310),
-      ], hoy: hoy));
+      await montar(
+        tester,
+        armarSemanas([
+          sesion(fecha: DateTime(2026, 8, 10, 6), litros: 312),
+          sesion(fecha: DateTime(2026, 8, 3, 6), litros: 310),
+        ], hoy: hoy),
+      );
 
       expect(find.text('estable'), findsOneWidget);
     });
 
     testWidgets('una caída se muestra con el signo', (tester) async {
-      await montar(tester, armarSemanas([
-        sesion(fecha: DateTime(2026, 8, 10, 6), litros: 280),
-        sesion(fecha: DateTime(2026, 8, 3, 6), litros: 312),
-      ], hoy: hoy));
+      await montar(
+        tester,
+        armarSemanas([
+          sesion(fecha: DateTime(2026, 8, 10, 6), litros: 280),
+          sesion(fecha: DateTime(2026, 8, 3, 6), litros: 312),
+        ], hoy: hoy),
+      );
 
       expect(find.text('-32 L'), findsOneWidget);
     });
@@ -181,11 +201,18 @@ void main() {
     ) async {
       // 120 L de 12 vacas contra 312 L de la semana pasada daría "-192 L",
       // que es puro artefacto de estar pesando todavía.
-      await montar(tester, armarSemanas([
-        sesion(fecha: DateTime(2026, 8, 10, 6), litros: 120, vacas: 12,
-            cerrada: false),
-        sesion(fecha: DateTime(2026, 8, 3, 6), litros: 312),
-      ], hoy: hoy));
+      await montar(
+        tester,
+        armarSemanas([
+          sesion(
+            fecha: DateTime(2026, 8, 10, 6),
+            litros: 120,
+            vacas: 12,
+            cerrada: false,
+          ),
+          sesion(fecha: DateTime(2026, 8, 3, 6), litros: 312),
+        ], hoy: hoy),
+      );
 
       expect(find.textContaining('-'), findsNothing);
       expect(find.text('pesando'), findsOneWidget);

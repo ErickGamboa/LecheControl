@@ -206,8 +206,7 @@ class PesasRepository {
     final sesiones =
         (db.select(db.pesasSesiones)
               ..where(
-                (t) =>
-                    t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+                (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
               )
               ..orderBy([(t) => OrderingTerm.desc(t.fecha)]))
             .watch();
@@ -402,7 +401,9 @@ class PesasRepository {
     return [
       for (final a in enOrdeno)
         if (!yaPesadas.contains(a.id)) a,
-    ]..sort((a, b) => compararIdentificadores(a.identificador, b.identificador));
+    ]..sort(
+      (a, b) => compararIdentificadores(a.identificador, b.identificador),
+    );
   }
 
   Future<ResumenSesion> resumenSesion(String sesionId) async {

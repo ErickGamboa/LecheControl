@@ -9726,27 +9726,16 @@ class $MedicamentosTable extends Medicamentos
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _costoEnvaseMeta = const VerificationMeta(
-    'costoEnvase',
+  static const VerificationMeta _dosisAplicacionMeta = const VerificationMeta(
+    'dosisAplicacion',
   );
   @override
-  late final GeneratedColumn<double> costoEnvase = GeneratedColumn<double>(
-    'costo_envase',
+  late final GeneratedColumn<String> dosisAplicacion = GeneratedColumn<String>(
+    'dosis_aplicacion',
     aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _tipoDosisMeta = const VerificationMeta(
-    'tipoDosis',
-  );
-  @override
-  late final GeneratedColumn<String> tipoDosis = GeneratedColumn<String>(
-    'tipo_dosis',
-    aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _mlEnvaseMeta = const VerificationMeta(
     'mlEnvase',
@@ -9758,40 +9747,6 @@ class $MedicamentosTable extends Medicamentos
     true,
     type: DriftSqlType.double,
     requiredDuringInsert: false,
-  );
-  static const VerificationMeta _aplicacionesEnvaseMeta =
-      const VerificationMeta('aplicacionesEnvase');
-  @override
-  late final GeneratedColumn<double> aplicacionesEnvase =
-      GeneratedColumn<double>(
-        'aplicaciones_envase',
-        aliasedName,
-        true,
-        type: DriftSqlType.double,
-        requiredDuringInsert: false,
-      );
-  static const VerificationMeta _dosisFijaMlMeta = const VerificationMeta(
-    'dosisFijaMl',
-  );
-  @override
-  late final GeneratedColumn<double> dosisFijaMl = GeneratedColumn<double>(
-    'dosis_fija_ml',
-    aliasedName,
-    true,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _diasRetiroLecheMeta = const VerificationMeta(
-    'diasRetiroLeche',
-  );
-  @override
-  late final GeneratedColumn<int> diasRetiroLeche = GeneratedColumn<int>(
-    'dias_retiro_leche',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -9846,12 +9801,8 @@ class $MedicamentosTable extends Medicamentos
     id,
     lecheriaId,
     nombre,
-    costoEnvase,
-    tipoDosis,
+    dosisAplicacion,
     mlEnvase,
-    aplicacionesEnvase,
-    dosisFijaMl,
-    diasRetiroLeche,
     createdAt,
     updatedAt,
     deletedAt,
@@ -9890,56 +9841,19 @@ class $MedicamentosTable extends Medicamentos
     } else if (isInserting) {
       context.missing(_nombreMeta);
     }
-    if (data.containsKey('costo_envase')) {
+    if (data.containsKey('dosis_aplicacion')) {
       context.handle(
-        _costoEnvaseMeta,
-        costoEnvase.isAcceptableOrUnknown(
-          data['costo_envase']!,
-          _costoEnvaseMeta,
+        _dosisAplicacionMeta,
+        dosisAplicacion.isAcceptableOrUnknown(
+          data['dosis_aplicacion']!,
+          _dosisAplicacionMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_costoEnvaseMeta);
-    }
-    if (data.containsKey('tipo_dosis')) {
-      context.handle(
-        _tipoDosisMeta,
-        tipoDosis.isAcceptableOrUnknown(data['tipo_dosis']!, _tipoDosisMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_tipoDosisMeta);
     }
     if (data.containsKey('ml_envase')) {
       context.handle(
         _mlEnvaseMeta,
         mlEnvase.isAcceptableOrUnknown(data['ml_envase']!, _mlEnvaseMeta),
-      );
-    }
-    if (data.containsKey('aplicaciones_envase')) {
-      context.handle(
-        _aplicacionesEnvaseMeta,
-        aplicacionesEnvase.isAcceptableOrUnknown(
-          data['aplicaciones_envase']!,
-          _aplicacionesEnvaseMeta,
-        ),
-      );
-    }
-    if (data.containsKey('dosis_fija_ml')) {
-      context.handle(
-        _dosisFijaMlMeta,
-        dosisFijaMl.isAcceptableOrUnknown(
-          data['dosis_fija_ml']!,
-          _dosisFijaMlMeta,
-        ),
-      );
-    }
-    if (data.containsKey('dias_retiro_leche')) {
-      context.handle(
-        _diasRetiroLecheMeta,
-        diasRetiroLeche.isAcceptableOrUnknown(
-          data['dias_retiro_leche']!,
-          _diasRetiroLecheMeta,
-        ),
       );
     }
     if (data.containsKey('created_at')) {
@@ -9991,30 +9905,14 @@ class $MedicamentosTable extends Medicamentos
         DriftSqlType.string,
         data['${effectivePrefix}nombre'],
       )!,
-      costoEnvase: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}costo_envase'],
-      )!,
-      tipoDosis: attachedDatabase.typeMapping.read(
+      dosisAplicacion: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}tipo_dosis'],
-      )!,
+        data['${effectivePrefix}dosis_aplicacion'],
+      ),
       mlEnvase: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}ml_envase'],
       ),
-      aplicacionesEnvase: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}aplicaciones_envase'],
-      ),
-      dosisFijaMl: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}dosis_fija_ml'],
-      ),
-      diasRetiroLeche: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}dias_retiro_leche'],
-      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -10044,12 +9942,8 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
   final String id;
   final String lecheriaId;
   final String nombre;
-  final double costoEnvase;
-  final String tipoDosis;
+  final String? dosisAplicacion;
   final double? mlEnvase;
-  final double? aplicacionesEnvase;
-  final double? dosisFijaMl;
-  final int diasRetiroLeche;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -10058,12 +9952,8 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
     required this.id,
     required this.lecheriaId,
     required this.nombre,
-    required this.costoEnvase,
-    required this.tipoDosis,
+    this.dosisAplicacion,
     this.mlEnvase,
-    this.aplicacionesEnvase,
-    this.dosisFijaMl,
-    required this.diasRetiroLeche,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -10075,18 +9965,12 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
     map['id'] = Variable<String>(id);
     map['lecheria_id'] = Variable<String>(lecheriaId);
     map['nombre'] = Variable<String>(nombre);
-    map['costo_envase'] = Variable<double>(costoEnvase);
-    map['tipo_dosis'] = Variable<String>(tipoDosis);
+    if (!nullToAbsent || dosisAplicacion != null) {
+      map['dosis_aplicacion'] = Variable<String>(dosisAplicacion);
+    }
     if (!nullToAbsent || mlEnvase != null) {
       map['ml_envase'] = Variable<double>(mlEnvase);
     }
-    if (!nullToAbsent || aplicacionesEnvase != null) {
-      map['aplicaciones_envase'] = Variable<double>(aplicacionesEnvase);
-    }
-    if (!nullToAbsent || dosisFijaMl != null) {
-      map['dosis_fija_ml'] = Variable<double>(dosisFijaMl);
-    }
-    map['dias_retiro_leche'] = Variable<int>(diasRetiroLeche);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -10101,18 +9985,12 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
       id: Value(id),
       lecheriaId: Value(lecheriaId),
       nombre: Value(nombre),
-      costoEnvase: Value(costoEnvase),
-      tipoDosis: Value(tipoDosis),
+      dosisAplicacion: dosisAplicacion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dosisAplicacion),
       mlEnvase: mlEnvase == null && nullToAbsent
           ? const Value.absent()
           : Value(mlEnvase),
-      aplicacionesEnvase: aplicacionesEnvase == null && nullToAbsent
-          ? const Value.absent()
-          : Value(aplicacionesEnvase),
-      dosisFijaMl: dosisFijaMl == null && nullToAbsent
-          ? const Value.absent()
-          : Value(dosisFijaMl),
-      diasRetiroLeche: Value(diasRetiroLeche),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -10131,14 +10009,8 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
       id: serializer.fromJson<String>(json['id']),
       lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
       nombre: serializer.fromJson<String>(json['nombre']),
-      costoEnvase: serializer.fromJson<double>(json['costoEnvase']),
-      tipoDosis: serializer.fromJson<String>(json['tipoDosis']),
+      dosisAplicacion: serializer.fromJson<String?>(json['dosisAplicacion']),
       mlEnvase: serializer.fromJson<double?>(json['mlEnvase']),
-      aplicacionesEnvase: serializer.fromJson<double?>(
-        json['aplicacionesEnvase'],
-      ),
-      dosisFijaMl: serializer.fromJson<double?>(json['dosisFijaMl']),
-      diasRetiroLeche: serializer.fromJson<int>(json['diasRetiroLeche']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -10152,12 +10024,8 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
       'id': serializer.toJson<String>(id),
       'lecheriaId': serializer.toJson<String>(lecheriaId),
       'nombre': serializer.toJson<String>(nombre),
-      'costoEnvase': serializer.toJson<double>(costoEnvase),
-      'tipoDosis': serializer.toJson<String>(tipoDosis),
+      'dosisAplicacion': serializer.toJson<String?>(dosisAplicacion),
       'mlEnvase': serializer.toJson<double?>(mlEnvase),
-      'aplicacionesEnvase': serializer.toJson<double?>(aplicacionesEnvase),
-      'dosisFijaMl': serializer.toJson<double?>(dosisFijaMl),
-      'diasRetiroLeche': serializer.toJson<int>(diasRetiroLeche),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -10169,12 +10037,8 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
     String? id,
     String? lecheriaId,
     String? nombre,
-    double? costoEnvase,
-    String? tipoDosis,
+    Value<String?> dosisAplicacion = const Value.absent(),
     Value<double?> mlEnvase = const Value.absent(),
-    Value<double?> aplicacionesEnvase = const Value.absent(),
-    Value<double?> dosisFijaMl = const Value.absent(),
-    int? diasRetiroLeche,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -10183,14 +10047,10 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
     id: id ?? this.id,
     lecheriaId: lecheriaId ?? this.lecheriaId,
     nombre: nombre ?? this.nombre,
-    costoEnvase: costoEnvase ?? this.costoEnvase,
-    tipoDosis: tipoDosis ?? this.tipoDosis,
+    dosisAplicacion: dosisAplicacion.present
+        ? dosisAplicacion.value
+        : this.dosisAplicacion,
     mlEnvase: mlEnvase.present ? mlEnvase.value : this.mlEnvase,
-    aplicacionesEnvase: aplicacionesEnvase.present
-        ? aplicacionesEnvase.value
-        : this.aplicacionesEnvase,
-    dosisFijaMl: dosisFijaMl.present ? dosisFijaMl.value : this.dosisFijaMl,
-    diasRetiroLeche: diasRetiroLeche ?? this.diasRetiroLeche,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -10203,20 +10063,10 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
           ? data.lecheriaId.value
           : this.lecheriaId,
       nombre: data.nombre.present ? data.nombre.value : this.nombre,
-      costoEnvase: data.costoEnvase.present
-          ? data.costoEnvase.value
-          : this.costoEnvase,
-      tipoDosis: data.tipoDosis.present ? data.tipoDosis.value : this.tipoDosis,
+      dosisAplicacion: data.dosisAplicacion.present
+          ? data.dosisAplicacion.value
+          : this.dosisAplicacion,
       mlEnvase: data.mlEnvase.present ? data.mlEnvase.value : this.mlEnvase,
-      aplicacionesEnvase: data.aplicacionesEnvase.present
-          ? data.aplicacionesEnvase.value
-          : this.aplicacionesEnvase,
-      dosisFijaMl: data.dosisFijaMl.present
-          ? data.dosisFijaMl.value
-          : this.dosisFijaMl,
-      diasRetiroLeche: data.diasRetiroLeche.present
-          ? data.diasRetiroLeche.value
-          : this.diasRetiroLeche,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -10230,12 +10080,8 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
           ..write('id: $id, ')
           ..write('lecheriaId: $lecheriaId, ')
           ..write('nombre: $nombre, ')
-          ..write('costoEnvase: $costoEnvase, ')
-          ..write('tipoDosis: $tipoDosis, ')
+          ..write('dosisAplicacion: $dosisAplicacion, ')
           ..write('mlEnvase: $mlEnvase, ')
-          ..write('aplicacionesEnvase: $aplicacionesEnvase, ')
-          ..write('dosisFijaMl: $dosisFijaMl, ')
-          ..write('diasRetiroLeche: $diasRetiroLeche, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -10249,12 +10095,8 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
     id,
     lecheriaId,
     nombre,
-    costoEnvase,
-    tipoDosis,
+    dosisAplicacion,
     mlEnvase,
-    aplicacionesEnvase,
-    dosisFijaMl,
-    diasRetiroLeche,
     createdAt,
     updatedAt,
     deletedAt,
@@ -10267,12 +10109,8 @@ class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
           other.id == this.id &&
           other.lecheriaId == this.lecheriaId &&
           other.nombre == this.nombre &&
-          other.costoEnvase == this.costoEnvase &&
-          other.tipoDosis == this.tipoDosis &&
+          other.dosisAplicacion == this.dosisAplicacion &&
           other.mlEnvase == this.mlEnvase &&
-          other.aplicacionesEnvase == this.aplicacionesEnvase &&
-          other.dosisFijaMl == this.dosisFijaMl &&
-          other.diasRetiroLeche == this.diasRetiroLeche &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -10283,12 +10121,8 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
   final Value<String> id;
   final Value<String> lecheriaId;
   final Value<String> nombre;
-  final Value<double> costoEnvase;
-  final Value<String> tipoDosis;
+  final Value<String?> dosisAplicacion;
   final Value<double?> mlEnvase;
-  final Value<double?> aplicacionesEnvase;
-  final Value<double?> dosisFijaMl;
-  final Value<int> diasRetiroLeche;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -10298,12 +10132,8 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
     this.id = const Value.absent(),
     this.lecheriaId = const Value.absent(),
     this.nombre = const Value.absent(),
-    this.costoEnvase = const Value.absent(),
-    this.tipoDosis = const Value.absent(),
+    this.dosisAplicacion = const Value.absent(),
     this.mlEnvase = const Value.absent(),
-    this.aplicacionesEnvase = const Value.absent(),
-    this.dosisFijaMl = const Value.absent(),
-    this.diasRetiroLeche = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -10314,12 +10144,8 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
     required String id,
     required String lecheriaId,
     required String nombre,
-    required double costoEnvase,
-    required String tipoDosis,
+    this.dosisAplicacion = const Value.absent(),
     this.mlEnvase = const Value.absent(),
-    this.aplicacionesEnvase = const Value.absent(),
-    this.dosisFijaMl = const Value.absent(),
-    this.diasRetiroLeche = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -10328,20 +10154,14 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
   }) : id = Value(id),
        lecheriaId = Value(lecheriaId),
        nombre = Value(nombre),
-       costoEnvase = Value(costoEnvase),
-       tipoDosis = Value(tipoDosis),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
   static Insertable<MedicamentoRow> custom({
     Expression<String>? id,
     Expression<String>? lecheriaId,
     Expression<String>? nombre,
-    Expression<double>? costoEnvase,
-    Expression<String>? tipoDosis,
+    Expression<String>? dosisAplicacion,
     Expression<double>? mlEnvase,
-    Expression<double>? aplicacionesEnvase,
-    Expression<double>? dosisFijaMl,
-    Expression<int>? diasRetiroLeche,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -10352,12 +10172,8 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
       if (id != null) 'id': id,
       if (lecheriaId != null) 'lecheria_id': lecheriaId,
       if (nombre != null) 'nombre': nombre,
-      if (costoEnvase != null) 'costo_envase': costoEnvase,
-      if (tipoDosis != null) 'tipo_dosis': tipoDosis,
+      if (dosisAplicacion != null) 'dosis_aplicacion': dosisAplicacion,
       if (mlEnvase != null) 'ml_envase': mlEnvase,
-      if (aplicacionesEnvase != null) 'aplicaciones_envase': aplicacionesEnvase,
-      if (dosisFijaMl != null) 'dosis_fija_ml': dosisFijaMl,
-      if (diasRetiroLeche != null) 'dias_retiro_leche': diasRetiroLeche,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -10370,12 +10186,8 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
     Value<String>? id,
     Value<String>? lecheriaId,
     Value<String>? nombre,
-    Value<double>? costoEnvase,
-    Value<String>? tipoDosis,
+    Value<String?>? dosisAplicacion,
     Value<double?>? mlEnvase,
-    Value<double?>? aplicacionesEnvase,
-    Value<double?>? dosisFijaMl,
-    Value<int>? diasRetiroLeche,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -10386,12 +10198,8 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
       id: id ?? this.id,
       lecheriaId: lecheriaId ?? this.lecheriaId,
       nombre: nombre ?? this.nombre,
-      costoEnvase: costoEnvase ?? this.costoEnvase,
-      tipoDosis: tipoDosis ?? this.tipoDosis,
+      dosisAplicacion: dosisAplicacion ?? this.dosisAplicacion,
       mlEnvase: mlEnvase ?? this.mlEnvase,
-      aplicacionesEnvase: aplicacionesEnvase ?? this.aplicacionesEnvase,
-      dosisFijaMl: dosisFijaMl ?? this.dosisFijaMl,
-      diasRetiroLeche: diasRetiroLeche ?? this.diasRetiroLeche,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -10412,23 +10220,11 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
     if (nombre.present) {
       map['nombre'] = Variable<String>(nombre.value);
     }
-    if (costoEnvase.present) {
-      map['costo_envase'] = Variable<double>(costoEnvase.value);
-    }
-    if (tipoDosis.present) {
-      map['tipo_dosis'] = Variable<String>(tipoDosis.value);
+    if (dosisAplicacion.present) {
+      map['dosis_aplicacion'] = Variable<String>(dosisAplicacion.value);
     }
     if (mlEnvase.present) {
       map['ml_envase'] = Variable<double>(mlEnvase.value);
-    }
-    if (aplicacionesEnvase.present) {
-      map['aplicaciones_envase'] = Variable<double>(aplicacionesEnvase.value);
-    }
-    if (dosisFijaMl.present) {
-      map['dosis_fija_ml'] = Variable<double>(dosisFijaMl.value);
-    }
-    if (diasRetiroLeche.present) {
-      map['dias_retiro_leche'] = Variable<int>(diasRetiroLeche.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -10454,12 +10250,8 @@ class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
           ..write('id: $id, ')
           ..write('lecheriaId: $lecheriaId, ')
           ..write('nombre: $nombre, ')
-          ..write('costoEnvase: $costoEnvase, ')
-          ..write('tipoDosis: $tipoDosis, ')
+          ..write('dosisAplicacion: $dosisAplicacion, ')
           ..write('mlEnvase: $mlEnvase, ')
-          ..write('aplicacionesEnvase: $aplicacionesEnvase, ')
-          ..write('dosisFijaMl: $dosisFijaMl, ')
-          ..write('diasRetiroLeche: $diasRetiroLeche, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -16256,12 +16048,8 @@ typedef $$MedicamentosTableCreateCompanionBuilder =
       required String id,
       required String lecheriaId,
       required String nombre,
-      required double costoEnvase,
-      required String tipoDosis,
+      Value<String?> dosisAplicacion,
       Value<double?> mlEnvase,
-      Value<double?> aplicacionesEnvase,
-      Value<double?> dosisFijaMl,
-      Value<int> diasRetiroLeche,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -16273,12 +16061,8 @@ typedef $$MedicamentosTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> lecheriaId,
       Value<String> nombre,
-      Value<double> costoEnvase,
-      Value<String> tipoDosis,
+      Value<String?> dosisAplicacion,
       Value<double?> mlEnvase,
-      Value<double?> aplicacionesEnvase,
-      Value<double?> dosisFijaMl,
-      Value<int> diasRetiroLeche,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -16310,33 +16094,13 @@ class $$MedicamentosTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get costoEnvase => $composableBuilder(
-    column: $table.costoEnvase,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get tipoDosis => $composableBuilder(
-    column: $table.tipoDosis,
+  ColumnFilters<String> get dosisAplicacion => $composableBuilder(
+    column: $table.dosisAplicacion,
     builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<double> get mlEnvase => $composableBuilder(
     column: $table.mlEnvase,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get aplicacionesEnvase => $composableBuilder(
-    column: $table.aplicacionesEnvase,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get dosisFijaMl => $composableBuilder(
-    column: $table.dosisFijaMl,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get diasRetiroLeche => $composableBuilder(
-    column: $table.diasRetiroLeche,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16385,33 +16149,13 @@ class $$MedicamentosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get costoEnvase => $composableBuilder(
-    column: $table.costoEnvase,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get tipoDosis => $composableBuilder(
-    column: $table.tipoDosis,
+  ColumnOrderings<String> get dosisAplicacion => $composableBuilder(
+    column: $table.dosisAplicacion,
     builder: (column) => ColumnOrderings(column),
   );
 
   ColumnOrderings<double> get mlEnvase => $composableBuilder(
     column: $table.mlEnvase,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get aplicacionesEnvase => $composableBuilder(
-    column: $table.aplicacionesEnvase,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get dosisFijaMl => $composableBuilder(
-    column: $table.dosisFijaMl,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get diasRetiroLeche => $composableBuilder(
-    column: $table.diasRetiroLeche,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -16456,31 +16200,13 @@ class $$MedicamentosTableAnnotationComposer
   GeneratedColumn<String> get nombre =>
       $composableBuilder(column: $table.nombre, builder: (column) => column);
 
-  GeneratedColumn<double> get costoEnvase => $composableBuilder(
-    column: $table.costoEnvase,
+  GeneratedColumn<String> get dosisAplicacion => $composableBuilder(
+    column: $table.dosisAplicacion,
     builder: (column) => column,
   );
-
-  GeneratedColumn<String> get tipoDosis =>
-      $composableBuilder(column: $table.tipoDosis, builder: (column) => column);
 
   GeneratedColumn<double> get mlEnvase =>
       $composableBuilder(column: $table.mlEnvase, builder: (column) => column);
-
-  GeneratedColumn<double> get aplicacionesEnvase => $composableBuilder(
-    column: $table.aplicacionesEnvase,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<double> get dosisFijaMl => $composableBuilder(
-    column: $table.dosisFijaMl,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get diasRetiroLeche => $composableBuilder(
-    column: $table.diasRetiroLeche,
-    builder: (column) => column,
-  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -16529,12 +16255,8 @@ class $$MedicamentosTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> lecheriaId = const Value.absent(),
                 Value<String> nombre = const Value.absent(),
-                Value<double> costoEnvase = const Value.absent(),
-                Value<String> tipoDosis = const Value.absent(),
+                Value<String?> dosisAplicacion = const Value.absent(),
                 Value<double?> mlEnvase = const Value.absent(),
-                Value<double?> aplicacionesEnvase = const Value.absent(),
-                Value<double?> dosisFijaMl = const Value.absent(),
-                Value<int> diasRetiroLeche = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -16544,12 +16266,8 @@ class $$MedicamentosTableTableManager
                 id: id,
                 lecheriaId: lecheriaId,
                 nombre: nombre,
-                costoEnvase: costoEnvase,
-                tipoDosis: tipoDosis,
+                dosisAplicacion: dosisAplicacion,
                 mlEnvase: mlEnvase,
-                aplicacionesEnvase: aplicacionesEnvase,
-                dosisFijaMl: dosisFijaMl,
-                diasRetiroLeche: diasRetiroLeche,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -16561,12 +16279,8 @@ class $$MedicamentosTableTableManager
                 required String id,
                 required String lecheriaId,
                 required String nombre,
-                required double costoEnvase,
-                required String tipoDosis,
+                Value<String?> dosisAplicacion = const Value.absent(),
                 Value<double?> mlEnvase = const Value.absent(),
-                Value<double?> aplicacionesEnvase = const Value.absent(),
-                Value<double?> dosisFijaMl = const Value.absent(),
-                Value<int> diasRetiroLeche = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -16576,12 +16290,8 @@ class $$MedicamentosTableTableManager
                 id: id,
                 lecheriaId: lecheriaId,
                 nombre: nombre,
-                costoEnvase: costoEnvase,
-                tipoDosis: tipoDosis,
+                dosisAplicacion: dosisAplicacion,
                 mlEnvase: mlEnvase,
-                aplicacionesEnvase: aplicacionesEnvase,
-                dosisFijaMl: dosisFijaMl,
-                diasRetiroLeche: diasRetiroLeche,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

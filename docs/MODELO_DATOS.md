@@ -42,7 +42,7 @@ Ver también `lib/data/sync/sync_service.dart` para el mapeo exacto de columnas
 
 | Tabla | Columnas clave | Notas |
 |---|---|---|
-| `animales` | `id`, `lecheria_id`, `identificador` (único por lechería, activos), `sexo`, `grupo`, `estado`, `estado_reproductivo`, `origen`, `precio_compra`, `fecha_compra`, `madre_id`, `fecha_probable_parto`, `retiro_leche_hasta`, `fecha_ultimo_parto` | `grupo` ∈ `en_ordeno, secas, novillas, terneros, en_tratamiento`. `retiro_leche_hasta` anula el ingreso de esa vaca mientras esté vigente. `fecha_ultimo_parto` es la base de los días de lactancia (DLac) del reporte de producción: la fija el evento `parto` y se puede corregir a mano desde la hoja de vida, que es como se cargan las vacas que ya estaban en la finca. |
+| `animales` | `id`, `lecheria_id`, `identificador` (único por lechería, activos), `sexo`, `grupo`, `estado`, `estado_reproductivo`, `origen`, `precio_compra`, `fecha_compra`, `madre_id`, `fecha_probable_parto`, `retiro_leche_hasta`, `fecha_ultimo_parto` | `grupo` ∈ `en_ordeno, secas, novillas, terneros`. El estado **pronta** (le falta poco para parir) no se guarda: sale de `fecha_probable_parto`, justamente para que la vaca no tenga que salir de Secas. `retiro_leche_hasta` quedó sin uso — los medicamentos ya no llevan días de retiro. `fecha_ultimo_parto` es la base de los días de lactancia (DLac) del reporte de producción: la fija el evento `parto` y se puede corregir a mano desde la hoja de vida, que es como se cargan las vacas que ya estaban en la finca. |
 | `eventos_animal` | `id`, `animal_id`, `lecheria_id`, `tipo`, `fecha`, + columnas específicas por tipo (`medicamento_id`/`dosis`/`dias_retiro`/`costo` para sanidad; `resultado` para palpación; `toro_pajilla` para servicio; `grupo_anterior`/`grupo_nuevo` para cambios de grupo/secado; `motivo_baja`/`precio_venta` para bajas; `sexo_cria`/`cria_animal_id` para partos) | Es la hoja de vida completa (Módulo 6): un registro append-only por evento. `tipo` ∈ `sanidad, celo, monta, inseminacion, palpacion, secado, parto, cambio_grupo, baja, concentrado`. |
 
 ## Pesa de leche (Módulo 3)
@@ -68,8 +68,8 @@ calculan**: se digita la plata que efectivamente entró.
 |---|---|---|
 | `semanas` | `id`, `lecheria_id`, `fecha_inicio`, `fecha_fin`, `cerrada` | Único por `(lecheria_id, fecha_inicio)`. `fecha_inicio` es el lunes. Columnas `date` en Postgres: el sync manda solo el día. |
 | `ingresos_semana` | `id`, `lecheria_id`, `semana_id`, `tipo`, `monto`, `litros`, `animal_id`, `detalle` | `tipo` ∈ `leche, venta_ganado, otro`. `litros` solo aplica a `leche`: `monto / litros` da el precio real por litro de la semana. `animal_id` solo aplica a `venta_ganado`, para la hoja de vida del animal. |
-| `gastos_semana` | `id`, `lecheria_id`, `semana_id`, `categoria`, `monto`, `detalle` | Salario del peón, concentrado, medicamentos, cerca… |
-| `categorias_gasto` | `id`, `lecheria_id`, `nombre`, `orden` | Sugerencias para que meter un gasto sea tocar y no escribir. Único por `(lecheria_id, nombre)`. |
+| `gastos_semana` | `id`, `lecheria_id`, `semana_id`, `categoria`, `monto`, `detalle` | Los botones fijos son Salarios, Luz, Concentrado, Medicamentos y Combustible (`CategoriaGasto` en `domain/semana.dart`); la categoría sigue siendo texto libre para lo que no cae en ninguno. **Compra de ganado** la mete sola el alta de un animal comprado, con el identificador en `detalle`. |
+| `categorias_gasto` | `id`, `lecheria_id`, `nombre`, `orden` | Sin uso desde que los botones de gasto son fijos. Se conserva por el sync y por lo que ya estaba cargado. |
 
 Utilidad de la semana = `Σ ingresos_semana − Σ gastos_semana`. No se persiste:
 se calcula al abrir el módulo.
@@ -98,11 +98,12 @@ Siguen en el esquema hasta que la app deje de leerlas — ver
 
 | Tabla | Columnas clave | Notas |
 |---|---|---|
-| `medicamentos` | `id`, `lecheria_id`, `nombre`, `costo_envase`, `tipo_dosis` (`fija`/`por_aplicacion`), `ml_envase`, `aplicaciones_envase`, `dosis_fija_ml`, `dias_retiro_leche` | Catálogo editable por lechería. El costo por aplicación se calcula en `MedicamentosRepository.calcularCosto`. |
+| `medicamentos` | `id`, `lecheria_id`, `nombre`, `dosis_aplicacion`, `ml_envase` | Catálogo editable por lechería. `dosis_aplicacion` es texto libre, como dice la etiqueta ("10 ml cada 50 kilos"). Sin costo ni días de retiro: la plata de los medicamentos entra como gasto semanal. |
 
-Aplicar un medicamento (`SanidadRepository.aplicarMedicamento`) crea un
-`eventos_animal` tipo `sanidad` y, si `dias_retiro_leche > 0`, fija
-`animales.retiro_leche_hasta`.
+Aplicar (`SanidadRepository.aplicarMedicamentos`) admite **varios medicamentos
+a la vez** y crea un `eventos_animal` tipo `sanidad` por cada uno, con la misma
+fecha, el nombre en `detalle` y la dosis en `dosis`. No fija costo, ni días de
+retiro, ni cambia el grupo del animal.
 
 ## Alertas (Módulo 9)
 

@@ -274,8 +274,7 @@ void main() {
 
   group('compararIdentificadores', () {
     test('ordena por número, no como texto', () {
-      final ids = ['10', '2', '36', '1', '9']
-        ..sort(compararIdentificadores);
+      final ids = ['10', '2', '36', '1', '9']..sort(compararIdentificadores);
 
       expect(ids, ['1', '2', '9', '10', '36']);
     });
@@ -349,17 +348,20 @@ void main() {
       expect(ultimas.first.vacas, 1);
     });
 
-    test('observarUltimasSesiones cuenta en cero la pesa recién abierta', () async {
-      // Sin `leftOuterJoin` la sesión sin vacas desaparecería de la lista, y
-      // el gráfico del home se saltaría la semana en curso.
-      final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
+    test(
+      'observarUltimasSesiones cuenta en cero la pesa recién abierta',
+      () async {
+        // Sin `leftOuterJoin` la sesión sin vacas desaparecería de la lista, y
+        // el gráfico del home se saltaría la semana en curso.
+        final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
 
-      final ultimas = await repo.observarUltimasSesiones(lecheriaId).first;
+        final ultimas = await repo.observarUltimasSesiones(lecheriaId).first;
 
-      expect(ultimas.single.sesion.id, sesion.id);
-      expect(ultimas.single.vacas, 0);
-      expect(ultimas.single.litros, 0);
-    });
+        expect(ultimas.single.sesion.id, sesion.id);
+        expect(ultimas.single.vacas, 0);
+        expect(ultimas.single.litros, 0);
+      },
+    );
 
     test('avisa cuando se abre la pesa de una semana nueva', () async {
       // Mismo defecto que en finanzas: el stream de sesiones quedaba pausado
@@ -399,9 +401,11 @@ void main() {
 
     test('deja fuera las pesas borradas', () async {
       final sesion = await repo.abrirSesion(lecheriaId: lecheriaId);
-      await (db.update(db.pesasSesiones)
-            ..where((t) => t.id.equals(sesion.id)))
-          .write(PesasSesionesCompanion(deletedAt: Value(DateTime(2026, 3, 11))));
+      await (db.update(
+        db.pesasSesiones,
+      )..where((t) => t.id.equals(sesion.id))).write(
+        PesasSesionesCompanion(deletedAt: Value(DateTime(2026, 3, 11))),
+      );
 
       expect(await repo.observarSesiones(lecheriaId).first, isEmpty);
     });

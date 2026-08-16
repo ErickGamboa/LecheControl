@@ -48,7 +48,10 @@ class _AnalisisFinanzasScreenState extends State<AnalisisFinanzasScreen> {
 
           if (semanas.isEmpty) return const _SinSemanas();
 
-          final ingresos = semanas.fold<double>(0, (a, r) => a + r.totalIngresos);
+          final ingresos = semanas.fold<double>(
+            0,
+            (a, r) => a + r.totalIngresos,
+          );
           final gastos = semanas.fold<double>(0, (a, r) => a + r.totalGastos);
           final cronologicas = semanas.reversed.toList();
 
@@ -159,10 +162,7 @@ class _Dato extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            valor,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
+          Text(valor, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 2),
           Text(etiqueta, style: Theme.of(context).textTheme.bodySmall),
         ],

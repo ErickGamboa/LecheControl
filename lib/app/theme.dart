@@ -115,10 +115,7 @@ abstract final class LecheTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(LecheRadius.sm),
           ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(

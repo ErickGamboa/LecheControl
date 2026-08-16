@@ -5,9 +5,16 @@ import '../domain/grupos.dart';
 import '../local/database.dart';
 import 'medicamentos_repository.dart';
 
-/// Aplica medicamentos del catálogo a un animal (Módulo 7): calcula el costo,
-/// registra el evento en la hoja de vida y, si el medicamento tiene días de
-/// retiro, deja al animal "en retiro de leche" hasta la fecha calculada.
+/// Aplica medicamentos del catálogo a un animal (Módulo 7): deja el evento en
+/// la hoja de vida con el nombre del medicamento y su dosis.
+///
+/// Una misma aplicación puede llevar **varios medicamentos** —así se trabaja
+/// en el corral: se agarra la vaca una vez y se le pone todo— y por eso queda
+/// un evento por medicamento, con la misma fecha.
+///
+/// No pide ml aplicados ni calcula costos: la plata de los medicamentos se
+/// anota como gasto de la semana, y el animal no cambia de grupo por estar
+/// tratado.
 class SanidadRepository {
   SanidadRepository(this.db, {MedicamentosRepository? medicamentosRepository})
     : _medicamentos = medicamentosRepository ?? MedicamentosRepository(db);
@@ -16,74 +23,47 @@ class SanidadRepository {
   final MedicamentosRepository _medicamentos;
   final _uuid = const Uuid();
 
-  Future<void> aplicarMedicamento({
+  /// Registra la aplicación de uno o varios medicamentos a un animal.
+  Future<void> aplicarMedicamentos({
     required String animalId,
     required String lecheriaId,
-    required String medicamentoId,
-    double? mlAplicados,
+    required List<String> medicamentoIds,
     DateTime? fecha,
     String? registradoPor,
   }) async {
-    final medicamento = await _medicamentos.porId(medicamentoId);
-    if (medicamento == null) {
-      throw StateError('Medicamento no encontrado: $medicamentoId');
+    if (medicamentoIds.isEmpty) return;
+    final medicamentos = <MedicamentoRow>[];
+    for (final id in medicamentoIds) {
+      final medicamento = await _medicamentos.porId(id);
+      if (medicamento == null) {
+        throw StateError('Medicamento no encontrado: $id');
+      }
+      medicamentos.add(medicamento);
     }
-    final calculo = _medicamentos.calcularCosto(
-      medicamento,
-      mlAplicados: mlAplicados,
-    );
     final ahora = fecha ?? DateTime.now();
-    final retiroHasta = medicamento.diasRetiroLeche > 0
-        ? ahora.add(Duration(days: medicamento.diasRetiroLeche))
-        : null;
 
     await db.transaction(() async {
-      await db
-          .into(db.eventosAnimal)
-          .insert(
-            EventosAnimalCompanion.insert(
-              id: _uuid.v4(),
-              animalId: animalId,
-              lecheriaId: lecheriaId,
-              tipo: TipoEventoAnimal.sanidad,
-              fecha: ahora,
-              detalle: Value(medicamento.nombre),
-              medicamentoId: Value(medicamentoId),
-              dosis: Value(calculo.etiquetaDosis),
-              diasRetiro: Value(
-                medicamento.diasRetiroLeche > 0
-                    ? medicamento.diasRetiroLeche
-                    : null,
+      for (final medicamento in medicamentos) {
+        await db
+            .into(db.eventosAnimal)
+            .insert(
+              EventosAnimalCompanion.insert(
+                id: _uuid.v4(),
+                animalId: animalId,
+                lecheriaId: lecheriaId,
+                tipo: TipoEventoAnimal.sanidad,
+                fecha: ahora,
+                detalle: Value(medicamento.nombre),
+                medicamentoId: Value(medicamento.id),
+                dosis: Value(medicamento.dosisAplicacion),
+                registradoPor: Value(registradoPor),
+                createdAt: ahora,
+                updatedAt: ahora,
+                pendiente: const Value(true),
               ),
-              costo: Value(calculo.costo),
-              registradoPor: Value(registradoPor),
-              createdAt: ahora,
-              updatedAt: ahora,
-              pendiente: const Value(true),
-            ),
-          );
-      if (retiroHasta != null) {
-        await (db.update(
-          db.animales,
-        )..where((t) => t.id.equals(animalId))).write(
-          AnimalesCompanion(
-            retiroLecheHasta: Value(retiroHasta),
-            updatedAt: Value(ahora),
-            pendiente: const Value(true),
-          ),
-        );
+            );
       }
     });
-  }
-
-  /// True si el animal tiene retiro de leche vigente en [hoy] (o ahora).
-  Future<bool> estaEnRetiro(String animalId, {DateTime? hoy}) async {
-    final animal = await (db.select(
-      db.animales,
-    )..where((t) => t.id.equals(animalId))).getSingleOrNull();
-    final retiro = animal?.retiroLecheHasta;
-    if (retiro == null) return false;
-    return retiro.isAfter(hoy ?? DateTime.now());
   }
 
   Stream<List<EventoAnimalRow>> observarHistorial(String animalId) {

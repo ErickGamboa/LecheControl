@@ -2,7 +2,9 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../domain/grupos.dart';
+import '../domain/semana.dart';
 import '../local/database.dart';
+import 'finanzas_repository.dart';
 
 /// Se lanza al intentar registrar un animal con un identificador que ya
 /// existe activo dentro de la misma lechería.
@@ -14,9 +16,13 @@ class AnimalDuplicadoException implements Exception {
 /// Acceso a animales (inventario). Lee y escribe en la base local; la
 /// sincronización con Supabase corre por separado (SyncService).
 class AnimalesRepository {
-  AnimalesRepository(this.db);
+  AnimalesRepository(this.db, {FinanzasRepository? finanzasRepository})
+    : _finanzas = finanzasRepository ?? FinanzasRepository(db);
 
   final AppDatabase db;
+
+  /// Para anotar sola la compra de un animal como gasto de la semana.
+  final FinanzasRepository _finanzas;
   final _uuid = const Uuid();
 
   /// Busca un animal (no borrado, cualquier estado) por su identificador
@@ -44,10 +50,16 @@ class AnimalesRepository {
 
   /// Stream reactivo con el inventario activo de la lechería, opcionalmente
   /// filtrado por grupo (Módulo 2).
+  ///
+  /// [soloProntas] deja solo las vacas a las que les falta poco para parir.
+  /// No es un grupo —la vaca sigue en Secas— sino un filtro sobre la fecha
+  /// probable de parto, así que se aplica en memoria y se puede combinar con
+  /// [grupo].
   Stream<List<AnimalRow>> observarInventario(
     String lecheriaId, {
     String? grupo,
     String? busqueda,
+    bool soloProntas = false,
   }) {
     final consulta = db.select(db.animales)
       ..where(
@@ -61,12 +73,29 @@ class AnimalesRepository {
       consulta.where((t) => t.grupo.equals(grupo));
     }
     return consulta.watch().map((animales) {
-      if (busqueda == null || busqueda.trim().isEmpty) return animales;
+      var lista = animales;
+      if (soloProntas) {
+        lista = lista.where((a) => esPronta(a.fechaProbableParto)).toList();
+      }
+      if (busqueda == null || busqueda.trim().isEmpty) return lista;
       final termino = busqueda.trim().toLowerCase();
-      return animales
+      return lista
           .where((a) => a.identificador.toLowerCase().contains(termino))
           .toList();
     });
+  }
+
+  /// Cuántas vacas activas están prontas (les falta poco para parir).
+  Stream<int> observarConteoProntas(String lecheriaId) {
+    return (db.select(db.animales)..where(
+          (t) =>
+              t.lecheriaId.equals(lecheriaId) &
+              t.deletedAt.isNull() &
+              t.estado.equals(EstadoAnimal.activo) &
+              t.fechaProbableParto.isNotNull(),
+        ))
+        .watch()
+        .map((as) => as.where((a) => esPronta(a.fechaProbableParto)).length);
   }
 
   /// Stream con animales dados de baja (historial, Módulo 2).
@@ -133,6 +162,11 @@ class AnimalesRepository {
   /// al grupo En ordeño: sin ella no hay días de lactancia y la vaca queda
   /// fuera de la comparación contra la curva en el reporte de producción. De
   /// ahí en adelante la mantiene sola el evento de parto.
+  ///
+  /// Si el animal es **comprado** y trae precio, la app anota sola el gasto de
+  /// la semana de la compra (categoría "Compra de ganado", con el
+  /// identificador del animal en el detalle). El ganadero no tiene que ir a
+  /// Finanzas a repetir la plata que ya digitó acá.
   Future<String> altaAnimal({
     required String lecheriaId,
     required String identificador,
@@ -173,7 +207,41 @@ class AnimalesRepository {
             pendiente: const Value(true),
           ),
         );
+
+    if (origen == OrigenAnimal.comprado &&
+        precioCompra != null &&
+        precioCompra > 0) {
+      await _anotarGastoDeCompra(
+        lecheriaId: lecheriaId,
+        identificador: identificador,
+        precioCompra: precioCompra,
+        fechaCompra: fechaCompra ?? ahora,
+      );
+    }
     return id;
+  }
+
+  /// Mete la compra del animal como un gasto más de la semana en la que se
+  /// compró. Va aparte del alta (fuera de su transacción) a propósito: si algo
+  /// falla anotando la plata, el animal igual queda registrado, que es lo que
+  /// el ganadero está viendo en pantalla.
+  Future<void> _anotarGastoDeCompra({
+    required String lecheriaId,
+    required String identificador,
+    required double precioCompra,
+    required DateTime fechaCompra,
+  }) async {
+    final semana = await _finanzas.abrirSemana(
+      lecheriaId: lecheriaId,
+      fecha: fechaCompra,
+    );
+    await _finanzas.agregarGasto(
+      lecheriaId: lecheriaId,
+      semanaId: semana.id,
+      categoria: CategoriaGasto.compraGanado,
+      monto: precioCompra,
+      detalle: identificador,
+    );
   }
 
   /// Corrige a mano la fecha del último parto. Sirve para cargar de una vez

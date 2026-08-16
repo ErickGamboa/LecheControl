@@ -16,7 +16,7 @@
 - **Identificador único por animal:** un solo número por animal. Puede llegar por el **lector RFID** o **escribirse manualmente** en el mismo campo (es el mismo dato). No manejamos número visual aparte por ahora.
 - **Nada se borra:** el animal que se vende, muere o se descarta no se elimina; pasa a **historial** (trazabilidad).
 - **Todo alimenta la Hoja de Vida:** cada acción (pesa de leche, sanidad, palpación, preñez, secado, parto, cambio de grupo, baja) queda registrada en la hoja de vida del animal con su fecha.
-- **Estados del hato:** cada animal vive en un **grupo por estado** (En ordeño, Secas, Novillas/Vaquillas, Terneros, En tratamiento). El estado se usa para filtrar y para **repartir costos** (los costos fijos se dividen entre las vacas en ordeño).
+- **Estados del hato:** cada animal vive en un **grupo por estado** (En ordeño, Secas, Novillas/Vaquillas, Terneros). El estado se usa para filtrar y para **repartir costos** (los costos fijos se dividen entre las vacas en ordeño). Aparte del grupo está **Pronta**: la vaca a la que le faltan 21 días o menos para parir. No es un grupo — la vaca **sigue en Secas** — sino un aviso que sale de la fecha probable de parto.
 
 ---
 
@@ -44,13 +44,13 @@ Se pide solo lo mínimo, la mayoría por toque:
 - **Sexo** (Hembra / Macho).
 - **Grupo/estado** al que entra (En ordeño, Secas, Novillas, Terneros).
 - **Origen:**
-  - **Comprado** → **precio de compra** y **fecha**.
+  - **Comprado** → **precio de compra** y **fecha**. El precio se anota solo como **gasto de la semana de la compra** (categoría "Compra de ganado", con el identificador del animal en el detalle). El ganadero no lo digita dos veces.
   - **Nacido en la finca** → sin precio de compra (o costo aparte si se define después); si viene de un parto registrado, queda **vinculado a su madre**.
 
 ### Eventos que se registran por animal (botones grandes)
 Cada evento queda en la **hoja de vida** con su fecha. Eventos disponibles:
 
-- **Sanidad** 🚑 — aplicar uno o varios medicamentos al animal. Registra: medicamento, dosis, **días de retiro (leche)** y **costo**. Al aplicar un medicamento con retiro, el animal queda **"en retiro de leche"** hasta una fecha calculada (fecha aplicación + días de retiro): durante ese tiempo **su leche no se cuenta como ingreso** (leche de descarte). *(Ver Módulo 7 — Sanidad.)*
+- **Sanidad** 🚑 — aplicar **uno o varios** medicamentos al animal de una sola vez (se marcan los que se le van a poner). Registra medicamento y su dosis en la hoja de vida. **No pide ml aplicados** ni cobra nada: la plata de los medicamentos se anota como gasto de la semana, y el animal **no cambia de grupo** por estar tratado. *(Ver Módulo 7 — Sanidad.)*
 - **Celo / Monta / Inseminación** — fecha del servicio y, si aplica, **toro / pajilla** usada.
 - **Palpación / Diagnóstico** — resultado **Preñada / Vacía** (con fecha probable de parto si está preñada), o resultado de ultrasonido.
 - **Secado** — marca la vaca como **seca** (deja de ordeñarse) y la pasa al grupo **Secas** con su fecha.
@@ -137,7 +137,9 @@ Cada semana el ganadero anota **la plata que efectivamente entró**:
 > Esto reemplaza la decisión vieja de calcular el ingreso como `litros × precio`. Ya no se digita un precio del litro: **sale de dividir lo que pagaron entre los litros que pagaron**, así que es el precio real de esa semana.
 
 ### Gastos
-Se anota cada salida con su **categoría** (salario del peón, concentrado, medicamentos, cerca, combustible, transporte…). Las categorías son botones; si el ganadero escribe una nueva, queda guardada para la próxima.
+Se anota cada salida con su **categoría**. Los botones son cinco, siempre los mismos: **Salarios, Luz, Concentrado, Medicamentos, Combustible**. Para lo que no cae en ninguno (una cerca, un repuesto) se puede escribir la categoría a mano.
+
+**Compra de ganado** no está entre los botones a propósito: la anota sola la app cuando se registra un animal comprado con su precio (ver Módulo 2).
 
 ### Utilidad de la semana
 `Σ ingresos − Σ gastos`. Puede ser negativa, y se muestra igual.
@@ -179,15 +181,14 @@ Muestra, ordenado por fecha, todo lo del animal:
 
 El usuario registra **una vez** los medicamentos que usa y tiene en la finca; luego aparecen para aplicarlos rápido desde la Pantalla de Trabajo.
 
-Cada medicamento tiene:
+Cada medicamento tiene **tres datos, nada más**:
 - **Nombre** (ej.: Oxitetraciclina).
-- **Costo del envase** y **rendimiento del envase** (ml del envase, o número de aplicaciones que rinde).
-- **Días de retiro (leche)** — cuántos días la leche no se puede vender tras aplicarlo.
-- **Tipo / dosis** — **fija** (ej. 5 ml siempre) o **por aplicación** (ej. spray = 1 aplicación). **No se dosifica por peso corporal**, así que **no se captura el peso de la vaca**.
+- **Dosis de aplicación** — texto libre, tal como viene en la etiqueta del frasco (ej.: "10 ml cada 50 kilos"). Puede quedar vacía.
+- **Ml del envase**.
 
-**Costo por uso (suma a los costos del período):**
-- Líquidos (dosis fija): `costo del envase ÷ ml del envase × ml aplicados`.
-- Por aplicación: `costo del envase ÷ aplicaciones que rinde`.
+**Al aplicar:** se marcan **todos** los medicamentos que se le van a poner al animal y se confirma. La app **no pide ml aplicados**; solo muestra el nombre y la dosis para que el que aplica la lea. Queda un evento de sanidad por medicamento en la hoja de vida.
+
+**Costo:** no se calcula por aplicación. Lo que se gastó en medicamentos se anota como gasto semanal en la categoría "Medicamentos" (Módulo 4-5).
 
 ---
 
@@ -254,11 +255,11 @@ Estas decisiones ya están tomadas y se reflejan en los módulos de arriba:
 
 1. **Precio de la leche:** **único por período** (un solo precio del litro para todo el hato en el mes). *(No se maneja precio por comprador/planta por ahora.)*
 2. **Ingresos:** **solo calculados** (`litros × precio`). No se registran facturas ni pagos reales de la planta. *(Se puede agregar más adelante si hace falta cuadrar.)*
-3. **Retiro de leche:** durante el retiro, la leche de esa vaca **se descarta y NO cuenta como ingreso**. *(La vaca se puede seguir pesando, pero esos litros no suman a la utilidad.)*
-4. **Sanidad — dosis:** **fija o por aplicación**. **No** se calcula dosis por peso corporal; por lo tanto **no** se captura peso del cuerpo de la vaca.
+3. **Retiro de leche:** el medicamento **ya no lleva días de retiro**, así que la app no marca ni calcula retiros. *(Decisión vieja: la leche en retiro se descartaba del ingreso.)*
+4. **Sanidad — dosis:** **texto libre**, como dice la etiqueta ("10 ml cada 50 kilos"). La app **no** pide ml aplicados ni calcula dosis ni costos por aplicación.
 5. **Período de costos:** **mes calendario** (del 1 al fin de mes).
 6. **Concentrado:** **kg/día por vaca, manual y editable**. La app **no** sugiere la cantidad; la digita el ganadero.
-7. **Grupos/estados del hato:** **En ordeño, Secas, Novillas/Vaquillas, Terneros** y **En tratamiento** (vacas en retiro/tratamiento sanitario). *(Sin grupos libres ni grupo de toros por ahora.)*
+7. **Grupos/estados del hato:** **En ordeño, Secas, Novillas/Vaquillas, Terneros**. *(Sin grupos libres ni grupo de toros por ahora.)* "En tratamiento" **ya no existe**: aplicar un medicamento no saca a la vaca de su grupo. **Pronta** tampoco es un grupo: se deduce de la fecha probable de parto y la vaca sigue en Secas.
 8. **Alertas reproductivas:** **sí** se incluyen (ver Módulo 9). Ej.: vaca próxima a secar/parir, vaca vacía hace mucho, celo esperado, fin de retiro de leche.
 
 ### Pendiente por definir

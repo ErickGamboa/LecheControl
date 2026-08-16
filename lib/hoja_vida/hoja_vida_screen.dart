@@ -83,9 +83,7 @@ class _EncabezadoAnimal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final enRetiro =
-        animal.retiroLecheHasta != null &&
-        animal.retiroLecheHasta!.isAfter(DateTime.now());
+    final pronta = esPronta(animal.fechaProbableParto);
     final dlac = diasLactancia(animal.fechaUltimoParto);
     final esVacaDeOrdeno =
         animal.sexo == Sexo.hembra && animal.grupo == GrupoAnimal.enOrdeno;
@@ -124,14 +122,18 @@ class _EncabezadoAnimal extends StatelessWidget {
             ),
           if (animal.fechaProbableParto != null)
             Chip(
+              // La vaca pronta no cambia de grupo, así que el aviso va acá:
+              // es lo que hay que saber cuando se la tiene enfrente.
+              backgroundColor: pronta
+                  ? theme.colorScheme.tertiaryContainer
+                  : null,
               avatar: const Icon(Icons.child_friendly_outlined, size: 18),
-              label: Text(_fmt(animal.fechaProbableParto!)),
-            ),
-          if (enRetiro)
-            Chip(
-              backgroundColor: theme.colorScheme.errorContainer,
-              avatar: const Icon(Icons.warning_amber, size: 18),
-              label: Text('Retiro hasta ${_fmt(animal.retiroLecheHasta!)}'),
+              label: Text(
+                pronta
+                    ? '${etiquetaPronta(animal.fechaProbableParto)} '
+                          '(${_fmt(animal.fechaProbableParto!)})'
+                    : 'Parto: ${_fmt(animal.fechaProbableParto!)}',
+              ),
             ),
         ],
       ),

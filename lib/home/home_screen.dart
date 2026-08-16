@@ -187,9 +187,7 @@ class HomeScreen extends StatelessWidget {
                     // y el nombre, y lo que se les recorta de alto es lo que
                     // gana el gráfico, que sí tiene qué mostrar ahí.
                     childAspectRatio: 1.3,
-                    children: [
-                      for (final m in modulos) _ModuloCard(modulo: m),
-                    ],
+                    children: [for (final m in modulos) _ModuloCard(modulo: m)],
                   ),
                 ],
               ),

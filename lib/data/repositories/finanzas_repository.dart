@@ -159,14 +159,16 @@ class FinanzasRepository {
             .get();
     if (semanas.isEmpty) return const [];
 
-    final ingresos = await (db.select(db.ingresosSemana)..where(
-          (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
-        ))
-        .get();
-    final gastos = await (db.select(db.gastosSemana)..where(
-          (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
-        ))
-        .get();
+    final ingresos =
+        await (db.select(db.ingresosSemana)..where(
+              (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+            ))
+            .get();
+    final gastos =
+        await (db.select(db.gastosSemana)..where(
+              (t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull(),
+            ))
+            .get();
 
     final ingresosPorSemana = <String, List<IngresoSemanaRow>>{};
     for (final i in ingresos) {

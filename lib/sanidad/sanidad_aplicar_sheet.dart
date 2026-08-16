@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../app/widgets/quick_number_field.dart';
-import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../services.dart';
+import 'sanidad_screen.dart';
 
-/// Hoja para aplicar un medicamento del catálogo a un animal (Módulo 7):
-/// elegir medicamento, indicar ml si es de dosis fija, y confirmar. Calcula
-/// el costo y, si corresponde, deja al animal en retiro de leche.
+/// Hoja para aplicar medicamentos del catálogo a un animal (Módulo 7).
+///
+/// Se pueden marcar **varios**: en el corral la vaca se agarra una sola vez y
+/// se le pone todo lo que lleva. No pide ml aplicados; solo muestra el nombre
+/// y la dosis tal como se anotó en el catálogo ("10 ml cada 50 kilos"), que es
+/// lo que el que aplica necesita leer.
 class SanidadAplicarSheet extends StatefulWidget {
   const SanidadAplicarSheet({
     super.key,
@@ -25,31 +27,19 @@ class SanidadAplicarSheet extends StatefulWidget {
 }
 
 class _SanidadAplicarSheetState extends State<SanidadAplicarSheet> {
-  MedicamentoRow? _seleccionado;
-  final _mlCtrl = TextEditingController();
+  final _seleccionados = <String>{};
   bool _guardando = false;
 
-  @override
-  void dispose() {
-    _mlCtrl.dispose();
-    super.dispose();
-  }
-
   Future<void> _aplicar() async {
-    final medicamento = _seleccionado;
-    if (medicamento == null) return;
+    if (_seleccionados.isEmpty) return;
     setState(() => _guardando = true);
-    final ml = medicamento.tipoDosis == TipoDosisMedicamento.fija
-        ? double.tryParse(_mlCtrl.text.replaceAll(',', '.')) ??
-              medicamento.dosisFijaMl
-        : null;
-    await sanidadRepo.aplicarMedicamento(
+    await sanidadRepo.aplicarMedicamentos(
       animalId: widget.animalId,
       lecheriaId: widget.lecheriaId,
-      medicamentoId: medicamento.id,
-      mlAplicados: ml,
+      medicamentoIds: _seleccionados.toList(),
       registradoPor: widget.usuarioId,
     );
+    sincronizarSiSePuede();
     if (mounted) Navigator.pop(context);
   }
 
@@ -66,7 +56,7 @@ class _SanidadAplicarSheetState extends State<SanidadAplicarSheet> {
       child: StreamBuilder<List<MedicamentoRow>>(
         stream: medicamentosRepo.observarMedicamentos(widget.lecheriaId),
         builder: (context, snapshot) {
-          final medicamentos = snapshot.data ?? const [];
+          final medicamentos = snapshot.data ?? const <MedicamentoRow>[];
           if (medicamentos.isEmpty) {
             return SizedBox(
               height: 200,
@@ -96,32 +86,31 @@ class _SanidadAplicarSheetState extends State<SanidadAplicarSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Aplicar medicamento', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 12),
+                Text('Aplicar medicamentos', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text(
+                  'Marcá todos los que le vas a poner.',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
                 for (final m in medicamentos)
-                  RadioListTile<MedicamentoRow>(
-                    value: m,
-                    groupValue: _seleccionado,
-                    onChanged: (v) => setState(() => _seleccionado = v),
+                  CheckboxListTile(
+                    key: ValueKey('sanidad.aplicar.${m.id}'),
+                    value: _seleccionados.contains(m.id),
+                    onChanged: (marcado) => setState(() {
+                      if (marcado == true) {
+                        _seleccionados.add(m.id);
+                      } else {
+                        _seleccionados.remove(m.id);
+                      }
+                    }),
                     title: Text(m.nombre),
-                    subtitle: Text(
-                      m.tipoDosis == TipoDosisMedicamento.fija
-                          ? 'Dosis fija · ${m.dosisFijaMl?.toStringAsFixed(1) ?? '-'} ml'
-                          : 'Por aplicación'
-                                '${m.diasRetiroLeche > 0 ? ' · ${m.diasRetiroLeche} días de retiro' : ''}',
-                    ),
+                    subtitle: Text(descripcionMedicamento(m)),
                   ),
-                if (_seleccionado?.tipoDosis == TipoDosisMedicamento.fija) ...[
-                  const SizedBox(height: 8),
-                  QuickNumberField(
-                    controller: _mlCtrl,
-                    labelText: 'Ml aplicados',
-                    suffixText: 'ml',
-                  ),
-                ],
                 const SizedBox(height: 20),
                 FilledButton(
-                  onPressed: (_seleccionado == null || _guardando)
+                  key: const ValueKey('sanidad.aplicar.confirmar'),
+                  onPressed: (_seleccionados.isEmpty || _guardando)
                       ? null
                       : _aplicar,
                   style: FilledButton.styleFrom(
@@ -133,7 +122,11 @@ class _SanidadAplicarSheetState extends State<SanidadAplicarSheet> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Aplicar'),
+                      : Text(
+                          _seleccionados.length <= 1
+                              ? 'Aplicar'
+                              : 'Aplicar ${_seleccionados.length}',
+                        ),
                 ),
               ],
             ),

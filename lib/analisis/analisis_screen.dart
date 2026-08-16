@@ -120,10 +120,7 @@ class _OpcionAnalisis extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      detalle,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text(detalle, style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
               ),

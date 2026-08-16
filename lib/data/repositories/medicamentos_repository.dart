@@ -1,18 +1,15 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
-import '../domain/grupos.dart';
 import '../local/database.dart';
 
-/// Resultado de calcular el costo/etiqueta de una aplicación de medicamento.
-class CalculoDosis {
-  const CalculoDosis({required this.costo, required this.etiquetaDosis});
-  final double costo;
-  final String etiquetaDosis;
-}
-
 /// Catálogo de medicamentos de la lechería (Módulo 7). El usuario los registra
-/// una vez y luego los aplica rápido desde la Pantalla de Trabajo.
+/// una vez —nombre, dosis y ml del envase— y luego los aplica rápido desde la
+/// Pantalla de Trabajo.
+///
+/// La dosis es texto libre ("10 ml cada 50 kilos") porque así viene en la
+/// etiqueta del frasco. La app no pide ml aplicados ni calcula costo por
+/// aplicación: la plata de los medicamentos se anota como gasto de la semana.
 class MedicamentosRepository {
   MedicamentosRepository(this.db);
 
@@ -42,12 +39,8 @@ class MedicamentosRepository {
   Future<String> crearMedicamento({
     required String lecheriaId,
     required String nombre,
-    required double costoEnvase,
-    required String tipoDosis,
+    String? dosisAplicacion,
     double? mlEnvase,
-    double? aplicacionesEnvase,
-    double? dosisFijaMl,
-    int diasRetiroLeche = 0,
   }) async {
     final ahora = DateTime.now();
     final id = _uuid.v4();
@@ -58,12 +51,8 @@ class MedicamentosRepository {
             id: id,
             lecheriaId: lecheriaId,
             nombre: nombre.trim(),
-            costoEnvase: costoEnvase,
-            tipoDosis: tipoDosis,
+            dosisAplicacion: Value(_limpio(dosisAplicacion)),
             mlEnvase: Value(mlEnvase),
-            aplicacionesEnvase: Value(aplicacionesEnvase),
-            dosisFijaMl: Value(dosisFijaMl),
-            diasRetiroLeche: Value(diasRetiroLeche),
             createdAt: ahora,
             updatedAt: ahora,
             pendiente: const Value(true),
@@ -75,24 +64,16 @@ class MedicamentosRepository {
   Future<void> editarMedicamento({
     required String medicamentoId,
     required String nombre,
-    required double costoEnvase,
-    required String tipoDosis,
+    String? dosisAplicacion,
     double? mlEnvase,
-    double? aplicacionesEnvase,
-    double? dosisFijaMl,
-    int diasRetiroLeche = 0,
   }) async {
     await (db.update(
       db.medicamentos,
     )..where((t) => t.id.equals(medicamentoId))).write(
       MedicamentosCompanion(
         nombre: Value(nombre.trim()),
-        costoEnvase: Value(costoEnvase),
-        tipoDosis: Value(tipoDosis),
+        dosisAplicacion: Value(_limpio(dosisAplicacion)),
         mlEnvase: Value(mlEnvase),
-        aplicacionesEnvase: Value(aplicacionesEnvase),
-        dosisFijaMl: Value(dosisFijaMl),
-        diasRetiroLeche: Value(diasRetiroLeche),
         updatedAt: Value(DateTime.now()),
         pendiente: const Value(true),
       ),
@@ -111,25 +92,8 @@ class MedicamentosRepository {
     );
   }
 
-  /// Costo por uso (Módulo 7):
-  /// - Líquidos (dosis fija): costo del envase ÷ ml del envase × ml aplicados.
-  /// - Por aplicación: costo del envase ÷ aplicaciones que rinde.
-  CalculoDosis calcularCosto(MedicamentoRow m, {double? mlAplicados}) {
-    if (m.tipoDosis == TipoDosisMedicamento.porAplicacion) {
-      final aplicaciones = m.aplicacionesEnvase ?? 1;
-      final costo = aplicaciones > 0
-          ? m.costoEnvase / aplicaciones
-          : m.costoEnvase;
-      return CalculoDosis(costo: costo, etiquetaDosis: '1 aplicación');
-    }
-    final ml = mlAplicados ?? m.dosisFijaMl ?? 0;
-    final mlEnvase = m.mlEnvase ?? 0;
-    final costo = mlEnvase > 0
-        ? (m.costoEnvase / mlEnvase) * ml
-        : m.costoEnvase;
-    return CalculoDosis(
-      costo: costo,
-      etiquetaDosis: '${ml.toStringAsFixed(1)} ml',
-    );
+  String? _limpio(String? texto) {
+    final limpio = texto?.trim();
+    return limpio == null || limpio.isEmpty ? null : limpio;
   }
 }

@@ -114,10 +114,7 @@ class _Totales extends StatelessWidget {
         padding: const EdgeInsets.all(LecheSpacing.lg),
         child: Row(
           children: [
-            _Dato(
-              etiqueta: 'Semanas',
-              valor: '$semanas',
-            ),
+            _Dato(etiqueta: 'Semanas', valor: '$semanas'),
             _Dato(
               etiqueta: 'Litros en total',
               valor: litrosTotales.toStringAsFixed(0),
@@ -244,9 +241,7 @@ class _Variacion extends StatelessWidget {
         ),
         Text(
           '${subio ? '+' : ''}${diferencia.toStringAsFixed(0)} L',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: color),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
         ),
       ],
     );

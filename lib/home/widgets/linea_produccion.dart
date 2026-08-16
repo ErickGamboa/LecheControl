@@ -91,7 +91,8 @@ List<double> ticksDeEje(double minimo, double maximo) {
 /// El número redondo más cercano a [bruto] de la familia 1-2-5-10.
 double _pasoLindo(double bruto) {
   if (bruto <= 0) return 1;
-  final magnitud = math.pow(10, (math.log(bruto) / math.ln10).floor())
+  final magnitud = math
+      .pow(10, (math.log(bruto) / math.ln10).floor())
       .toDouble();
   final normalizado = bruto / magnitud;
   final multiplo = normalizado <= 1
@@ -112,11 +113,7 @@ double _pasoLindo(double bruto) {
 /// usado exagera la pendiente, y por eso al lado va el número: la forma dice
 /// para dónde va, el número dice cuánto.
 class LineaProduccion extends StatelessWidget {
-  const LineaProduccion({
-    super.key,
-    required this.puntos,
-    this.onTap,
-  });
+  const LineaProduccion({super.key, required this.puntos, this.onTap});
 
   final List<PuntoProduccion> puntos;
   final VoidCallback? onTap;
@@ -134,7 +131,10 @@ class LineaProduccion extends StatelessWidget {
   /// null mientras la pesa siga abierta: comparar una semana a medias contra
   /// una completa siempre da una caída, y esa caída no existe.
   double? get _variacion {
-    final conDato = [for (final p in puntos) if (p.litros != null) p];
+    final conDato = [
+      for (final p in puntos)
+        if (p.litros != null) p,
+    ];
     if (conDato.length < 2 || conDato.last.enCurso) return null;
     return conDato.last.litros! - conDato[conDato.length - 2].litros!;
   }
@@ -147,9 +147,7 @@ class LineaProduccion extends StatelessWidget {
     // Mismo gris y mismo tamaño para las fechas de abajo y los litros del
     // eje: son la misma clase de dato, la regla contra la que se lee.
     final estiloEje =
-        theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.outline,
-        ) ??
+        theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline) ??
         const TextStyle(fontSize: 12);
 
     return Card(
@@ -215,7 +213,8 @@ class LineaProduccion extends StatelessWidget {
                           // El punto de la pesa en curso va hueco: se pinta
                           // el fondo de la tarjeta adentro del círculo.
                           fondo:
-                              theme.cardTheme.color ?? theme.colorScheme.surface,
+                              theme.cardTheme.color ??
+                              theme.colorScheme.surface,
                           lineaGuia: theme.colorScheme.outlineVariant
                               .withValues(alpha: 0.5),
                           estiloEje: estiloEje,
@@ -265,9 +264,7 @@ class _Variacion extends StatelessWidget {
         : (subio ? kExito : kPeligro);
 
     return Text(
-      estable
-          ? 'estable'
-          : '${subio ? '+' : ''}${litros.toStringAsFixed(0)} L',
+      estable ? 'estable' : '${subio ? '+' : ''}${litros.toStringAsFixed(0)} L',
       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
     );
   }
@@ -410,10 +407,7 @@ class _PinturaLinea extends CustomPainter {
       // como una columna y no como números sueltos.
       texto.paint(
         canvas,
-        Offset(
-          anchoEje - _respiroEje - texto.width,
-          altura - texto.height / 2,
-        ),
+        Offset(anchoEje - _respiroEje - texto.width, altura - texto.height / 2),
       );
     }
   }
@@ -444,7 +438,9 @@ class _PinturaLinea extends CustomPainter {
     for (var i = 0; i < puntos.length; i++) {
       final a = anterior.puntos[i];
       final b = puntos[i];
-      if (a.litros != b.litros || a.enCurso != b.enCurso || a.lunes != b.lunes) {
+      if (a.litros != b.litros ||
+          a.enCurso != b.enCurso ||
+          a.lunes != b.lunes) {
         return true;
       }
     }
