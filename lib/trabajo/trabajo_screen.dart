@@ -330,8 +330,8 @@ class _TarjetaAnimal extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.child_friendly_outlined,
+                            ImageIcon(
+                              const AssetImage('assets/icono_parto.png'),
                               size: 16,
                               color: theme.colorScheme.onTertiaryContainer,
                             ),
@@ -358,7 +358,7 @@ class _TarjetaAnimal extends StatelessWidget {
           _GrillaEventos(
             botones: [
               _BotonEvento(
-                icono: Icons.medical_services_outlined,
+                icono: const Icon(Icons.medical_services_outlined),
                 etiqueta: 'Sanidad',
                 onTap: () async {
                   await showModalBottomSheet(
@@ -374,34 +374,36 @@ class _TarjetaAnimal extends StatelessWidget {
                 },
               ),
               _BotonEvento(
-                icono: Icons.favorite_outline,
+                icono: const Icon(Icons.favorite_outline),
                 etiqueta: 'Celo / Monta / Insem.',
                 onTap: () => _servicioDialog(context),
               ),
               _BotonEvento(
-                icono: Icons.fact_check_outlined,
+                icono: const Icon(Icons.fact_check_outlined),
                 etiqueta: 'Palpación',
                 onTap: () => _palpacionDialog(context),
               ),
               if (animal.grupo == GrupoAnimal.enOrdeno)
                 _BotonEvento(
-                  icono: Icons.pause_circle_outline,
+                  icono: const Icon(Icons.pause_circle_outline),
                   etiqueta: 'Secado',
                   onTap: () => _secadoDialog(context),
                 ),
               if (animal.estadoReproductivo == EstadoReproductivo.preniada)
                 _BotonEvento(
-                  icono: Icons.child_friendly_outlined,
+                  icono: const ImageIcon(
+                    AssetImage('assets/icono_parto.png'),
+                  ),
                   etiqueta: 'Parto',
                   onTap: () => _partoDialog(context),
                 ),
               _BotonEvento(
-                icono: Icons.swap_horiz,
+                icono: const Icon(Icons.swap_horiz),
                 etiqueta: 'Cambiar de grupo',
                 onTap: () => _cambiarGrupoDialog(context),
               ),
               _BotonEvento(
-                icono: Icons.remove_circle_outline,
+                icono: const Icon(Icons.remove_circle_outline),
                 etiqueta: 'Dar de baja',
                 onTap: () => _bajaDialog(context),
               ),
@@ -757,7 +759,10 @@ class _BotonEvento extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icono;
+  /// Widget y no `IconData`: Parto usa un PNG propio en vez de un ícono de
+  /// Material. Va como `ImageIcon` para que herede el color y el tamaño del
+  /// botón igual que los demás.
+  final Widget icono;
   final String etiqueta;
   final VoidCallback onTap;
 
@@ -765,10 +770,10 @@ class _BotonEvento extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilledButton.tonalIcon(
       onPressed: onTap,
-      icon: Icon(icono),
+      icon: icono,
       label: Text(etiqueta, textAlign: TextAlign.center),
       style: FilledButton.styleFrom(
-        alignment: Alignment.centerLeft,
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 12),
       ),
     );

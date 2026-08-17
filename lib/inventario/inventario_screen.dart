@@ -139,7 +139,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
                   ),
                 ChoiceChip(
                   key: const ValueKey('inventario.filtro.prontas'),
-                  avatar: const Icon(Icons.child_friendly_outlined, size: 18),
                   label: const Text('Prontas'),
                   selected: _soloProntas,
                   onSelected: (v) => setState(() => _soloProntas = v),
