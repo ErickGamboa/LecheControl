@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'curva_screen.dart';
+import 'dieta_screen.dart';
 import 'tope_kg_screen.dart';
 
 /// Menú de ajustes de métricas de la lechería.
 ///
 /// Antes el botón de la barra del home entraba directo a la curva de
 /// referencia. Ahora hay más de una cosa que calibrar, así que primero se
-/// elige qué: de acá salen la curva y el tope de kilos.
+/// elige qué: de acá salen la curva, el tope de kilos y la dieta.
 class AjustesScreen extends StatelessWidget {
   const AjustesScreen({super.key, required this.lecheriaId});
 
@@ -39,6 +40,15 @@ class AjustesScreen extends StatelessWidget {
                   'Cuántos kilos de leche puede entregar la finca por semana. '
                   'Si se pasa, la app avisa al anotar el ingreso.',
               destino: TopeKgScreen(lecheriaId: lecheriaId),
+            ),
+            _Opcion(
+              clave: 'ajustes.dieta',
+              icono: Icons.grass_outlined,
+              titulo: 'Ajuste de dieta de concentrado',
+              detalle:
+                  'Cuántos kilos de leche pagan un kilo de concentrado. Es '
+                  'con lo que se saca la ración de cada vaca.',
+              destino: DietaScreen(lecheriaId: lecheriaId),
             ),
           ],
         ),

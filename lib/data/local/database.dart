@@ -281,6 +281,11 @@ class ConfigReporte extends Table {
   /// Tope de kilos de leche que la finca espera entregar en una semana.
   /// `null` mientras no se configure: sin tope no hay alerta que dar.
   RealColumn get topeKgLeche => real().nullable()();
+
+  /// Cuántos kilos de leche "pagan" un kilo de concentrado: con 3, una vaca
+  /// que da 18 L come 6 kg. Es la regla de la finca y se edita en Ajustes.
+  RealColumn get kgLechePorKgConcentrado =>
+      real().withDefault(const Constant(3))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -479,7 +484,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -556,6 +561,11 @@ class AppDatabase extends _$AppDatabase {
         // Drift recrea la tabla copiando las filas. Sin esto, guardar una
         // observación falla.
         await m.alterTable(TableMigration(eventosAnimal));
+      }
+      // v6 -> v7: la dieta de concentrado. Cuántos kilos de leche pagan un
+      // kilo de concentrado; arranca en 3 para las lecherías que ya existen.
+      if (from < 7) {
+        await m.addColumn(configReporte, configReporte.kgLechePorKgConcentrado);
       }
     },
   );

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../domain/curva_lactancia.dart';
+import '../domain/dieta_concentrado.dart';
 import '../local/database.dart';
 
 /// La curva de referencia de lactancia y los umbrales del reporte de
@@ -129,6 +130,35 @@ class CurvaRepository {
     )..where((t) => t.id.equals(config.id))).write(
       ConfigReporteCompanion(
         topeKgLeche: Value(tope),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  /// Cuántos kilos de leche pagan un kilo de concentrado. Si la lechería no
+  /// tiene fila de config todavía, el valor por defecto (a diferencia del
+  /// tope, acá siempre hay una regla con la que calcular).
+  Future<double> kgLechePorKgConcentradoDe(String lecheriaId) async {
+    final config = await configDe(lecheriaId);
+    return config?.kgLechePorKgConcentrado ??
+        kgLechePorKgConcentradoPorDefecto;
+  }
+
+  Future<void> editarKgLechePorKgConcentrado({
+    required String lecheriaId,
+    required double kgLechePorKg,
+  }) async {
+    // Cero o negativo no es una proporción: no habría ración que calcular.
+    if (kgLechePorKg <= 0) return;
+    final config = await configDe(lecheriaId);
+    if (config == null) return;
+    final ahora = DateTime.now();
+    await (db.update(
+      db.configReporte,
+    )..where((t) => t.id.equals(config.id))).write(
+      ConfigReporteCompanion(
+        kgLechePorKgConcentrado: Value(kgLechePorKg),
         updatedAt: Value(ahora),
         pendiente: const Value(true),
       ),

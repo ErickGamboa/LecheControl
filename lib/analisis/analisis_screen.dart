@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import 'analisis_finanzas_screen.dart';
 import 'analisis_leche_screen.dart';
+import 'dieta_concentrado_screen.dart';
 
 /// Análisis (Módulo 6): mirar la finca **a lo largo del tiempo**, no la
 /// semana de hoy.
@@ -10,7 +11,8 @@ import 'analisis_leche_screen.dart';
 /// El resto de la app trabaja siempre sobre la semana en curso —se pesa esta
 /// semana, se anotan los gastos de esta semana—. Acá se abren todas: cómo
 /// viene la leche semana a semana y cómo vienen las utilidades. Son dos
-/// preguntas distintas, así que se elige cuál antes de entrar.
+/// preguntas distintas —y la dieta de concentrado es una tercera—, así que se
+/// elige cuál antes de entrar.
 class AnalisisScreen extends StatelessWidget {
   const AnalisisScreen({
     super.key,
@@ -64,6 +66,24 @@ class AnalisisScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) =>
                       AnalisisFinanzasScreen(lecheriaId: lecheriaId),
+                ),
+              ),
+            ),
+            const SizedBox(height: LecheSpacing.md),
+            _OpcionAnalisis(
+              valueKey: 'analisis.dieta',
+              icono: Icons.grass_outlined,
+              color: kVerdeLeche,
+              titulo: 'Dieta de concentrado',
+              detalle:
+                  'Cuánto concentrado le toca a cada vaca según su última '
+                  'pesa, y cuánto se le está dando.',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => DietaConcentradoScreen(
+                    lecheriaId: lecheriaId,
+                    nombreLecheria: nombreLecheria,
+                  ),
                 ),
               ),
             ),

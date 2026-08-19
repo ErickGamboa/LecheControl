@@ -6719,6 +6719,18 @@ class $ConfigReporteTable extends ConfigReporte
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _kgLechePorKgConcentradoMeta =
+      const VerificationMeta('kgLechePorKgConcentrado');
+  @override
+  late final GeneratedColumn<double> kgLechePorKgConcentrado =
+      GeneratedColumn<double>(
+        'kg_leche_por_kg_concentrado',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(3),
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -6777,6 +6789,7 @@ class $ConfigReporteTable extends ConfigReporte
     pctBajo,
     umbralSecadoLitros,
     topeKgLeche,
+    kgLechePorKgConcentrado,
     createdAt,
     updatedAt,
     deletedAt,
@@ -6852,6 +6865,15 @@ class $ConfigReporteTable extends ConfigReporte
         ),
       );
     }
+    if (data.containsKey('kg_leche_por_kg_concentrado')) {
+      context.handle(
+        _kgLechePorKgConcentradoMeta,
+        kgLechePorKgConcentrado.isAcceptableOrUnknown(
+          data['kg_leche_por_kg_concentrado']!,
+          _kgLechePorKgConcentradoMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -6921,6 +6943,10 @@ class $ConfigReporteTable extends ConfigReporte
         DriftSqlType.double,
         data['${effectivePrefix}tope_kg_leche'],
       ),
+      kgLechePorKgConcentrado: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}kg_leche_por_kg_concentrado'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -6959,6 +6985,10 @@ class ConfigReporteRow extends DataClass
   /// Tope de kilos de leche que la finca espera entregar en una semana.
   /// `null` mientras no se configure: sin tope no hay alerta que dar.
   final double? topeKgLeche;
+
+  /// Cuántos kilos de leche "pagan" un kilo de concentrado: con 3, una vaca
+  /// que da 18 L come 6 kg. Es la regla de la finca y se edita en Ajustes.
+  final double kgLechePorKgConcentrado;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -6972,6 +7002,7 @@ class ConfigReporteRow extends DataClass
     required this.pctBajo,
     required this.umbralSecadoLitros,
     this.topeKgLeche,
+    required this.kgLechePorKgConcentrado,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -6990,6 +7021,9 @@ class ConfigReporteRow extends DataClass
     if (!nullToAbsent || topeKgLeche != null) {
       map['tope_kg_leche'] = Variable<double>(topeKgLeche);
     }
+    map['kg_leche_por_kg_concentrado'] = Variable<double>(
+      kgLechePorKgConcentrado,
+    );
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -7011,6 +7045,7 @@ class ConfigReporteRow extends DataClass
       topeKgLeche: topeKgLeche == null && nullToAbsent
           ? const Value.absent()
           : Value(topeKgLeche),
+      kgLechePorKgConcentrado: Value(kgLechePorKgConcentrado),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -7036,6 +7071,9 @@ class ConfigReporteRow extends DataClass
         json['umbralSecadoLitros'],
       ),
       topeKgLeche: serializer.fromJson<double?>(json['topeKgLeche']),
+      kgLechePorKgConcentrado: serializer.fromJson<double>(
+        json['kgLechePorKgConcentrado'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -7054,6 +7092,9 @@ class ConfigReporteRow extends DataClass
       'pctBajo': serializer.toJson<double>(pctBajo),
       'umbralSecadoLitros': serializer.toJson<double>(umbralSecadoLitros),
       'topeKgLeche': serializer.toJson<double?>(topeKgLeche),
+      'kgLechePorKgConcentrado': serializer.toJson<double>(
+        kgLechePorKgConcentrado,
+      ),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -7070,6 +7111,7 @@ class ConfigReporteRow extends DataClass
     double? pctBajo,
     double? umbralSecadoLitros,
     Value<double?> topeKgLeche = const Value.absent(),
+    double? kgLechePorKgConcentrado,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -7083,6 +7125,8 @@ class ConfigReporteRow extends DataClass
     pctBajo: pctBajo ?? this.pctBajo,
     umbralSecadoLitros: umbralSecadoLitros ?? this.umbralSecadoLitros,
     topeKgLeche: topeKgLeche.present ? topeKgLeche.value : this.topeKgLeche,
+    kgLechePorKgConcentrado:
+        kgLechePorKgConcentrado ?? this.kgLechePorKgConcentrado,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -7108,6 +7152,9 @@ class ConfigReporteRow extends DataClass
       topeKgLeche: data.topeKgLeche.present
           ? data.topeKgLeche.value
           : this.topeKgLeche,
+      kgLechePorKgConcentrado: data.kgLechePorKgConcentrado.present
+          ? data.kgLechePorKgConcentrado.value
+          : this.kgLechePorKgConcentrado,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -7126,6 +7173,7 @@ class ConfigReporteRow extends DataClass
           ..write('pctBajo: $pctBajo, ')
           ..write('umbralSecadoLitros: $umbralSecadoLitros, ')
           ..write('topeKgLeche: $topeKgLeche, ')
+          ..write('kgLechePorKgConcentrado: $kgLechePorKgConcentrado, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -7144,6 +7192,7 @@ class ConfigReporteRow extends DataClass
     pctBajo,
     umbralSecadoLitros,
     topeKgLeche,
+    kgLechePorKgConcentrado,
     createdAt,
     updatedAt,
     deletedAt,
@@ -7161,6 +7210,7 @@ class ConfigReporteRow extends DataClass
           other.pctBajo == this.pctBajo &&
           other.umbralSecadoLitros == this.umbralSecadoLitros &&
           other.topeKgLeche == this.topeKgLeche &&
+          other.kgLechePorKgConcentrado == this.kgLechePorKgConcentrado &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -7176,6 +7226,7 @@ class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
   final Value<double> pctBajo;
   final Value<double> umbralSecadoLitros;
   final Value<double?> topeKgLeche;
+  final Value<double> kgLechePorKgConcentrado;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -7190,6 +7241,7 @@ class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
     this.pctBajo = const Value.absent(),
     this.umbralSecadoLitros = const Value.absent(),
     this.topeKgLeche = const Value.absent(),
+    this.kgLechePorKgConcentrado = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -7205,6 +7257,7 @@ class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
     this.pctBajo = const Value.absent(),
     this.umbralSecadoLitros = const Value.absent(),
     this.topeKgLeche = const Value.absent(),
+    this.kgLechePorKgConcentrado = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -7223,6 +7276,7 @@ class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
     Expression<double>? pctBajo,
     Expression<double>? umbralSecadoLitros,
     Expression<double>? topeKgLeche,
+    Expression<double>? kgLechePorKgConcentrado,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -7239,6 +7293,8 @@ class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
       if (umbralSecadoLitros != null)
         'umbral_secado_litros': umbralSecadoLitros,
       if (topeKgLeche != null) 'tope_kg_leche': topeKgLeche,
+      if (kgLechePorKgConcentrado != null)
+        'kg_leche_por_kg_concentrado': kgLechePorKgConcentrado,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -7256,6 +7312,7 @@ class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
     Value<double>? pctBajo,
     Value<double>? umbralSecadoLitros,
     Value<double?>? topeKgLeche,
+    Value<double>? kgLechePorKgConcentrado,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -7271,6 +7328,8 @@ class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
       pctBajo: pctBajo ?? this.pctBajo,
       umbralSecadoLitros: umbralSecadoLitros ?? this.umbralSecadoLitros,
       topeKgLeche: topeKgLeche ?? this.topeKgLeche,
+      kgLechePorKgConcentrado:
+          kgLechePorKgConcentrado ?? this.kgLechePorKgConcentrado,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -7306,6 +7365,11 @@ class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
     if (topeKgLeche.present) {
       map['tope_kg_leche'] = Variable<double>(topeKgLeche.value);
     }
+    if (kgLechePorKgConcentrado.present) {
+      map['kg_leche_por_kg_concentrado'] = Variable<double>(
+        kgLechePorKgConcentrado.value,
+      );
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -7335,6 +7399,7 @@ class ConfigReporteCompanion extends UpdateCompanion<ConfigReporteRow> {
           ..write('pctBajo: $pctBajo, ')
           ..write('umbralSecadoLitros: $umbralSecadoLitros, ')
           ..write('topeKgLeche: $topeKgLeche, ')
+          ..write('kgLechePorKgConcentrado: $kgLechePorKgConcentrado, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -14607,6 +14672,7 @@ typedef $$ConfigReporteTableCreateCompanionBuilder =
       Value<double> pctBajo,
       Value<double> umbralSecadoLitros,
       Value<double?> topeKgLeche,
+      Value<double> kgLechePorKgConcentrado,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -14623,6 +14689,7 @@ typedef $$ConfigReporteTableUpdateCompanionBuilder =
       Value<double> pctBajo,
       Value<double> umbralSecadoLitros,
       Value<double?> topeKgLeche,
+      Value<double> kgLechePorKgConcentrado,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -14676,6 +14743,11 @@ class $$ConfigReporteTableFilterComposer
 
   ColumnFilters<double> get topeKgLeche => $composableBuilder(
     column: $table.topeKgLeche,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get kgLechePorKgConcentrado => $composableBuilder(
+    column: $table.kgLechePorKgConcentrado,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14749,6 +14821,11 @@ class $$ConfigReporteTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get kgLechePorKgConcentrado => $composableBuilder(
+    column: $table.kgLechePorKgConcentrado,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -14813,6 +14890,11 @@ class $$ConfigReporteTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get kgLechePorKgConcentrado => $composableBuilder(
+    column: $table.kgLechePorKgConcentrado,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -14869,6 +14951,7 @@ class $$ConfigReporteTableTableManager
                 Value<double> pctBajo = const Value.absent(),
                 Value<double> umbralSecadoLitros = const Value.absent(),
                 Value<double?> topeKgLeche = const Value.absent(),
+                Value<double> kgLechePorKgConcentrado = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -14883,6 +14966,7 @@ class $$ConfigReporteTableTableManager
                 pctBajo: pctBajo,
                 umbralSecadoLitros: umbralSecadoLitros,
                 topeKgLeche: topeKgLeche,
+                kgLechePorKgConcentrado: kgLechePorKgConcentrado,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -14899,6 +14983,7 @@ class $$ConfigReporteTableTableManager
                 Value<double> pctBajo = const Value.absent(),
                 Value<double> umbralSecadoLitros = const Value.absent(),
                 Value<double?> topeKgLeche = const Value.absent(),
+                Value<double> kgLechePorKgConcentrado = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -14913,6 +14998,7 @@ class $$ConfigReporteTableTableManager
                 pctBajo: pctBajo,
                 umbralSecadoLitros: umbralSecadoLitros,
                 topeKgLeche: topeKgLeche,
+                kgLechePorKgConcentrado: kgLechePorKgConcentrado,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

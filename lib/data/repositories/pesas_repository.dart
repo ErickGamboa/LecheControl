@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../combinar_streams.dart';
 import '../domain/curva_lactancia.dart';
+import '../domain/dieta_concentrado.dart';
 import '../domain/grupos.dart';
 import '../domain/semana.dart';
 import '../local/database.dart';
@@ -494,6 +495,89 @@ class PesasRepository {
           )
           .toList(),
     );
+  }
+
+  /// Dieta de concentrado del hato: cuánto le toca a cada vaca según **su**
+  /// pesa más reciente, y cuánto se le está dando.
+  ///
+  /// Cada vaca sale con su último pesaje, no con el de la última sesión de la
+  /// finca: así la que no se pesó esta semana entra con la de la anterior en
+  /// vez de quedarse sin ración. Por eso cada fila lleva su fecha.
+  ///
+  /// Se traen todas las pesas de la lechería y se reduce en memoria. Con una
+  /// consulta por vaca serían tantos viajes a la base como animales; el hato
+  /// entero de una finca cabe de sobra en memoria.
+  Future<List<RacionVaca>> dietaConcentrado(
+    String lecheriaId, {
+    required double kgLechePorKg,
+  }) async {
+    final filas =
+        await (db.select(db.pesasLeche).join([
+              innerJoin(
+                db.pesasSesiones,
+                db.pesasSesiones.id.equalsExp(db.pesasLeche.sesionId),
+              ),
+              leftOuterJoin(
+                db.animales,
+                db.animales.id.equalsExp(db.pesasLeche.animalId),
+              ),
+            ])..where(
+              db.pesasSesiones.lecheriaId.equals(lecheriaId) &
+                  db.pesasSesiones.deletedAt.isNull() &
+                  db.pesasLeche.deletedAt.isNull(),
+            ))
+            .get();
+
+    // Una sola fila por vaca: la de la pesa con fecha más nueva.
+    final ultimaPorVaca = <String, TypedResult>{};
+    for (final fila in filas) {
+      final pesa = fila.readTable(db.pesasLeche);
+      final clave = pesa.animalId ?? 'manual:${pesa.identificadorManual}';
+      final guardada = ultimaPorVaca[clave];
+      if (guardada == null ||
+          fila
+              .readTable(db.pesasSesiones)
+              .fecha
+              .isAfter(guardada.readTable(db.pesasSesiones).fecha)) {
+        ultimaPorVaca[clave] = fila;
+      }
+    }
+
+    final raciones = <RacionVaca>[];
+    for (final fila in ultimaPorVaca.values) {
+      final pesa = fila.readTable(db.pesasLeche);
+      final animal = fila.readTableOrNull(db.animales);
+
+      // Una vaca seca, vendida o borrada ya no come concentrado de
+      // producción. Las manuales entran siempre: no tienen ficha que
+      // consultar, pero su leche es real.
+      if (animal != null &&
+          (animal.deletedAt != null ||
+              animal.estado != EstadoAnimal.activo ||
+              animal.grupo != GrupoAnimal.enOrdeno)) {
+        continue;
+      }
+
+      raciones.add(
+        RacionVaca(
+          identificador:
+              animal?.identificador ?? pesa.identificadorManual ?? 'sin id',
+          esManual: animal == null,
+          litrosLeche: pesa.litros,
+          fechaPesa: fila.readTable(db.pesasSesiones).fecha,
+          concentradoActualKg: pesa.concentradoKg,
+          racionKg: racionConcentrado(
+            litrosLeche: pesa.litros,
+            kgLechePorKg: kgLechePorKg,
+          ),
+        ),
+      );
+    }
+
+    raciones.sort(
+      (a, b) => compararIdentificadores(a.identificador, b.identificador),
+    );
+    return raciones;
   }
 
   /// Última producción registrada del animal (para la tarjeta de la Pantalla
