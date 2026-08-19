@@ -447,5 +447,92 @@ void main() {
 
       expect(await db.select(db.categoriasGasto).get(), hasLength(1));
     });
+
+    group('kgLecheDeSemana', () {
+      test('suma las entregas de leche de la semana', () async {
+        final semana = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          tipo: TipoIngreso.leche,
+          monto: 1200000,
+          litros: 3000,
+        );
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          tipo: TipoIngreso.leche,
+          monto: 1000000,
+          litros: 2500,
+        );
+
+        // Las dos tandas suman: el tope se mide contra el acumulado, que es
+        // lo que la planta castiga.
+        expect(await repo.kgLecheDeSemana(semana.id), 5500);
+      });
+
+      test('no cuenta los ingresos que no son de leche', () async {
+        final semana = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          tipo: TipoIngreso.leche,
+          monto: 800000,
+          litros: 2000,
+        );
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          tipo: TipoIngreso.ventaGanado,
+          monto: 250000,
+        );
+
+        expect(await repo.kgLecheDeSemana(semana.id), 2000);
+      });
+
+      test('no arrastra los kilos de otra semana', () async {
+        final estaSemana = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        final laPasada = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles.subtract(const Duration(days: 7)),
+        );
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: laPasada.id,
+          tipo: TipoIngreso.leche,
+          monto: 1600000,
+          litros: 4000,
+        );
+
+        expect(await repo.kgLecheDeSemana(estaSemana.id), 0);
+      });
+
+      test('una entrega borrada deja de contar', () async {
+        final semana = await repo.abrirSemana(
+          lecheriaId: lecheriaId,
+          fecha: miercoles,
+        );
+        await repo.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: semana.id,
+          tipo: TipoIngreso.leche,
+          monto: 1200000,
+          litros: 3000,
+        );
+        final ingreso = await db.select(db.ingresosSemana).getSingle();
+        await repo.eliminarIngreso(ingreso.id);
+
+        expect(await repo.kgLecheDeSemana(semana.id), 0);
+      });
+    });
   });
 }

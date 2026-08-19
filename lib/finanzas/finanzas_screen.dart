@@ -498,16 +498,75 @@ class _IngresoSheetState extends State<_IngresoSheet> {
       setState(() => _error = 'Poné cuánta plata entró.');
       return;
     }
+    final kg = double.tryParse(_litrosCtrl.text.trim().replaceAll(',', '.'));
+
+    if (!await _confirmarSiPasaElTope(kg)) return;
+
     await finanzasRepo.agregarIngreso(
       lecheriaId: widget.lecheriaId,
       semanaId: widget.semanaId,
       tipo: _tipo,
       monto: monto,
-      litros: double.tryParse(_litrosCtrl.text.trim().replaceAll(',', '.')),
+      litros: kg,
       detalle: _detalleCtrl.text,
     );
     if (mounted) Navigator.pop(context, true);
   }
+
+  /// Avisa si esta entrega hace que la semana pase el tope de kilos de la
+  /// finca. Devuelve si hay que seguir guardando.
+  ///
+  /// El tope se mide contra **el acumulado de la semana**, no contra la
+  /// entrega suelta: la planta puede pagar en dos tandas y lo que castiga es
+  /// el total. Y avisa, no bloquea — los kilos entregados son un hecho, la app
+  /// no está para negarlos sino para que nadie se lleve la sorpresa al cobrar.
+  Future<bool> _confirmarSiPasaElTope(double? kgNuevos) async {
+    if (_tipo != TipoIngreso.leche || kgNuevos == null || kgNuevos <= 0) {
+      return true;
+    }
+    final tope = await curvaRepo.topeKgLecheDe(widget.lecheriaId);
+    if (tope == null || tope <= 0) return true;
+
+    final yaAnotados = await finanzasRepo.kgLecheDeSemana(widget.semanaId);
+    final total = yaAnotados + kgNuevos;
+    if (total <= tope) return true;
+
+    // Lo que se pasa es del total de la semana contra el tope, no de esta
+    // entrega sola: si la semana ya venía pasada, el exceso arrastra lo de
+    // antes, que es justo lo que la planta va a castigar.
+    final exceso = total - tope;
+
+    if (!mounted) return false;
+    final seguir = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        key: const ValueKey('finanzas.ingreso.alertaTope'),
+        icon: const Icon(Icons.warning_amber_rounded),
+        title: const Text('Se pasa del tope'),
+        content: Text(
+          'Con esta entrega la semana llega a ${_kg(total)} kg y el tope de la '
+          'finca es ${_kg(tope)} kg.\n\n'
+          'Son ${_kg(exceso)} kg de más. A la planta le pueden castigar el '
+          'precio de esos kilos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Revisar'),
+          ),
+          FilledButton(
+            key: const ValueKey('finanzas.ingreso.alertaTope.guardar'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Guardar igual'),
+          ),
+        ],
+      ),
+    );
+    return seguir == true;
+  }
+
+  static String _kg(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
 
   @override
   Widget build(BuildContext context) {

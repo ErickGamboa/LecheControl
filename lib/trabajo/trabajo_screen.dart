@@ -398,6 +398,11 @@ class _TarjetaAnimal extends StatelessWidget {
                   onTap: () => _partoDialog(context),
                 ),
               _BotonEvento(
+                icono: const Icon(Icons.sticky_note_2_outlined),
+                etiqueta: 'Observación',
+                onTap: () => _observacionDialog(context),
+              ),
+              _BotonEvento(
                 icono: const Icon(Icons.swap_horiz),
                 etiqueta: 'Cambiar de grupo',
                 onTap: () => _cambiarGrupoDialog(context),
@@ -567,6 +572,52 @@ class _TarjetaAnimal extends StatelessWidget {
     await eventosRepo.registrarSecado(
       animalId: animal.id,
       lecheriaId: lecheriaId,
+      registradoPor: usuarioId,
+    );
+    onCambio();
+  }
+
+  /// Nota libre sobre la vaca. Es el único evento que no cambia nada de la
+  /// ficha: solo deja el texto apuntado en su hoja de vida.
+  Future<void> _observacionDialog(BuildContext context) async {
+    final textoCtrl = TextEditingController();
+    final guardar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Observación de ${animal.identificador}'),
+        content: TextField(
+          key: const ValueKey('trabajo.observacion.texto'),
+          controller: textoCtrl,
+          autofocus: true,
+          // Varias líneas y sin tope: la idea es que quepa lo que sea, desde
+          // "cojea de la pata izquierda" hasta media historia.
+          maxLines: 5,
+          minLines: 3,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            labelText: 'Qué querés apuntar',
+            border: OutlineInputBorder(),
+            alignLabelWithHint: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const ValueKey('trabajo.observacion.guardar'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    if (guardar != true) return;
+    await eventosRepo.registrarObservacion(
+      animalId: animal.id,
+      lecheriaId: lecheriaId,
+      texto: textoCtrl.text,
       registradoPor: usuarioId,
     );
     onCambio();

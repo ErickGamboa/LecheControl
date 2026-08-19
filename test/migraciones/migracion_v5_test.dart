@@ -59,6 +59,52 @@ void main() {
           "'en_tratamiento','nacido','2026-01-01T00:00:00.000',"
           "'2026-01-01T00:00:00.000')",
         );
+        // La migración a v6 también toca estas dos, y en una base v4 de
+        // verdad existen: sin ellas la migración revienta antes de llegar a
+        // lo que este test mira.
+        raw.execute('''
+      CREATE TABLE config_reporte (
+        id TEXT NOT NULL PRIMARY KEY,
+        lecheria_id TEXT NOT NULL,
+        pct_excelente REAL NOT NULL DEFAULT 100,
+        pct_bueno REAL NOT NULL DEFAULT 85,
+        pct_vigilar REAL NOT NULL DEFAULT 70,
+        pct_bajo REAL NOT NULL DEFAULT 60,
+        umbral_secado_litros REAL NOT NULL DEFAULT 8,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        pendiente INTEGER NOT NULL DEFAULT 0
+      )''');
+        raw.execute('''
+      CREATE TABLE eventos_animal (
+        id TEXT NOT NULL PRIMARY KEY,
+        animal_id TEXT NOT NULL,
+        lecheria_id TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        fecha TEXT NOT NULL,
+        detalle TEXT,
+        medicamento_id TEXT,
+        dosis TEXT,
+        dias_retiro INTEGER,
+        costo REAL,
+        resultado TEXT,
+        toro_pajilla TEXT,
+        sexo_cria TEXT,
+        grupo_anterior TEXT,
+        grupo_nuevo TEXT,
+        motivo_baja TEXT,
+        precio_venta REAL,
+        cria_animal_id TEXT,
+        registrado_por TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        pendiente INTEGER NOT NULL DEFAULT 0,
+        CHECK (tipo IN ('sanidad','celo','monta','inseminacion','palpacion',
+          'secado','parto','cambio_grupo','baja','concentrado')),
+        CHECK (costo IS NULL OR costo >= 0)
+      )''');
         raw.execute('PRAGMA user_version = 4');
       },
     );

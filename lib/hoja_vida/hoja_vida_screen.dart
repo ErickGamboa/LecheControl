@@ -183,6 +183,7 @@ class _EventoTile extends StatelessWidget {
     TipoEventoAnimal.cambioGrupo => Icons.swap_horiz,
     TipoEventoAnimal.baja => Icons.remove_circle_outline,
     TipoEventoAnimal.concentrado => Icons.grass_outlined,
+    TipoEventoAnimal.observacion => Icons.sticky_note_2_outlined,
     _ => Icons.circle_outlined,
   };
 

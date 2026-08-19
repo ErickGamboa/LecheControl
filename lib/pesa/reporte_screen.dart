@@ -380,6 +380,7 @@ class _ProduccionPorVaca extends StatelessWidget {
             DataColumn(label: Text('Total'), numeric: true),
             DataColumn(label: Text('Conc. kg'), numeric: true),
             DataColumn(label: Text('Anterior'), numeric: true),
+            DataColumn(label: Text('Dif.'), numeric: true),
             DataColumn(label: Text('Estado')),
           ],
           rows: [
@@ -405,12 +406,53 @@ class _ProduccionPorVaca extends StatelessWidget {
                   ),
                   DataCell(Text(_num(f.concentradoKg))),
                   DataCell(Text(_num(f.anterior))),
+                  DataCell(_CeldaDiferencia(diferencia: f.diferenciaAnterior)),
                   DataCell(_EtiquetaEvaluacion(evaluacion: f.evaluacion)),
                 ],
               ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Cuánto subió o bajó la vaca contra su pesa anterior: verde con `+` si dio
+/// más, rojo con `-` si dio menos.
+///
+/// Es la misma cuenta que ya hacía [FilaReporte.diferenciaAnterior]; acá solo
+/// se le pone color, que es lo que permite barrer la tabla de un vistazo y ver
+/// quién se cayó sin tener que restar mentalmente dos columnas.
+class _CeldaDiferencia extends StatelessWidget {
+  const _CeldaDiferencia({required this.diferencia});
+
+  /// null cuando la vaca no tiene pesa anterior con la que comparar.
+  final double? diferencia;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = diferencia;
+    if (d == null) return const Text('—');
+
+    final theme = Theme.of(context);
+
+    // Menos de un décimo de litro es redondeo, no un cambio: va en gris para
+    // que no distraiga entre las que sí se movieron.
+    if (d.abs() < 0.05) {
+      return Text('0.0', style: TextStyle(color: theme.hintColor));
+    }
+
+    final subio = d > 0;
+    // En oscuro los shade700 se hunden contra el fondo, igual que pasa con el
+    // marino del logo (ver LecheTheme).
+    final oscuro = theme.brightness == Brightness.dark;
+    final color = subio
+        ? (oscuro ? Colors.green.shade300 : Colors.green.shade700)
+        : (oscuro ? Colors.red.shade300 : Colors.red.shade700);
+
+    return Text(
+      '${subio ? '+' : '-'}${d.abs().toStringAsFixed(1)}',
+      style: TextStyle(color: color, fontWeight: FontWeight.bold),
     );
   }
 }

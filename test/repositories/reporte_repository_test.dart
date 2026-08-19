@@ -335,6 +335,48 @@ void main() {
 
       expect(reporte.filas.single.anterior, isNull);
     });
+
+    // La columna Dif. del reporte pinta esta cuenta: verde con `+` si subió,
+    // rojo con `-` si bajó. El signo es lo que decide el color, así que tiene
+    // que salir bien en las dos direcciones.
+    test('la diferencia es negativa cuando la vaca bajó', () async {
+      await vaca('v1', dlac: 100);
+      final anterior = await sesionCon({
+        'v1': (manana: 12, tarde: 11),
+      }, fecha: hoy.subtract(const Duration(days: 7)));
+      await pesasRepo.cerrarSesion(anterior.id);
+
+      final actual = await sesionCon({'v1': (manana: 9, tarde: 8)});
+
+      final reporte = await repo.generar(
+        lecheriaId: lecheriaId,
+        sesionId: actual.id,
+        hoy: hoy,
+      );
+
+      final fila = reporte.filas.single;
+      expect(fila.anterior, 23);
+      expect(fila.total, 17);
+      expect(fila.diferenciaAnterior, -6);
+    });
+
+    test('la diferencia es cero cuando dio lo mismo', () async {
+      await vaca('v1', dlac: 100);
+      final anterior = await sesionCon({
+        'v1': (manana: 10, tarde: 10),
+      }, fecha: hoy.subtract(const Duration(days: 7)));
+      await pesasRepo.cerrarSesion(anterior.id);
+
+      final actual = await sesionCon({'v1': (manana: 10, tarde: 10)});
+
+      final reporte = await repo.generar(
+        lecheriaId: lecheriaId,
+        sesionId: actual.id,
+        hoy: hoy,
+      );
+
+      expect(reporte.filas.single.diferenciaAnterior, 0);
+    });
   });
 
   test('avisa cuando la lechería no tiene curva cargada', () async {

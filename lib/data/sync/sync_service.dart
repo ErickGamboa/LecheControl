@@ -819,6 +819,7 @@ class SyncService {
                 'pct_vigilar': c.pctVigilar,
                 'pct_bajo': c.pctBajo,
                 'umbral_secado_litros': c.umbralSecadoLitros,
+                'tope_kg_leche': c.topeKgLeche,
                 'created_at': c.createdAt.toIso8601String(),
                 'deleted_at': c.deletedAt?.toIso8601String(),
               },
@@ -849,6 +850,7 @@ class SyncService {
               pctBajo: (r['pct_bajo'] as num?)?.toDouble() ?? 60,
               umbralSecadoLitros:
                   (r['umbral_secado_litros'] as num?)?.toDouble() ?? 8,
+              topeKgLeche: (r['tope_kg_leche'] as num?)?.toDouble(),
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: _fechaOpcional(r['deleted_at']),

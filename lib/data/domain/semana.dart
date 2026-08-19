@@ -69,7 +69,18 @@ abstract final class CategoriaGasto {
   static const medicamentos = 'Medicamentos';
   static const combustible = 'Combustible';
 
-  static const todos = [salarios, luz, concentrado, medicamentos, combustible];
+  /// La cooperativa a la que se le entrega la leche también le vende insumos
+  /// a la finca, y ese cobro llega aparte: por eso es su propio botón.
+  static const comprasDosPinos = 'Compras Dos Pinos';
+
+  static const todos = [
+    salarios,
+    luz,
+    concentrado,
+    medicamentos,
+    combustible,
+    comprasDosPinos,
+  ];
 
   static const compraGanado = 'Compra de ganado';
 }

@@ -156,6 +156,10 @@ abstract final class TipoEventoAnimal {
   static const baja = 'baja';
   static const concentrado = 'concentrado';
 
+  /// Nota libre que el ganadero escribe sobre la vaca. No cambia nada del
+  /// animal: es solo texto que queda en su hoja de vida.
+  static const observacion = 'observacion';
+
   static const todos = [
     sanidad,
     celo,
@@ -167,6 +171,7 @@ abstract final class TipoEventoAnimal {
     cambioGrupo,
     baja,
     concentrado,
+    observacion,
   ];
 
   static String etiqueta(String codigo) => switch (codigo) {
@@ -180,6 +185,7 @@ abstract final class TipoEventoAnimal {
     cambioGrupo => 'Cambio de grupo',
     baja => 'Baja',
     concentrado => 'Cambio de concentrado',
+    observacion => 'Observación',
     _ => codigo,
   };
 }

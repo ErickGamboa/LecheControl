@@ -199,6 +199,25 @@ class FinanzasRepository {
     return ResumenSemana(semana: semana, ingresos: ingresos, gastos: gastos);
   }
 
+  /// Kilos de leche ya anotados en la semana (misma unidad que
+  /// [ResumenSemana.litrosLeche]: la columna se llama `litros` pero son
+  /// kilos).
+  ///
+  /// Se usa para avisar antes de guardar: el tope de la finca se mide contra
+  /// **el acumulado de la semana**, no contra cada entrega suelta, porque la
+  /// planta puede pagar en dos tandas y lo que se castiga es el total.
+  Future<double> kgLecheDeSemana(String semanaId) async {
+    final filas =
+        await (db.select(db.ingresosSemana)..where(
+              (t) =>
+                  t.semanaId.equals(semanaId) &
+                  t.tipo.equals(TipoIngreso.leche) &
+                  t.deletedAt.isNull(),
+            ))
+            .get();
+    return filas.fold<double>(0, (a, i) => a + (i.litros ?? 0));
+  }
+
   // ------------------------------------------------------------- ingresos
 
   /// Anota plata que entró. Para [TipoIngreso.leche] conviene pasar también

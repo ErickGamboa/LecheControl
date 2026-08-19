@@ -68,6 +68,39 @@ class EventosRepository {
         );
   }
 
+  /// Nota libre sobre la vaca: lo que el ganadero quiera dejar apuntado.
+  ///
+  /// No cambia nada de la ficha del animal — es el único evento que no toca
+  /// grupo, estado ni fechas. El texto va en `detalle` y queda en la hoja de
+  /// vida junto a los demás eventos. Un texto en blanco no se guarda.
+  Future<void> registrarObservacion({
+    required String animalId,
+    required String lecheriaId,
+    required String texto,
+    DateTime? fecha,
+    String? registradoPor,
+  }) async {
+    final limpio = texto.trim();
+    if (limpio.isEmpty) return;
+    final ahora = fecha ?? DateTime.now();
+    await db
+        .into(db.eventosAnimal)
+        .insert(
+          EventosAnimalCompanion.insert(
+            id: _uuid.v4(),
+            animalId: animalId,
+            lecheriaId: lecheriaId,
+            tipo: TipoEventoAnimal.observacion,
+            fecha: ahora,
+            detalle: Value(limpio),
+            registradoPor: Value(registradoPor),
+            createdAt: ahora,
+            updatedAt: ahora,
+            pendiente: const Value(true),
+          ),
+        );
+  }
+
   /// Palpación / diagnóstico: resultado preñada o vacía. Si está preñada,
   /// guarda la fecha probable de parto y actualiza el estado reproductivo.
   Future<void> registrarPalpacion({

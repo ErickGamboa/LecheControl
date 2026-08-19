@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../ajustes/curva_screen.dart';
+import '../ajustes/ajustes_screen.dart';
 import '../analisis/analisis_leche_screen.dart';
 import '../analisis/analisis_screen.dart';
 import '../app/theme.dart';
@@ -134,11 +134,11 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           IconButton(
-            key: const ValueKey('home.curva'),
-            tooltip: 'Curva de referencia',
+            key: const ValueKey('home.ajustes'),
+            tooltip: 'Ajuste de métricas',
             icon: const Icon(Icons.tune),
             onPressed: () =>
-                _abrir(context, CurvaScreen(lecheriaId: lecheria.id)),
+                _abrir(context, AjustesScreen(lecheriaId: lecheria.id)),
           ),
           IconButton(
             tooltip: 'Cerrar sesión',

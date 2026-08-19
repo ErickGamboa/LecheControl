@@ -175,7 +175,7 @@ class EventosAnimal extends Table {
   @override
   List<String> get customConstraints => [
     "CHECK (tipo IN ('sanidad','celo','monta','inseminacion','palpacion',"
-        "'secado','parto','cambio_grupo','baja','concentrado'))",
+        "'secado','parto','cambio_grupo','baja','concentrado','observacion'))",
     'CHECK (costo IS NULL OR costo >= 0)',
   ];
 }
@@ -277,6 +277,10 @@ class ConfigReporte extends Table {
   RealColumn get pctVigilar => real().withDefault(const Constant(70))();
   RealColumn get pctBajo => real().withDefault(const Constant(60))();
   RealColumn get umbralSecadoLitros => real().withDefault(const Constant(8))();
+
+  /// Tope de kilos de leche que la finca espera entregar en una semana.
+  /// `null` mientras no se configure: sin tope no hay alerta que dar.
+  RealColumn get topeKgLeche => real().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -475,7 +479,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -543,6 +547,15 @@ class AppDatabase extends _$AppDatabase {
           "UPDATE animales SET grupo = 'en_ordeno', pendiente = 1 "
           "WHERE grupo = 'en_tratamiento'",
         );
+      }
+      // v5 -> v6: entra el evento de observación (nota libre sobre la vaca) y
+      // el tope de kilos de leche por semana.
+      if (from < 6) {
+        await m.addColumn(configReporte, configReporte.topeKgLeche);
+        // El tipo de evento vive en un CHECK, y SQLite no sabe cambiar uno:
+        // Drift recrea la tabla copiando las filas. Sin esto, guardar una
+        // observación falla.
+        await m.alterTable(TableMigration(eventosAnimal));
       }
     },
   );

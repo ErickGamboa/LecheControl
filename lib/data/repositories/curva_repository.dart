@@ -97,6 +97,44 @@ class CurvaRepository {
     return config?.umbralSecadoLitros ?? 8;
   }
 
+  /// Tope de kilos de leche que la finca espera entregar en una semana.
+  /// `null` cuando no se ha configurado: sin tope no hay alerta que dar.
+  Future<double?> topeKgLecheDe(String lecheriaId) async {
+    final config = await configDe(lecheriaId);
+    return config?.topeKgLeche;
+  }
+
+  Stream<double?> observarTopeKgLeche(String lecheriaId) {
+    return (db.select(
+      db.configReporte,
+    )..where((t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull())).watch().map(
+      (filas) => filas.isEmpty ? null : filas.first.topeKgLeche,
+    );
+  }
+
+  /// Fija el tope de kilos, o lo quita con [tope] en null.
+  ///
+  /// Va aparte de [editarConfig] justamente porque acepta null como valor
+  /// válido: ahí null significa "no cambiés este campo", y acá significa
+  /// "quitá el tope".
+  Future<void> editarTopeKgLeche({
+    required String lecheriaId,
+    required double? tope,
+  }) async {
+    final config = await configDe(lecheriaId);
+    if (config == null) return;
+    final ahora = DateTime.now();
+    await (db.update(
+      db.configReporte,
+    )..where((t) => t.id.equals(config.id))).write(
+      ConfigReporteCompanion(
+        topeKgLeche: Value(tope),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
   /// Cambia los umbrales de calificación y el umbral de secado.
   Future<void> editarConfig({
     required String lecheriaId,
