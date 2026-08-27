@@ -497,7 +497,7 @@ class PesasRepository {
     );
   }
 
-  /// Dieta de concentrado del hato: cuánto le toca a cada vaca según **su**
+  /// Dieta de concentrado del hato: cuánto le corresponde a cada vaca según **su**
   /// pesa más reciente, y cuánto se le está dando.
   ///
   /// Cada vaca sale con su último pesaje, no con el de la última sesión de la

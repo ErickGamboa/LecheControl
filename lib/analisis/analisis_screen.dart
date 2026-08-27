@@ -115,8 +115,8 @@ class AnalisisScreen extends StatelessWidget {
               color: kVerdeLeche,
               titulo: 'Dieta de concentrado',
               detalle:
-                  'Cuánto concentrado le toca a cada vaca según su última '
-                  'pesa, y cuánto se le está dando.',
+                  'Cuánto concentrado le corresponde a cada vaca según su '
+                  'última pesa, y cuánto está recibiendo.',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => DietaConcentradoScreen(

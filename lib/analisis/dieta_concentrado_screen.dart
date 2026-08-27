@@ -181,13 +181,13 @@ class _Regla extends StatelessWidget {
               children: [
                 Expanded(
                   child: _Dato(
-                    etiqueta: 'Debería comer el hato',
+                    etiqueta: 'Le corresponde al hato',
                     valor: '${_num(totalRacion)} kg',
                   ),
                 ),
                 Expanded(
                   child: _Dato(
-                    etiqueta: 'Se le está dando',
+                    etiqueta: 'Está recibiendo',
                     valor: totalActual == 0 ? '—' : '${_num(totalActual)} kg',
                   ),
                 ),
@@ -252,8 +252,8 @@ class _Tabla extends StatelessWidget {
           columns: const [
             DataColumn(label: Text('Vaca')),
             DataColumn(label: Text('Leche'), numeric: true),
-            DataColumn(label: Text('Debería'), numeric: true),
-            DataColumn(label: Text('Le dan'), numeric: true),
+            DataColumn(label: Text('Corresponde'), numeric: true),
+            DataColumn(label: Text('Recibe'), numeric: true),
             DataColumn(label: Text('Dif.'), numeric: true),
             DataColumn(label: Text('Pesa')),
           ],

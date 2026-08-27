@@ -147,8 +147,8 @@ pw.Widget _tabla(List<RacionVaca> raciones) {
         children: [
           _celdaEncabezado('Vaca', izquierda: true),
           _celdaEncabezado('Leche'),
-          _celdaEncabezado('Debería'),
-          _celdaEncabezado('Le dan'),
+          _celdaEncabezado('Corresponde'),
+          _celdaEncabezado('Recibe'),
           _celdaEncabezado('Dif.'),
           _celdaEncabezado('Pesa'),
         ],
@@ -162,12 +162,12 @@ pw.Widget _tabla(List<RacionVaca> raciones) {
             ),
             _celda('${_num(r.litrosLeche)} L'),
             _celda(
-              r.racionKg == null ? 'n/d' : '${_num(r.racionKg!)} kg',
+              r.racionKg == null ? '—' : '${_num(r.racionKg!)} kg',
               negrita: true,
             ),
             _celda(
               r.concentradoActualKg == null
-                  ? 'n/d'
+                  ? '—'
                   : '${_num(r.concentradoActualKg!)} kg',
             ),
             _celdaDiferencia(r.diferenciaKg),
@@ -212,7 +212,7 @@ pw.Widget _celda(
 /// Igual que en pantalla: naranja si le falta, azul si le sobra. En blanco y
 /// negro el signo sigue diciendo de qué lado está.
 pw.Widget _celdaDiferencia(double? diferencia) {
-  if (diferencia == null) return _celda('n/d');
+  if (diferencia == null) return _celda('—');
   if (diferencia.abs() < 0.05) return _celda('0');
   final falta = diferencia > 0;
   return _celda(

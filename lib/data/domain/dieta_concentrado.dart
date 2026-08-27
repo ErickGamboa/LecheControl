@@ -1,4 +1,4 @@
-/// Dieta de concentrado: cuánto concentrado le toca a una vaca según lo que
+/// Dieta de concentrado: cuánto concentrado le corresponde a una vaca según lo que
 /// está dando de leche (Módulo 6 — Análisis).
 ///
 /// La regla de la finca es una proporción: **cada tantos kilos de leche pagan
@@ -14,7 +14,7 @@ library;
 /// concentrado.
 const kgLechePorKgConcentradoPorDefecto = 3.0;
 
-/// Kilos de concentrado que le tocan a una vaca que dio [litrosLeche].
+/// Kilos de concentrado que le corresponden a una vaca que dio [litrosLeche].
 ///
 /// [kgLechePorKg] es la proporción de la finca. Devuelve null si la
 /// proporción no sirve para dividir (cero o negativa), en vez de un infinito
@@ -28,7 +28,7 @@ double? racionConcentrado({
   return litrosLeche / kgLechePorKg;
 }
 
-/// Lo que le toca a una vaca contra lo que se le está dando.
+/// Lo que le corresponde a una vaca contra lo que está recibiendo.
 class RacionVaca {
   const RacionVaca({
     required this.identificador,
