@@ -275,7 +275,11 @@ Este comportamiento es **transversal**: aplica a todos los módulos. El ganadero
 - **Trabajo 100% offline:** el ganadero puede pasar todo el día registrando sin señal. Nada lo bloquea por falta de conexión.
 - **Sincronización automática al reconectar:** cuando el dispositivo **detecta internet**, la app **sube sola** todos los cambios pendientes a **Supabase** (la nube) y **baja** cualquier cambio nuevo, en **segundo plano**. El usuario **no tiene que apretar "sincronizar"**.
 - **En lote:** si se acumularon muchos registros sin señal, al reconectar se **envían todos** de corrido y quedan **vinculados en la nube**.
-- **Indicador de estado:** la app muestra de forma sencilla si hay **cambios pendientes de subir** o si ya está **todo sincronizado** (ej. un ícono/nube). Sin tecnicismos.
+- **No se sincroniza por partes.** La subida **no tiene tiempo límite global**: insiste hasta que no quede ni una fila pendiente. El límite es **por petición** (30 s escritura, 60 s lectura), así que una conexión colgada se corta sola pero una lenta pero viva termina el trabajo. *Antes había un límite de 20 s para toda la sincronización y un día entero de campo se cortaba a la mitad: subía un pedazo y el resto quedaba esperando.*
+- **Si una fila falla, las demás siguen.** La resiliencia es por fila (conflicto, RLS, red): la que falla queda `pendiente` y se reintenta; nunca bloquea al resto. Si una vuelta no logró subir **nada**, se espera (2 s, 5 s, 15 s) y se reintenta; agotadas las esperas, queda para el próximo intento sin perder nada.
+- **Lo que se guarda mientras sube, también sale.** Si llega un cambio nuevo durante la sincronización, al terminar la vuelta se da otra. El pedido no se descarta.
+- **Sin ningún botón.** Se sincroniza al abrir la app, al guardar cualquier cosa, al recuperar la señal y **cada 2 minutos** si quedó algo pendiente. No hay botón de "sincronizar ahora": no hace falta y solo hacía dudar de si había que apretarlo.
+- **Indicador de estado:** la app muestra de forma sencilla si hay **cambios pendientes de subir** o si ya está **todo al día** (ícono de nube). Mientras sube dice **cuánto va** ("Subiendo 12 de 210"), no un giro sin fin. Sin tecnicismos.
 - **Respaldo en la nube:** una vez sincronizado, los datos quedan **respaldados en Supabase**; si se pierde o cambia el dispositivo, al iniciar sesión se **recuperan** todos los datos.
 
 ### Reglas para no perder ni duplicar datos

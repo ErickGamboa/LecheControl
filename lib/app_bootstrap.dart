@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -9,6 +11,9 @@ import 'demo/demo_seed.dart';
 import 'services.dart';
 
 export 'app/theme.dart' show kAzulLeche, kCremaLeche, kVerdeLeche;
+
+/// Cada cuánto se reintenta solo la sincronización si quedó algo pendiente.
+const kReintentoSyncCada = Duration(minutes: 2);
 
 /// Inicializa Supabase (si hay configuración), la sesión local, la
 /// conectividad y, si aplica, la siembra de datos demo.
@@ -43,6 +48,14 @@ Future<void> bootstrapLecheControl() async {
   }
 
   sincronizarSiSePuede();
+
+  // Red de seguridad: si algo quedó sin subir —la red se cayó a mitad, el
+  // servidor no respondió— se reintenta solo. El ganadero no tiene que
+  // acordarse de nada ni apretar ningún botón.
+  Timer.periodic(kReintentoSyncCada, (_) async {
+    if (await syncService.hayPendientes()) await sincronizarSiSePuede();
+  });
+
   if (SupabaseConfig.estaConfigurado) {
     supabase.auth.onAuthStateChange.listen((estado) async {
       if (estado.event == AuthChangeEvent.signedIn) {

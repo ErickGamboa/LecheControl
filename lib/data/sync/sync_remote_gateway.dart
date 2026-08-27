@@ -55,6 +55,16 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
   /// ya verifican esa configuración antes de invocar `sincronizar()`.
   SupabaseClient get _sb => _override ?? Supabase.instance.client;
 
+  /// Tiempo límite **por petición**, no por sincronización.
+  ///
+  /// La diferencia importa: con un límite global, un día entero de campo —el
+  /// hato completo pesado, más los gastos— no cabía en la ventana y la subida
+  /// se cortaba a la mitad. El resto quedaba pendiente y había que insistir.
+  /// Con el límite acá, una conexión colgada se corta sola, pero una lenta
+  /// pero viva termina el trabajo por más que tarde.
+  static const _limiteEscritura = Duration(seconds: 30);
+  static const _limiteLectura = Duration(seconds: 60);
+
   @override
   bool get tieneUsuario => _sb.auth.currentUser != null;
 
@@ -76,10 +86,11 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
         .from(tabla)
         .update(datos)
         .eq('id', id)
-        .select();
+        .select()
+        .timeout(_limiteEscritura);
     if ((actualizadas as List).isEmpty) {
       // No existía en el servidor -> es una fila nueva.
-      await _sb.from(tabla).insert(datos);
+      await _sb.from(tabla).insert(datos).timeout(_limiteEscritura);
     }
   }
 
@@ -107,7 +118,8 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
     }
     final res = await query
         .order('updated_at', ascending: true)
-        .order(idColumna, ascending: true);
+        .order(idColumna, ascending: true)
+        .timeout(_limiteLectura);
     return (res as List).cast<Map<String, dynamic>>();
   }
 }

@@ -46,8 +46,8 @@ class PullSpec {
 
 /// Todo lo que el motor de sync necesita saber de una tabla. `subida` es
 /// null para tablas de solo lectura (`planes`, `cuentas`, `usuarios`): el
-/// motor genérico (`_subirTabla`/`_bajarTabla`) hace el resto igual para
-/// todas.
+/// motor genérico (`_subirFilasPendientes`/`_bajarTabla`) hace el resto igual
+/// para todas.
 class TableSyncSpec {
   const TableSyncSpec({required this.tabla, this.subida, required this.bajada});
 
@@ -66,62 +66,211 @@ String _soloFecha(DateTime d) =>
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
 
+/// Cuánto va subido de la sincronización en curso, para que la app pueda
+/// decir "subiendo 12 de 210" en vez de un giro sin fin.
+class SyncProgreso {
+  const SyncProgreso({required this.hechas, required this.total});
+
+  static const inactivo = SyncProgreso(hechas: 0, total: 0);
+
+  final int hechas;
+  final int total;
+
+  bool get activo => total > 0;
+}
+
+/// Cuánto se movió una vuelta de subida: filas que lograron subir y filas que
+/// quedaron pendientes.
+///
+/// Es lo que decide si vale la pena insistir: si algo subió, la red está viva
+/// y se sigue de una; si no subió nada, hay que esperar antes de reintentar.
+class ResultadoSubida {
+  const ResultadoSubida({required this.subidas, required this.pendientes});
+
+  static const nada = ResultadoSubida(subidas: 0, pendientes: 0);
+
+  final int subidas;
+  final int pendientes;
+}
+
 /// Motor de sincronización entre la base local (Drift/SQLite) y Supabase.
 ///
 /// Estrategia:
 ///  - SUBIR: envía al servidor las filas marcadas como `pendiente` (upsert) y
-///    luego las marca como sincronizadas.
+///    luego las marca como sincronizadas. Insiste hasta que no quede ninguna.
 ///  - BAJAR: trae del servidor las filas con `(updated_at, id)` mayor al
 ///    último marcador guardado ([SyncCursor]), y las guarda localmente.
 ///    Avanza el marcador.
 ///  - Conflictos: "gana el último que escribe" (el servidor fija `updated_at`).
 ///  - Borrados: viajan como `deleted_at` (borrado suave, "nada se borra").
 ///
-/// Cada tabla es un [TableSyncSpec] en [_specs]; `_subirTabla`/`_bajarTabla`
-/// son el único código de orquestación.
+/// **El usuario nunca aprieta nada**: se sincroniza al arrancar, al guardar,
+/// al recuperar la conexión y cada tanto si quedó algo pendiente (ver
+/// `app_bootstrap.dart`).
+///
+/// Cada tabla es un [TableSyncSpec] en [_specs]; `_subirFilasPendientes` y
+/// `_bajarTabla` son el único código de orquestación.
 class SyncService {
-  SyncService(this.db, {SyncRemoteGateway? remote})
-    : _remote = remote ?? SupabaseSyncRemoteGateway();
+  SyncService(
+    this.db, {
+    SyncRemoteGateway? remote,
+    List<Duration>? esperasReintento,
+  }) : _remote = remote ?? SupabaseSyncRemoteGateway(),
+       _esperasReintento = esperasReintento ?? esperasReintentoPorDefecto;
 
   final AppDatabase db;
   final SyncRemoteGateway _remote;
 
+  /// Cuánto esperar antes de cada reintento, cuando una vuelta de subida no
+  /// logró subir ni una fila. Se agotan y el resto queda pendiente para el
+  /// próximo intento: si la red está caída de verdad, insistir para siempre
+  /// solo gasta batería. Los tests las ponen en `[]` para no dormir.
+  static const esperasReintentoPorDefecto = [
+    Duration(seconds: 2),
+    Duration(seconds: 5),
+    Duration(seconds: 15),
+  ];
+
+  final List<Duration> _esperasReintento;
+
   /// Para que la UI pueda mostrar un indicador de "sincronizando…".
   final ValueNotifier<bool> sincronizando = ValueNotifier(false);
 
+  /// Avance de la subida en curso (ver [SyncProgreso]).
+  final ValueNotifier<SyncProgreso> progreso = ValueNotifier(
+    SyncProgreso.inactivo,
+  );
+
   bool _enCurso = false;
 
+  /// Llegó otro pedido mientras se sincronizaba: al terminar se da otra
+  /// vuelta en vez de perderlo.
+  bool _pedidoDeNuevo = false;
+
+  /// Sincroniza **todo**, de una, sin que el usuario apriete nada.
+  ///
+  /// No hay tiempo límite global a propósito. Antes había uno de 20 s para
+  /// toda la sincronización y con muchos registros —un día entero de campo—
+  /// se cortaba a la mitad: subía un pedazo, dejaba el resto pendiente y
+  /// había que insistir. El límite ahora es **por petición**, dentro del
+  /// gateway: una conexión colgada se corta sola, pero una lenta pero viva
+  /// termina el trabajo.
   Future<void> sincronizar() async {
     if (!_remote.tieneUsuario) return; // sin sesión, nada que hacer
-    if (_enCurso) return; // evitar solapamientos
+    if (_enCurso) {
+      // El pedido no se descarta: al terminar la vuelta actual se da otra,
+      // así lo que se guardó **mientras** se subía también sale. Antes esto
+      // era un `return` seco y esos cambios se quedaban esperando el próximo
+      // disparo.
+      _pedidoDeNuevo = true;
+      return;
+    }
     _enCurso = true;
     sincronizando.value = true;
     try {
-      // Tiempo límite: si la red se cuelga (p. ej. se cae a mitad), no dejamos
-      // el sync trabado para siempre; se cancela y se libera para reintentar.
-      await _ejecutarSync().timeout(const Duration(seconds: 20));
+      do {
+        _pedidoDeNuevo = false;
+        await _ejecutarSync();
+      } while (_pedidoDeNuevo);
     } catch (e) {
       // Si no hay internet o falla la red, reintentaremos en la próxima.
       debugPrint('Sync: no se pudo completar ($e)');
     } finally {
       _enCurso = false;
       sincronizando.value = false;
+      progreso.value = SyncProgreso.inactivo;
     }
   }
 
+  /// Una sincronización completa: SUBIR todo lo pendiente —insistiendo hasta
+  /// que no quede nada— y después BAJAR los cambios del servidor.
   Future<void> _ejecutarSync() async {
-    // Cada paso va aislado: si uno falla (p. ej. un registro con conflicto),
-    // los demás igual se ejecutan. Subir primero (para no pisar cambios
-    // locales al bajar). Bajar después, en el orden de _specs (planes/
-    // cuentas/usuarios antes que lecherías, que las necesita).
-    for (final spec in _specs) {
-      if (spec.subida != null) {
-        await _paso(() => _subirTabla(spec));
+    var vueltasSinProgreso = 0;
+    while (true) {
+      final resultado = await _subirFilasPendientes();
+      if (resultado.pendientes == 0) break; // subió todo
+      if (resultado.subidas > 0) {
+        // Hubo avance, la red responde: seguimos de una, sin esperar.
+        vueltasSinProgreso = 0;
+        continue;
       }
+      // Ni una fila pasó: probablemente la red se cayó otra vez. Se espera y
+      // se reintenta; si no hay caso, queda pendiente para la próxima (no se
+      // pierde nada, las filas siguen marcadas `pendiente`).
+      if (vueltasSinProgreso >= _esperasReintento.length) break;
+      await Future.delayed(_esperasReintento[vueltasSinProgreso]);
+      vueltasSinProgreso++;
     }
+
+    // Bajar al final, en el orden de _specs (planes/cuentas/usuarios antes
+    // que lecherías, que las necesita). Cada paso va aislado: si uno falla,
+    // los demás igual se ejecutan.
     for (final spec in _specs) {
       await _paso(() => _bajarTabla(spec));
     }
+  }
+
+  /// Una vuelta de subida: manda **todas** las filas pendientes de todas las
+  /// tablas y dice cuántas pasaron y cuántas quedaron.
+  ///
+  /// Se juntan primero para poder decir "subiendo 12 de 210" mientras avanza:
+  /// sin el total, el usuario no tiene forma de saber si falta mucho.
+  Future<ResultadoSubida> _subirFilasPendientes() async {
+    final porTabla = <String, List<(String, Map<String, dynamic>)>>{};
+    for (final spec in _specs) {
+      final subida = spec.subida;
+      if (subida == null) continue;
+      await _paso(() async {
+        porTabla[spec.tabla] = await subida.pendientes();
+      });
+    }
+    final total = porTabla.values.fold<int>(0, (n, filas) => n + filas.length);
+    if (total == 0) {
+      progreso.value = SyncProgreso.inactivo;
+      return ResultadoSubida.nada;
+    }
+
+    var subidas = 0;
+    var pendientes = 0;
+    var hechas = 0;
+    progreso.value = SyncProgreso(hechas: 0, total: total);
+
+    for (final spec in _specs) {
+      final filas = porTabla[spec.tabla];
+      final subida = spec.subida;
+      if (subida == null || filas == null || filas.isEmpty) continue;
+      // Resiliencia POR FILA: si una falla (conflicto, red, RLS, etc.) se
+      // registra y se sigue con las demás — nunca bloquea ni descarta al
+      // resto. Cada fila se marca subida solo si tuvo éxito; si falla, queda
+      // `pendiente` y se reintenta en la vuelta siguiente.
+      for (final (id, datos) in filas) {
+        try {
+          await _remote.insertarOActualizar(spec.tabla, id, datos);
+          await subida.marcarSubida(id);
+          subidas++;
+        } catch (e) {
+          pendientes++;
+          debugPrint(
+            'Sync: no se pudo subir ${spec.tabla} $id; queda pendiente '
+            'para reintentar ($e)',
+          );
+        }
+        hechas++;
+        progreso.value = SyncProgreso(hechas: hechas, total: total);
+      }
+    }
+    return ResultadoSubida(subidas: subidas, pendientes: pendientes);
+  }
+
+  /// Si quedó algo sin subir. Lo usa el reintento automático para no
+  /// despertar la red cuando no hay nada que mandar.
+  Future<bool> hayPendientes() async {
+    for (final spec in _specs) {
+      final subida = spec.subida;
+      if (subida == null) continue;
+      if ((await subida.pendientes()).isNotEmpty) return true;
+    }
+    return false;
   }
 
   /// Ejecuta un paso del sync de forma aislada: si lanza una excepción, la
@@ -135,27 +284,6 @@ class SyncService {
   }
 
   // ------------------------------------------------------------- MOTOR
-
-  Future<void> _subirTabla(TableSyncSpec spec) async {
-    final subida = spec.subida;
-    if (subida == null) return;
-    final pendientes = await subida.pendientes();
-    // Resiliencia POR FILA: si una falla (conflicto, red, RLS, etc.) se
-    // registra y se sigue con las demás — nunca bloquea ni descarta al
-    // resto. Cada fila se marca subida solo si tuvo éxito; si falla, queda
-    // `pendiente` y se reintenta en la próxima sincronización.
-    for (final (id, datos) in pendientes) {
-      try {
-        await _remote.insertarOActualizar(spec.tabla, id, datos);
-        await subida.marcarSubida(id);
-      } catch (e) {
-        debugPrint(
-          'Sync: no se pudo subir ${spec.tabla} $id; queda pendiente '
-          'para reintentar ($e)',
-        );
-      }
-    }
-  }
 
   Future<void> _bajarTabla(TableSyncSpec spec) async {
     var cursorNuevo = SyncCursor.vacio;

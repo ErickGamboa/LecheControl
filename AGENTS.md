@@ -65,3 +65,7 @@ dart run build_runner build --delete-conflicting-outputs
 - Do not add network calls in widgets unless auth-only.
 - Do not clear `pendiente` until upload succeeds.
 - Do not advance sync cursors beyond rows successfully applied locally.
+- Do not add a global timeout around a whole sync run, and do not add a
+  "sync now" button. Sync must upload everything in one go, retrying until
+  nothing is pending, triggered automatically (startup, save, reconnect,
+  periodic retry). Request-level timeouts live in `SyncRemoteGateway`.

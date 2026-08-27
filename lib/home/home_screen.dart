@@ -7,6 +7,7 @@ import '../app/theme.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../data/repositories/pesas_repository.dart';
+import '../data/sync/sync_service.dart';
 import '../finanzas/finanzas_screen.dart';
 import '../inventario/inventario_screen.dart';
 import '../pesa/registro_leche_screen.dart';
@@ -437,14 +438,6 @@ class _SyncStatusSheetState extends State<_SyncStatusSheet> {
     _pendientesFuture = syncService.pendientesPorTabla();
   }
 
-  Future<void> _sincronizarAhora() async {
-    await syncService.sincronizar();
-    if (!mounted) return;
-    setState(() {
-      _pendientesFuture = syncService.pendientesPorTabla();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -459,10 +452,20 @@ class _SyncStatusSheetState extends State<_SyncStatusSheet> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
-            ValueListenableBuilder<bool>(
-              valueListenable: syncService.sincronizando,
-              builder: (context, sincronizando, _) =>
-                  Text(sincronizando ? 'Sincronizando…' : 'En reposo.'),
+            // Con el total, "sincronizando" deja de ser un giro sin fin y
+            // pasa a decir cuánto falta.
+            ValueListenableBuilder<SyncProgreso>(
+              valueListenable: syncService.progreso,
+              builder: (context, avance, _) => ValueListenableBuilder<bool>(
+                valueListenable: syncService.sincronizando,
+                builder: (context, sincronizando, _) =>
+                    Text(switch ((sincronizando, avance.activo)) {
+                      (true, true) =>
+                        'Subiendo ${avance.hechas} de ${avance.total}…',
+                      (true, false) => 'Sincronizando…',
+                      _ => 'Todo al día.',
+                    }),
+              ),
             ),
             const SizedBox(height: 8),
             FutureBuilder<Map<String, int>>(
@@ -482,11 +485,15 @@ class _SyncStatusSheetState extends State<_SyncStatusSheet> {
                   : 'Sin conexión a internet.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: _sincronizarAhora,
-              icon: const Icon(Icons.sync),
-              label: const Text('Sincronizar ahora'),
+            const SizedBox(height: LecheSpacing.lg),
+            // Sin botón de "sincronizar ahora" a propósito: la app sube todo
+            // sola —al guardar, al recuperar la señal y cada rato si quedó
+            // algo—, así que el botón solo servía para dudar de si hacía
+            // falta apretarlo. Esta hoja es para ver qué está pasando.
+            Text(
+              'La app sincroniza sola: no hay que apretar nada. Si quedó algo '
+              'pendiente, lo vuelve a intentar cuando haya señal.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
