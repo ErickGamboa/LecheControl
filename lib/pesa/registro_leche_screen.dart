@@ -42,7 +42,7 @@ class RegistroLecheScreen extends StatelessWidget {
             const SizedBox(height: LecheSpacing.md),
             OpcionMenuCard(
               valueKey: 'registro.pesa',
-              icono: Icons.water_drop_outlined,
+              icono: const Icon(Icons.water_drop_outlined),
               color: kVerdeLeche,
               titulo: 'Pesa de leche',
               detalle:
@@ -59,7 +59,7 @@ class RegistroLecheScreen extends StatelessWidget {
             const SizedBox(height: LecheSpacing.md),
             OpcionMenuCard(
               valueKey: 'registro.calidad',
-              icono: Icons.science_outlined,
+              icono: const Icon(Icons.science_outlined),
               color: kAzulLeche,
               titulo: 'Calidad de leche',
               detalle:

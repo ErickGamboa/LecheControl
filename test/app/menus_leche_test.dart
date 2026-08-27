@@ -30,7 +30,7 @@ void main() {
     expect(find.byKey(const ValueKey('registro.calidad')), findsOneWidget);
   });
 
-  testWidgets('Análisis ofrece las cuatro miradas', (tester) async {
+  testWidgets('Análisis ofrece las cinco miradas', (tester) async {
     await montar(
       tester,
       const AnalisisScreen(
@@ -42,6 +42,7 @@ void main() {
     for (final clave in [
       'analisis.leche',
       'analisis.calidad',
+      'analisis.palpacion',
       'analisis.finanzas',
       'analisis.dieta',
     ]) {

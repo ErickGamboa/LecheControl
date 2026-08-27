@@ -6,6 +6,7 @@ import 'analisis_calidad_screen.dart';
 import 'analisis_finanzas_screen.dart';
 import 'analisis_leche_screen.dart';
 import 'dieta_concentrado_screen.dart';
+import 'palpacion_screen.dart';
 
 /// Análisis (Módulo 6): mirar la finca **a lo largo del tiempo**, no la
 /// semana de hoy.
@@ -40,7 +41,7 @@ class AnalisisScreen extends StatelessWidget {
             const SizedBox(height: LecheSpacing.md),
             OpcionMenuCard(
               valueKey: 'analisis.leche',
-              icono: Icons.water_drop_outlined,
+              icono: const Icon(Icons.water_drop_outlined),
               color: kVerdeLeche,
               titulo: 'Leche',
               detalle:
@@ -58,7 +59,7 @@ class AnalisisScreen extends StatelessWidget {
             const SizedBox(height: LecheSpacing.md),
             OpcionMenuCard(
               valueKey: 'analisis.calidad',
-              icono: Icons.science_outlined,
+              icono: const Icon(Icons.science_outlined),
               color: kAzulLeche,
               titulo: 'Calidad de leche',
               detalle:
@@ -76,7 +77,7 @@ class AnalisisScreen extends StatelessWidget {
             const SizedBox(height: LecheSpacing.md),
             OpcionMenuCard(
               valueKey: 'analisis.finanzas',
-              icono: Icons.savings_outlined,
+              icono: const Icon(Icons.savings_outlined),
               color: kAzulLeche,
               titulo: 'Finanzas',
               detalle:
@@ -91,8 +92,26 @@ class AnalisisScreen extends StatelessWidget {
             ),
             const SizedBox(height: LecheSpacing.md),
             OpcionMenuCard(
+              valueKey: 'analisis.palpacion',
+              icono: const ImageIcon(AssetImage('assets/icono_palpacion.png')),
+              color: kAmbarLeche,
+              titulo: 'Vacas por palpar',
+              detalle:
+                  'Las recién paridas y las que ya se sirvieron y no '
+                  'confirman preñez, en una hoja para el veterinario.',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PalpacionScreen(
+                    lecheriaId: lecheriaId,
+                    nombreLecheria: nombreLecheria,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: LecheSpacing.md),
+            OpcionMenuCard(
               valueKey: 'analisis.dieta',
-              icono: Icons.grass_outlined,
+              icono: const ImageIcon(AssetImage('assets/icono_dieta.png')),
               color: kVerdeLeche,
               titulo: 'Dieta de concentrado',
               detalle:

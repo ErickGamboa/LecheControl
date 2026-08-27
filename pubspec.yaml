@@ -34,3 +34,5 @@ flutter:
   assets:
     - assets/logo_lechecontrol.png
     - assets/icono_parto.png
+    - assets/icono_dieta.png
+    - assets/icono_palpacion.png

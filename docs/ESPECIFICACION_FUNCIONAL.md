@@ -203,6 +203,23 @@ Las semanas con análisis anotados, una al lado de la otra:
 - **Semana por semana:** los tres valores y su grado.
 - Las mismas **tablas de referencia**, con el renglón de la última lectura marcado.
 
+### Vacas por palpar
+La hoja que se le pasa al **veterinario** cuando viene a la finca. Nadie marca a mano qué vaca revisar: la lista sale sola de la hoja de vida, por dos motivos:
+
+- **Recién paridas** — parieron hace **15 días o menos**. Es la revisión de posparto. La vaca entra y sale sola de la lista.
+- **Servidas sin confirmar** — se les anotó **celo, monta o inseminación** y todavía **no están preñadas**. Es el diagnóstico de gestación: se palpa para saber si la vaca aumentó o hay que volver a servirla.
+
+Reglas que evitan que la lista se ensucie o no se vacíe nunca:
+
+- **El posparto manda.** Una vaca que acaba de parir entra por eso, aunque arrastre el servicio de la preñez que ya terminó.
+- **Un servicio anterior al último parto no cuenta:** ese servicio ya terminó en parto.
+- **Si ya se registró la palpación después del servicio, la vaca sale** —aunque haya salido vacía—. Para volver a la lista hace falta un servicio nuevo.
+- Entran **todas las hembras activas**, novillas incluidas: una novilla servida se palpa igual, y sale sin días de lactancia.
+
+Las **más atrasadas van arriba**: primero las recién paridas (que tienen fecha de vencimiento) y después las servidas, la de más días primero.
+
+**Exportable en PDF**, con el mismo formato que la dieta de concentrado: una fila por vaca con identificador, motivo, fecha, días, servicio y grupo, más el nombre de la finca y la fecha de generación para que una hoja vieja no se confunda con la de hoy.
+
 ### Finanzas
 **Ingresos, gastos y utilidad de todas las semanas**, con el acumulado, el promedio semanal y el precio real por litro de cada una. Las semanas con pérdida salen en rojo, también en el gráfico.
 

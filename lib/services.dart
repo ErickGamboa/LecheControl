@@ -11,6 +11,7 @@ import 'data/repositories/eventos_repository.dart';
 import 'data/repositories/finanzas_repository.dart';
 import 'data/repositories/lecherias_repository.dart';
 import 'data/repositories/medicamentos_repository.dart';
+import 'data/repositories/palpacion_repository.dart';
 import 'data/repositories/pesas_repository.dart';
 import 'data/repositories/reporte_repository.dart';
 import 'data/repositories/sanidad_repository.dart';
@@ -34,6 +35,7 @@ final CalidadRepository calidadRepo = CalidadRepository(
 );
 final EventosRepository eventosRepo = EventosRepository(db);
 final PesasRepository pesasRepo = PesasRepository(db);
+final PalpacionRepository palpacionRepo = PalpacionRepository(db);
 final ReporteRepository reporteRepo = ReporteRepository(db, curva: curvaRepo);
 final MedicamentosRepository medicamentosRepo = MedicamentosRepository(db);
 final SanidadRepository sanidadRepo = SanidadRepository(

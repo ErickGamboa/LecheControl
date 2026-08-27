@@ -20,7 +20,12 @@ class OpcionMenuCard extends StatelessWidget {
   });
 
   final String valueKey;
-  final IconData icono;
+
+  /// El ícono, ya como widget: puede ser un `Icon` de Material o un
+  /// `ImageIcon` de los PNG de `assets/`. Se pasa sin tamaño ni color —los
+  /// pone la tarjeta con un `IconTheme`— para que los de una y otra clase se
+  /// vean iguales en la fila.
+  final Widget icono;
   final Color color;
   final String titulo;
   final String detalle;
@@ -43,7 +48,10 @@ class OpcionMenuCard extends StatelessWidget {
                   color: color.withValues(alpha: oscuro ? 0.20 : 0.10),
                   borderRadius: BorderRadius.circular(LecheRadius.md),
                 ),
-                child: Icon(icono, size: 28, color: color),
+                child: IconTheme(
+                  data: IconThemeData(size: 28, color: color),
+                  child: icono,
+                ),
               ),
               const SizedBox(width: LecheSpacing.lg),
               Expanded(
