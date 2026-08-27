@@ -61,6 +61,74 @@ class ResumenSemana {
   }
 }
 
+/// Una semana con precio: lo que la planta pagó por kilo y cuántos kilos se
+/// le entregaron.
+typedef SemanaConPrecio = ({SemanaRow semana, double precio, double kg});
+
+/// Cómo viene el precio que la planta paga por kilo, semana a semana.
+///
+/// El precio **no se digita**: sale de dividir la plata que entró por leche
+/// entre los kilos que la planta recibió esa semana (ver
+/// [ResumenSemana.precioRealPorLitro]). Por eso cambia solo, sin que nadie lo
+/// toque: la planta castiga o premia según cómo venga la leche —el grado
+/// bacterial, los sólidos— y eso se ve acá antes que en ningún otro lado.
+///
+/// Solo entran las semanas donde se anotaron **las dos cosas**, monto y kilos:
+/// con una sola no hay precio que calcular.
+class PrecioPorKilo {
+  const PrecioPorKilo({
+    required this.semanas,
+    required this.kgTotales,
+    required this.montoTotal,
+  });
+
+  /// De la semana más reciente a la más vieja.
+  final List<SemanaConPrecio> semanas;
+  final double kgTotales;
+  final double montoTotal;
+
+  factory PrecioPorKilo.desde(List<ResumenSemana> resumenes) {
+    final conPrecio = <SemanaConPrecio>[
+      for (final r in resumenes)
+        if (r.precioRealPorLitro case final precio?)
+          (semana: r.semana, precio: precio, kg: r.litrosLeche),
+    ]..sort((a, b) => b.semana.fechaInicio.compareTo(a.semana.fechaInicio));
+
+    return PrecioPorKilo(
+      semanas: conPrecio,
+      kgTotales: conPrecio.fold(0, (a, s) => a + s.kg),
+      montoTotal: conPrecio.fold(0, (a, s) => a + s.precio * s.kg),
+    );
+  }
+
+  bool get hayDatos => semanas.isNotEmpty;
+
+  /// La semana más reciente con precio.
+  SemanaConPrecio get ultima => semanas.first;
+
+  /// El precio promedio de todo lo entregado: la plata total entre los kilos
+  /// totales.
+  ///
+  /// **Ponderado por kilos**, no el promedio de los precios semanales. No es lo
+  /// mismo: una semana de 1.500 kg a ₡400 y otra de 200 kg a ₡300 dan ₡388 de
+  /// promedio real, no ₡350. Lo que se cobró de verdad es lo primero.
+  double get promedio => kgTotales <= 0 ? 0 : montoTotal / kgTotales;
+
+  double get mejor =>
+      semanas.map((s) => s.precio).reduce((a, b) => a > b ? a : b);
+
+  double get peor =>
+      semanas.map((s) => s.precio).reduce((a, b) => a < b ? a : b);
+
+  /// Cuánto cambió el precio de [ultima] contra la semana anterior **que
+  /// también tenga precio**. null si no hay con qué comparar.
+  ///
+  /// No es "la semana pasada" a secas: si esa semana no se anotó, comparar
+  /// contra ella daría un salto que nunca pasó.
+  double? get cambio =>
+      semanas.length < 2 ? null : semanas[0].precio - semanas[1].precio;
+}
+
 /// Finanzas de la semana (Módulo 4 y 5). Reemplaza el esquema mensual de
 /// `GastosRepository` + `RentabilidadRepository`.
 ///

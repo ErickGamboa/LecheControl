@@ -208,6 +208,15 @@ Las semanas con análisis anotados, una al lado de la otra:
 
 Igual que en leche, una semana sin ingresos ni gastos no cuenta.
 
+#### Precio por kilo
+El precio que la planta paga por kilo es el **único número de la finca que nadie digita**: sale de dividir la plata que entró por leche entre los kilos que la planta recibió esa semana. Sube y baja solo —según cómo venga la leche, ver *Calidad de leche*— y por eso hay que poder verlo semana a semana y no de una en una.
+
+- **La última semana con precio**, con cuánto cambió contra la anterior *que también tenga precio* (si esa semana no se anotó, comparar contra ella daría un salto que nunca pasó).
+- **Promedio de todo lo entregado**, **mejor semana** y **peor semana**. El promedio es **ponderado por kilos** (plata total ÷ kilos totales), no el promedio de los precios semanales: 1.500 kg a ₡400 y 200 kg a ₡300 dan ₡388 de promedio real, no ₡350.
+- **Gráfico semana a semana.** La escala **no arranca en cero**: entre ₡380 y ₡410 hay una diferencia que decide la semana y desde cero las barras saldrían todas iguales. Como recortar la escala exagera las diferencias, el gráfico **dice desde dónde arranca**, y cada barra lleva su precio escrito encima.
+
+Solo entran las semanas donde se anotaron **monto y kilos**. Si nunca se anotaron los kilos, la tarjeta lo dice en vez de dejar el hueco.
+
 ---
 
 ## Módulo 6 — Hoja de Vida del animal

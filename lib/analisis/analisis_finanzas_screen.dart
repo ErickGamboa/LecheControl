@@ -80,6 +80,8 @@ class _AnalisisFinanzasScreenState extends State<AnalisisFinanzasScreen> {
                 ],
               ),
               const SizedBox(height: LecheSpacing.lg),
+              _PrecioPorKiloSeccion(precio: PrecioPorKilo.desde(semanas)),
+              const SizedBox(height: LecheSpacing.lg),
               Text(
                 'SEMANA POR SEMANA',
                 style: Theme.of(context).textTheme.titleSmall,
@@ -90,6 +92,166 @@ class _AnalisisFinanzasScreenState extends State<AnalisisFinanzasScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// El precio que la planta paga por kilo, semana a semana.
+///
+/// Es el número que más manda en la finca y el único que no se digita: sale de
+/// dividir lo que pagaron entre los kilos que recibieron. Sube y baja solo
+/// —según cómo venga la leche— y hasta ahora solo se podía ver una semana a la
+/// vez, que es como no verlo.
+class _PrecioPorKiloSeccion extends StatelessWidget {
+  const _PrecioPorKiloSeccion({required this.precio});
+
+  final PrecioPorKilo precio;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!precio.hayDatos) return const _SinPrecio();
+
+    final textos = Theme.of(context).textTheme;
+    final ultima = precio.ultima;
+    final cambio = precio.cambio;
+
+    // La escala arranca abajo del precio más bajo, no en cero: entre ₡380 y
+    // ₡410 hay una diferencia que decide la semana, y desde cero las barras
+    // saldrían todas iguales. El margen deja que la peor semana siga
+    // dibujando barra en vez de quedar en cero.
+    final margen = (precio.mejor - precio.peor) * 0.35;
+    final piso = (precio.peor - (margen > 0 ? margen : precio.peor * 0.1))
+        .clamp(0.0, double.infinity);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          key: const ValueKey('analisis.precioKilo'),
+          child: Padding(
+            padding: const EdgeInsets.all(LecheSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('PRECIO POR KILO', style: textos.titleSmall),
+                const SizedBox(height: LecheSpacing.md),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      colones(ultima.precio),
+                      style: textos.headlineSmall?.copyWith(color: kAzulLeche),
+                    ),
+                    const SizedBox(width: LecheSpacing.sm),
+                    if (cambio != null && cambio != 0)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              cambio > 0
+                                  ? Icons.arrow_upward
+                                  : Icons.arrow_downward,
+                              size: 14,
+                              color: cambio > 0 ? kExito : kPeligro,
+                            ),
+                            Text(
+                              colones(cambio.abs()),
+                              style: textos.bodyMedium?.copyWith(
+                                color: cambio > 0 ? kExito : kPeligro,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                Text(
+                  '${etiquetaSemana(ultima.semana.fechaInicio, ultima.semana.fechaFin)}'
+                  ' · ${ultima.kg.toStringAsFixed(0)} kg entregados',
+                  style: textos.bodySmall,
+                ),
+                const Divider(height: LecheSpacing.xl),
+                // Alineados arriba: si una etiqueta se parte en dos
+                // renglones, las otras dos no tienen por qué bajarse con
+                // ella.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Dato(
+                      etiqueta: 'Promedio real',
+                      valor: colones(precio.promedio),
+                    ),
+                    _Dato(
+                      etiqueta: 'Mejor semana',
+                      valor: colones(precio.mejor),
+                    ),
+                    _Dato(etiqueta: 'Peor semana', valor: colones(precio.peor)),
+                  ],
+                ),
+                const SizedBox(height: LecheSpacing.sm),
+                Text(
+                  'El promedio pesa cada semana por los kilos que entregó, '
+                  'así que es lo que de verdad se cobró por kilo.',
+                  style: textos.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: LecheSpacing.md),
+        BarrasSemanales(
+          key: const ValueKey('analisis.precioKilo.grafico'),
+          titulo: 'PRECIO POR KILO, SEMANA A SEMANA',
+          nota:
+              'La escala arranca en ${colones(piso)} para que se note la '
+              'diferencia entre semanas.',
+          color: kAzulLeche,
+          piso: piso,
+          barras: [
+            for (final s in precio.semanas.reversed)
+              BarraSemanal(
+                etiqueta:
+                    '${s.semana.fechaInicio.day}/${s.semana.fechaInicio.month}',
+                valor: s.precio,
+                texto: colones(s.precio),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Cuando hay semanas con plata pero nadie anotó los kilos: sin kilos no hay
+/// precio que calcular, y decirlo es más útil que dejar el hueco.
+class _SinPrecio extends StatelessWidget {
+  const _SinPrecio();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: const ValueKey('analisis.precioKilo.sinDatos'),
+      child: Padding(
+        padding: const EdgeInsets.all(LecheSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'PRECIO POR KILO',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: LecheSpacing.sm),
+            Text(
+              'Todavía no se puede calcular. Al anotar el ingreso de leche en '
+              'Finanzas hay que poner también los kilos que recibió la planta: '
+              'el precio sale de dividir uno entre otro.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
       ),
     );
   }

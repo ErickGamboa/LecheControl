@@ -82,6 +82,7 @@ both integration tests and manual QA can target elements reliably:
 | `pesa/calidad_leche_screen.dart` | `calidad.solidos`, `calidad.somaticas`, `calidad.bacterial`, `calidad.guardar`, `calidad.semanaAnterior`, `calidad.semanaSiguiente`, `calidad.historial` |
 | `pesa/widgets/guia_calidad_leche.dart` | `calidad.guia.solidos`, `calidad.guia.somaticas`, `calidad.guia.bacterial`, `calidad.guia.precios` |
 | `analisis/analisis_calidad_screen.dart` | `analisis.calidad.solidos`, `analisis.calidad.somaticas`, `analisis.calidad.bacterial` (un gráfico por análisis) |
+| `analisis/analisis_finanzas_screen.dart` | `analisis.precioKilo`, `analisis.precioKilo.grafico`, `analisis.precioKilo.sinDatos` |
 
 `pesa.abrirSesion` was **not** added: `PesaScreen` opens/reuses today's
 session automatically in `initState`, there is no button for it in the UI.

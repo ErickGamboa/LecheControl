@@ -44,6 +44,8 @@ class BarrasSemanales extends StatelessWidget {
     required this.color,
     this.colorNegativo,
     this.alto = 140,
+    this.piso,
+    this.nota,
   });
 
   final String titulo;
@@ -53,6 +55,23 @@ class BarrasSemanales extends StatelessWidget {
   /// Color para las barras bajo cero. Si es null se usa [color].
   final Color? colorNegativo;
   final double alto;
+
+  /// Desde dónde arranca la escala, cuando cero no sirve.
+  ///
+  /// El precio por kilo se mueve entre ₡350 y ₡430: medido desde cero, las
+  /// semanas salen todas del mismo alto y el gráfico no dice nada, que es
+  /// justo lo que se venía a ver. Con un piso, la diferencia se nota.
+  ///
+  /// Recortar la escala **exagera** las diferencias, así que quien lo usa
+  /// tiene que decir desde dónde arranca en [nota]. Y el valor exacto va
+  /// escrito encima de cada barra igual, así que el número nunca depende de la
+  /// altura.
+  ///
+  /// null = el comportamiento de siempre: cero (o el valor más negativo).
+  final double? piso;
+
+  /// Un renglón chico bajo el título, para advertir de la escala recortada.
+  final String? nota;
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +84,8 @@ class BarrasSemanales extends StatelessWidget {
     // todas las semanas dieran exactamente lo mismo, el rango sería cero y
     // no se podría dividir: ahí se usa 1 y todas salen igual de altas.
     final techo = maximo > 0 ? maximo : 0.0;
-    final piso = minimo < 0 ? minimo : 0.0;
-    final rango = (techo - piso) == 0 ? 1.0 : techo - piso;
+    final base = piso ?? (minimo < 0 ? minimo : 0.0);
+    final rango = (techo - base) == 0 ? 1.0 : techo - base;
 
     return Card(
       child: Padding(
@@ -75,6 +94,10 @@ class BarrasSemanales extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(titulo, style: Theme.of(context).textTheme.titleSmall),
+            if (nota != null) ...[
+              const SizedBox(height: 2),
+              Text(nota!, style: Theme.of(context).textTheme.bodySmall),
+            ],
             const SizedBox(height: LecheSpacing.md),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -89,7 +112,13 @@ class BarrasSemanales extends StatelessWidget {
                       barra: b,
                       alto: alto,
                       // Proporción del alto disponible, siempre positiva.
-                      fraccion: b.valor.abs() / rango,
+                      // Sin piso propio se mide la magnitud desde cero (así
+                      // una semana con pérdida crece hacia arriba y se pinta
+                      // de rojo); con piso, la altura es lo que sobresale de
+                      // él.
+                      fraccion: piso == null
+                          ? b.valor.abs() / rango
+                          : ((b.valor - base) / rango).clamp(0.0, 1.0),
                       color:
                           b.color ??
                           (b.valor < 0 ? (colorNegativo ?? color) : color),
