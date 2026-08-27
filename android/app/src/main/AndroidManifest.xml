@@ -1,4 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Internet: sin esto la app instalada NO puede hablar con Supabase.
+         Va acá, en el manifest `main`, porque es el único que entra en el
+         build de RELEASE. Flutter crea el proyecto con este permiso solo en
+         `src/debug/` y `src/profile/` (los necesita para el hot reload), así
+         que la app anda perfecto con `flutter run` y, al instalar el APK/AAB,
+         el login falla y la sincronización nunca sube nada — sin ningún
+         error visible que apunte al permiso. No quitar. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Para saber si hay señal (connectivity_plus): es lo que dispara la
+         sincronización automática al recuperar la conexión. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
     <application
         android:label="Leche Control"
         android:name="${applicationName}"

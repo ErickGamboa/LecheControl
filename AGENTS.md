@@ -47,6 +47,28 @@ Architecture is intentionally aligned with sibling project `../HatoControlRun` (
 9. No self-registration in the app; accounts are created by the administrator.
 10. One active lechería per account (v1).
 
+## Platform requirements (network)
+
+The app must reach Supabase from any installed device, not just from
+`flutter run`.
+
+- **Android:** `INTERNET` and `ACCESS_NETWORK_STATE` live in
+  `android/app/src/main/AndroidManifest.xml`. Flutter only scaffolds
+  `INTERNET` into `src/debug/` and `src/profile/`, so a missing entry in
+  `main` breaks login and sync in **release only**, with no error pointing at
+  the permission. `test/plataforma/permisos_red_test.dart` guards this.
+- **iOS:** nothing to declare. Supabase is HTTPS and ATS allows that by
+  default; do not add `NSAllowsArbitraryLoads`.
+- **Credentials:** `SupabaseConfig` embeds the project URL and the `anon` key
+  as defaults, because an installed APK gets no `--dart-define`. The `anon`
+  key is public by design; RLS is the real boundary.
+- Auth is email/password (`signInWithPassword`) — no OAuth, so no deep-link
+  URL schemes or intent filters are needed.
+
+**Still open:** `android/app/build.gradle.kts` signs release with the debug
+keystore (Flutter's scaffold TODO). Fine for sideloading an APK; Play Store
+will reject it. Needs a real keystore before store distribution.
+
 ## Quality commands
 
 ```bash
