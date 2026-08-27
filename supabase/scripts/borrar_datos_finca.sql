@@ -13,7 +13,8 @@
 --   - animales, eventos_animal, pesas_sesiones, pesas_leche
 --   - medicamentos
 --   - parametros_periodo, costos_fijos (el esquema viejo, mensual)
---   - semanas, ingresos_semana, gastos_semana (por si ya se probó algo)
+--   - semanas, ingresos_semana, gastos_semana, calidad_leche (por si ya se
+--     probó algo)
 --
 -- Esto NO es una migración: no cambia el esquema, sólo vacía tablas. Por eso
 -- vive en scripts/ y no en migrations/.
@@ -49,6 +50,7 @@ BEGIN;
 DELETE FROM public.pesas_leche;
 DELETE FROM public.pesas_sesiones;
 
+DELETE FROM public.calidad_leche;
 DELETE FROM public.ingresos_semana;
 DELETE FROM public.gastos_semana;
 DELETE FROM public.semanas;

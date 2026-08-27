@@ -34,10 +34,7 @@ void main() {
     required double litros,
     double? concentradoKg,
   }) async {
-    final sesion = await repo.abrirSesion(
-      lecheriaId: lecheriaId,
-      fecha: fecha,
-    );
+    final sesion = await repo.abrirSesion(lecheriaId: lecheriaId, fecha: fecha);
     await repo.registrarPesa(
       sesionId: sesion.id,
       animalId: animalId,
@@ -49,12 +46,7 @@ void main() {
   }
 
   test('cada vaca entra con su pesa más reciente', () async {
-    await seedAnimal(
-      db,
-      lecheriaId: lecheriaId,
-      id: 'a1',
-      identificador: '1',
-    );
+    await seedAnimal(db, lecheriaId: lecheriaId, id: 'a1', identificador: '1');
     // Dos semanas distintas: la dieta tiene que usar la segunda.
     await pesar(fecha: DateTime(2026, 8, 10), animalId: 'a1', litros: 12);
     await pesar(fecha: DateTime(2026, 8, 17), animalId: 'a1', litros: 18);
@@ -139,9 +131,7 @@ void main() {
     await pesar(fecha: DateTime(2026, 8, 17), animalId: 'a1', litros: 30);
 
     // Se borra la pesa nueva (se anotó mal): la dieta vuelve a la anterior.
-    await (db.update(
-      db.pesasLeche,
-    )..where((t) => t.litros.equals(30))).write(
+    await (db.update(db.pesasLeche)..where((t) => t.litros.equals(30))).write(
       PesasLecheCompanion(deletedAt: Value(DateTime(2026, 8, 18))),
     );
 

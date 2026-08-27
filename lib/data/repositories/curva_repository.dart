@@ -107,10 +107,10 @@ class CurvaRepository {
 
   Stream<double?> observarTopeKgLeche(String lecheriaId) {
     return (db.select(
-      db.configReporte,
-    )..where((t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull())).watch().map(
-      (filas) => filas.isEmpty ? null : filas.first.topeKgLeche,
-    );
+          db.configReporte,
+        )..where((t) => t.lecheriaId.equals(lecheriaId) & t.deletedAt.isNull()))
+        .watch()
+        .map((filas) => filas.isEmpty ? null : filas.first.topeKgLeche);
   }
 
   /// Fija el tope de kilos, o lo quita con [tope] en null.
@@ -141,8 +141,7 @@ class CurvaRepository {
   /// tope, acá siempre hay una regla con la que calcular).
   Future<double> kgLechePorKgConcentradoDe(String lecheriaId) async {
     final config = await configDe(lecheriaId);
-    return config?.kgLechePorKgConcentrado ??
-        kgLechePorKgConcentradoPorDefecto;
+    return config?.kgLechePorKgConcentrado ?? kgLechePorKgConcentradoPorDefecto;
   }
 
   Future<void> editarKgLechePorKgConcentrado({

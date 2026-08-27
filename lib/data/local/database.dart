@@ -234,6 +234,45 @@ class PesasLeche extends Table {
   ];
 }
 
+/// Calidad de la leche entregada en una semana, tal como la reporta la planta
+/// (Módulo 3 — Registro de leche).
+///
+/// Una fila por semana de la finca (`semanas`, la misma unidad de las
+/// finanzas). Los tres análisis son opcionales por separado: la planta no
+/// siempre manda los tres el mismo día, y media semana cargada es mejor que
+/// ninguna. Una fila donde no quedó ningún valor se borra suave: no aporta
+/// nada al análisis y ensuciaría los gráficos.
+@DataClassName('CalidadLecheRow')
+class CalidadLeche extends Table {
+  TextColumn get id => text()();
+  TextColumn get lecheriaId => text()();
+  TextColumn get semanaId => text()();
+
+  /// Grasa + proteína + lactosa y minerales, en porcentaje del peso.
+  RealColumn get solidosTotalesPct => real().nullable()();
+
+  /// Recuento de células somáticas, en células por mL.
+  RealColumn get celulasSomaticas => real().nullable()();
+
+  /// Recuento bacterial, en UFC por mL.
+  RealColumn get conteoBacterial => real().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    'CHECK (solidos_totales_pct IS NULL OR '
+        '(solidos_totales_pct >= 0 AND solidos_totales_pct <= 100))',
+    'CHECK (celulas_somaticas IS NULL OR celulas_somaticas >= 0)',
+    'CHECK (conteo_bacterial IS NULL OR conteo_bacterial >= 0)',
+  ];
+}
+
 /// Litros que se esperan de una vaca según cuántos días lleva de parida.
 /// Siete tramos editables por lechería (Módulo 3 — reporte de producción).
 ///
@@ -464,6 +503,7 @@ class SesionesLocales extends Table {
     EventosAnimal,
     PesasSesiones,
     PesasLeche,
+    CalidadLeche,
     CurvaReferencia,
     ConfigReporte,
     Semanas,
@@ -484,7 +524,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -567,8 +607,30 @@ class AppDatabase extends _$AppDatabase {
       if (from < 7) {
         await m.addColumn(configReporte, configReporte.kgLechePorKgConcentrado);
       }
+      // v7 -> v8: la calidad de la leche semana a semana (sólidos totales,
+      // células somáticas y conteo bacterial), que hasta ahora solo vivía en
+      // el papel que manda la planta.
+      if (from < 8) {
+        await m.createTable(calidadLeche);
+        // Solo el índice de la tabla nueva, no todos: los demás son de
+        // tablas que esta migración no toca.
+        await _crearIndiceCalidadLeche();
+      }
     },
   );
+
+  /// Una sola lectura de calidad por semana: si llega otra, se corrige la que
+  /// ya está en vez de dejar dos verdades para la misma semana.
+  ///
+  /// Va aparte porque la migración v7 -> v8 lo necesita solo, sin los índices
+  /// de las tablas que esa migración no toca.
+  Future<void> _crearIndiceCalidadLeche() {
+    return customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_calidad_leche_lecheria_semana '
+      'ON calidad_leche (lecheria_id, semana_id) '
+      'WHERE deleted_at IS NULL',
+    );
+  }
 
   Future<void> _crearIndicesUnicosLocales() async {
     await customStatement(
@@ -594,6 +656,7 @@ class AppDatabase extends _$AppDatabase {
       'ON config_reporte (lecheria_id) '
       'WHERE deleted_at IS NULL',
     );
+    await _crearIndiceCalidadLeche();
     await customStatement(
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_semanas_lecheria_inicio '
       'ON semanas (lecheria_id, fecha_inicio) '

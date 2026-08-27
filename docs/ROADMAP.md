@@ -48,11 +48,16 @@ de verdad del producto). Última actualización: 2026-07-29.
 - Alta de animal, baja rápida (venta/muerte/descarte) y acceso a la hoja de
   vida por toque.
 
-### Módulo 3 — Pesa de leche
-- Apertura/reutilización de sesión, contador de pesadas vs. faltantes
-  (contra el grupo En ordeño), corrección si un animal ya se pesó.
+### Módulo 3 — Registro de leche
+- Menú de entrada con las dos cosas que se anotan de la leche: la pesa y la
+  calidad.
+- **Pesa:** apertura/reutilización de sesión, contador de pesadas vs.
+  faltantes (contra el grupo En ordeño), corrección si un animal ya se pesó.
 - Resumen de sesión (total, promedio, máximo, mínimo, variación vs. la
   sesión anterior) y accesos a historial/tendencia por animal.
+- **Calidad:** sólidos totales, células somáticas y conteo bacterial por
+  semana, con el grado de cada uno y las tablas de la planta como guía.
+  Se analiza en Análisis → Calidad de leche.
 
 ### Módulo 4 — Gastos
 - Parámetros del mes (precio del litro, precio del concentrado, umbral de

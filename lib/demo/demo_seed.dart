@@ -4,6 +4,7 @@ import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../data/repositories/animales_repository.dart';
 import '../data/domain/semana.dart';
+import '../data/repositories/calidad_repository.dart';
 import '../data/repositories/finanzas_repository.dart';
 import '../data/repositories/lecherias_repository.dart';
 import '../data/repositories/medicamentos_repository.dart';
@@ -21,7 +22,8 @@ abstract final class DemoSeedIds {
 
 /// Siembra una lechería demo completa (offline) para explorar la app sin
 /// necesitar un proyecto de Supabase: hato con 5 animales en distintos
-/// grupos, medicamentos, parámetros del mes y una sesión de pesa reciente.
+/// grupos, medicamentos, parámetros del mes, una sesión de pesa reciente y tres
+/// semanas de calidad de leche.
 class DemoSeed {
   DemoSeed({
     AppDatabase? database,
@@ -29,12 +31,14 @@ class DemoSeed {
     AnimalesRepository? animales,
     PesasRepository? pesas,
     FinanzasRepository? finanzas,
+    CalidadRepository? calidad,
     MedicamentosRepository? medicamentos,
   }) : _db = database ?? db,
        _lecherias = lecherias ?? lecheriasRepo,
        _animales = animales ?? animalesRepo,
        _pesas = pesas ?? pesasRepo,
        _finanzas = finanzas ?? finanzasRepo,
+       _calidad = calidad ?? calidadRepo,
        _medicamentos = medicamentos ?? medicamentosRepo;
 
   final AppDatabase _db;
@@ -42,6 +46,7 @@ class DemoSeed {
   final AnimalesRepository _animales;
   final PesasRepository _pesas;
   final FinanzasRepository _finanzas;
+  final CalidadRepository _calidad;
   final MedicamentosRepository _medicamentos;
 
   /// Idempotente: si la lechería demo ya existe para este usuario, no hace
@@ -66,6 +71,7 @@ class DemoSeed {
     await _sembrarAnimales(lecheriaId);
     await _sembrarFinanzas(lecheriaId);
     await _sembrarPesaReciente(lecheriaId);
+    await _sembrarCalidad(lecheriaId);
 
     return lecheriaId;
   }
@@ -220,6 +226,30 @@ class DemoSeed {
       categoria: 'Cerca',
       monto: 18000,
     );
+  }
+
+  /// Tres semanas de análisis de la planta, mejorando: así el gráfico de
+  /// calidad tiene una tendencia que mirar en vez de una sola barra suelta.
+  Future<void> _sembrarCalidad(String lecheriaId) async {
+    final hoy = DateTime.now();
+    final semanas = <(int atras, double solidos, double somaticas, double ufc)>[
+      (2, 11.8, 420000, 640000), // grado A: se estaba castigando el precio
+      (1, 12.2, 310000, 380000), // ya en Excelente
+      (0, 12.7, 220000, 240000), // Premium
+    ];
+    for (final (atras, solidos, somaticas, ufc) in semanas) {
+      final semana = await _calidad.abrirSemana(
+        lecheriaId: lecheriaId,
+        fecha: hoy.subtract(Duration(days: 7 * atras)),
+      );
+      await _calidad.guardar(
+        lecheriaId: lecheriaId,
+        semanaId: semana.id,
+        solidosTotalesPct: solidos,
+        celulasSomaticas: somaticas,
+        conteoBacterial: ufc,
+      );
+    }
   }
 
   Future<void> _sembrarPesaReciente(String lecheriaId) async {

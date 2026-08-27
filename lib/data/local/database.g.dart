@@ -6005,6 +6005,651 @@ class PesasLecheCompanion extends UpdateCompanion<PesaLecheRow> {
   }
 }
 
+class $CalidadLecheTable extends CalidadLeche
+    with TableInfo<$CalidadLecheTable, CalidadLecheRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CalidadLecheTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lecheriaIdMeta = const VerificationMeta(
+    'lecheriaId',
+  );
+  @override
+  late final GeneratedColumn<String> lecheriaId = GeneratedColumn<String>(
+    'lecheria_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _semanaIdMeta = const VerificationMeta(
+    'semanaId',
+  );
+  @override
+  late final GeneratedColumn<String> semanaId = GeneratedColumn<String>(
+    'semana_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _solidosTotalesPctMeta = const VerificationMeta(
+    'solidosTotalesPct',
+  );
+  @override
+  late final GeneratedColumn<double> solidosTotalesPct =
+      GeneratedColumn<double>(
+        'solidos_totales_pct',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _celulasSomaticasMeta = const VerificationMeta(
+    'celulasSomaticas',
+  );
+  @override
+  late final GeneratedColumn<double> celulasSomaticas = GeneratedColumn<double>(
+    'celulas_somaticas',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _conteoBacterialMeta = const VerificationMeta(
+    'conteoBacterial',
+  );
+  @override
+  late final GeneratedColumn<double> conteoBacterial = GeneratedColumn<double>(
+    'conteo_bacterial',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    lecheriaId,
+    semanaId,
+    solidosTotalesPct,
+    celulasSomaticas,
+    conteoBacterial,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'calidad_leche';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CalidadLecheRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('lecheria_id')) {
+      context.handle(
+        _lecheriaIdMeta,
+        lecheriaId.isAcceptableOrUnknown(data['lecheria_id']!, _lecheriaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lecheriaIdMeta);
+    }
+    if (data.containsKey('semana_id')) {
+      context.handle(
+        _semanaIdMeta,
+        semanaId.isAcceptableOrUnknown(data['semana_id']!, _semanaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_semanaIdMeta);
+    }
+    if (data.containsKey('solidos_totales_pct')) {
+      context.handle(
+        _solidosTotalesPctMeta,
+        solidosTotalesPct.isAcceptableOrUnknown(
+          data['solidos_totales_pct']!,
+          _solidosTotalesPctMeta,
+        ),
+      );
+    }
+    if (data.containsKey('celulas_somaticas')) {
+      context.handle(
+        _celulasSomaticasMeta,
+        celulasSomaticas.isAcceptableOrUnknown(
+          data['celulas_somaticas']!,
+          _celulasSomaticasMeta,
+        ),
+      );
+    }
+    if (data.containsKey('conteo_bacterial')) {
+      context.handle(
+        _conteoBacterialMeta,
+        conteoBacterial.isAcceptableOrUnknown(
+          data['conteo_bacterial']!,
+          _conteoBacterialMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CalidadLecheRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CalidadLecheRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      lecheriaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lecheria_id'],
+      )!,
+      semanaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}semana_id'],
+      )!,
+      solidosTotalesPct: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}solidos_totales_pct'],
+      ),
+      celulasSomaticas: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}celulas_somaticas'],
+      ),
+      conteoBacterial: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}conteo_bacterial'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $CalidadLecheTable createAlias(String alias) {
+    return $CalidadLecheTable(attachedDatabase, alias);
+  }
+}
+
+class CalidadLecheRow extends DataClass implements Insertable<CalidadLecheRow> {
+  final String id;
+  final String lecheriaId;
+  final String semanaId;
+
+  /// Grasa + proteína + lactosa y minerales, en porcentaje del peso.
+  final double? solidosTotalesPct;
+
+  /// Recuento de células somáticas, en células por mL.
+  final double? celulasSomaticas;
+
+  /// Recuento bacterial, en UFC por mL.
+  final double? conteoBacterial;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const CalidadLecheRow({
+    required this.id,
+    required this.lecheriaId,
+    required this.semanaId,
+    this.solidosTotalesPct,
+    this.celulasSomaticas,
+    this.conteoBacterial,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['lecheria_id'] = Variable<String>(lecheriaId);
+    map['semana_id'] = Variable<String>(semanaId);
+    if (!nullToAbsent || solidosTotalesPct != null) {
+      map['solidos_totales_pct'] = Variable<double>(solidosTotalesPct);
+    }
+    if (!nullToAbsent || celulasSomaticas != null) {
+      map['celulas_somaticas'] = Variable<double>(celulasSomaticas);
+    }
+    if (!nullToAbsent || conteoBacterial != null) {
+      map['conteo_bacterial'] = Variable<double>(conteoBacterial);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  CalidadLecheCompanion toCompanion(bool nullToAbsent) {
+    return CalidadLecheCompanion(
+      id: Value(id),
+      lecheriaId: Value(lecheriaId),
+      semanaId: Value(semanaId),
+      solidosTotalesPct: solidosTotalesPct == null && nullToAbsent
+          ? const Value.absent()
+          : Value(solidosTotalesPct),
+      celulasSomaticas: celulasSomaticas == null && nullToAbsent
+          ? const Value.absent()
+          : Value(celulasSomaticas),
+      conteoBacterial: conteoBacterial == null && nullToAbsent
+          ? const Value.absent()
+          : Value(conteoBacterial),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory CalidadLecheRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CalidadLecheRow(
+      id: serializer.fromJson<String>(json['id']),
+      lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
+      semanaId: serializer.fromJson<String>(json['semanaId']),
+      solidosTotalesPct: serializer.fromJson<double?>(
+        json['solidosTotalesPct'],
+      ),
+      celulasSomaticas: serializer.fromJson<double?>(json['celulasSomaticas']),
+      conteoBacterial: serializer.fromJson<double?>(json['conteoBacterial']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'lecheriaId': serializer.toJson<String>(lecheriaId),
+      'semanaId': serializer.toJson<String>(semanaId),
+      'solidosTotalesPct': serializer.toJson<double?>(solidosTotalesPct),
+      'celulasSomaticas': serializer.toJson<double?>(celulasSomaticas),
+      'conteoBacterial': serializer.toJson<double?>(conteoBacterial),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  CalidadLecheRow copyWith({
+    String? id,
+    String? lecheriaId,
+    String? semanaId,
+    Value<double?> solidosTotalesPct = const Value.absent(),
+    Value<double?> celulasSomaticas = const Value.absent(),
+    Value<double?> conteoBacterial = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => CalidadLecheRow(
+    id: id ?? this.id,
+    lecheriaId: lecheriaId ?? this.lecheriaId,
+    semanaId: semanaId ?? this.semanaId,
+    solidosTotalesPct: solidosTotalesPct.present
+        ? solidosTotalesPct.value
+        : this.solidosTotalesPct,
+    celulasSomaticas: celulasSomaticas.present
+        ? celulasSomaticas.value
+        : this.celulasSomaticas,
+    conteoBacterial: conteoBacterial.present
+        ? conteoBacterial.value
+        : this.conteoBacterial,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  CalidadLecheRow copyWithCompanion(CalidadLecheCompanion data) {
+    return CalidadLecheRow(
+      id: data.id.present ? data.id.value : this.id,
+      lecheriaId: data.lecheriaId.present
+          ? data.lecheriaId.value
+          : this.lecheriaId,
+      semanaId: data.semanaId.present ? data.semanaId.value : this.semanaId,
+      solidosTotalesPct: data.solidosTotalesPct.present
+          ? data.solidosTotalesPct.value
+          : this.solidosTotalesPct,
+      celulasSomaticas: data.celulasSomaticas.present
+          ? data.celulasSomaticas.value
+          : this.celulasSomaticas,
+      conteoBacterial: data.conteoBacterial.present
+          ? data.conteoBacterial.value
+          : this.conteoBacterial,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalidadLecheRow(')
+          ..write('id: $id, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('semanaId: $semanaId, ')
+          ..write('solidosTotalesPct: $solidosTotalesPct, ')
+          ..write('celulasSomaticas: $celulasSomaticas, ')
+          ..write('conteoBacterial: $conteoBacterial, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    lecheriaId,
+    semanaId,
+    solidosTotalesPct,
+    celulasSomaticas,
+    conteoBacterial,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CalidadLecheRow &&
+          other.id == this.id &&
+          other.lecheriaId == this.lecheriaId &&
+          other.semanaId == this.semanaId &&
+          other.solidosTotalesPct == this.solidosTotalesPct &&
+          other.celulasSomaticas == this.celulasSomaticas &&
+          other.conteoBacterial == this.conteoBacterial &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class CalidadLecheCompanion extends UpdateCompanion<CalidadLecheRow> {
+  final Value<String> id;
+  final Value<String> lecheriaId;
+  final Value<String> semanaId;
+  final Value<double?> solidosTotalesPct;
+  final Value<double?> celulasSomaticas;
+  final Value<double?> conteoBacterial;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const CalidadLecheCompanion({
+    this.id = const Value.absent(),
+    this.lecheriaId = const Value.absent(),
+    this.semanaId = const Value.absent(),
+    this.solidosTotalesPct = const Value.absent(),
+    this.celulasSomaticas = const Value.absent(),
+    this.conteoBacterial = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CalidadLecheCompanion.insert({
+    required String id,
+    required String lecheriaId,
+    required String semanaId,
+    this.solidosTotalesPct = const Value.absent(),
+    this.celulasSomaticas = const Value.absent(),
+    this.conteoBacterial = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       lecheriaId = Value(lecheriaId),
+       semanaId = Value(semanaId),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<CalidadLecheRow> custom({
+    Expression<String>? id,
+    Expression<String>? lecheriaId,
+    Expression<String>? semanaId,
+    Expression<double>? solidosTotalesPct,
+    Expression<double>? celulasSomaticas,
+    Expression<double>? conteoBacterial,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (lecheriaId != null) 'lecheria_id': lecheriaId,
+      if (semanaId != null) 'semana_id': semanaId,
+      if (solidosTotalesPct != null) 'solidos_totales_pct': solidosTotalesPct,
+      if (celulasSomaticas != null) 'celulas_somaticas': celulasSomaticas,
+      if (conteoBacterial != null) 'conteo_bacterial': conteoBacterial,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CalidadLecheCompanion copyWith({
+    Value<String>? id,
+    Value<String>? lecheriaId,
+    Value<String>? semanaId,
+    Value<double?>? solidosTotalesPct,
+    Value<double?>? celulasSomaticas,
+    Value<double?>? conteoBacterial,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return CalidadLecheCompanion(
+      id: id ?? this.id,
+      lecheriaId: lecheriaId ?? this.lecheriaId,
+      semanaId: semanaId ?? this.semanaId,
+      solidosTotalesPct: solidosTotalesPct ?? this.solidosTotalesPct,
+      celulasSomaticas: celulasSomaticas ?? this.celulasSomaticas,
+      conteoBacterial: conteoBacterial ?? this.conteoBacterial,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (lecheriaId.present) {
+      map['lecheria_id'] = Variable<String>(lecheriaId.value);
+    }
+    if (semanaId.present) {
+      map['semana_id'] = Variable<String>(semanaId.value);
+    }
+    if (solidosTotalesPct.present) {
+      map['solidos_totales_pct'] = Variable<double>(solidosTotalesPct.value);
+    }
+    if (celulasSomaticas.present) {
+      map['celulas_somaticas'] = Variable<double>(celulasSomaticas.value);
+    }
+    if (conteoBacterial.present) {
+      map['conteo_bacterial'] = Variable<double>(conteoBacterial.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalidadLecheCompanion(')
+          ..write('id: $id, ')
+          ..write('lecheriaId: $lecheriaId, ')
+          ..write('semanaId: $semanaId, ')
+          ..write('solidosTotalesPct: $solidosTotalesPct, ')
+          ..write('celulasSomaticas: $celulasSomaticas, ')
+          ..write('conteoBacterial: $conteoBacterial, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CurvaReferenciaTable extends CurvaReferencia
     with TableInfo<$CurvaReferenciaTable, CurvaReferenciaRow> {
   @override
@@ -11459,6 +12104,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $EventosAnimalTable eventosAnimal = $EventosAnimalTable(this);
   late final $PesasSesionesTable pesasSesiones = $PesasSesionesTable(this);
   late final $PesasLecheTable pesasLeche = $PesasLecheTable(this);
+  late final $CalidadLecheTable calidadLeche = $CalidadLecheTable(this);
   late final $CurvaReferenciaTable curvaReferencia = $CurvaReferenciaTable(
     this,
   );
@@ -11489,6 +12135,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     eventosAnimal,
     pesasSesiones,
     pesasLeche,
+    calidadLeche,
     curvaReferencia,
     configReporte,
     semanas,
@@ -14353,6 +15000,309 @@ typedef $$PesasLecheTableProcessedTableManager =
       PesaLecheRow,
       PrefetchHooks Function()
     >;
+typedef $$CalidadLecheTableCreateCompanionBuilder =
+    CalidadLecheCompanion Function({
+      required String id,
+      required String lecheriaId,
+      required String semanaId,
+      Value<double?> solidosTotalesPct,
+      Value<double?> celulasSomaticas,
+      Value<double?> conteoBacterial,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$CalidadLecheTableUpdateCompanionBuilder =
+    CalidadLecheCompanion Function({
+      Value<String> id,
+      Value<String> lecheriaId,
+      Value<String> semanaId,
+      Value<double?> solidosTotalesPct,
+      Value<double?> celulasSomaticas,
+      Value<double?> conteoBacterial,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$CalidadLecheTableFilterComposer
+    extends Composer<_$AppDatabase, $CalidadLecheTable> {
+  $$CalidadLecheTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get semanaId => $composableBuilder(
+    column: $table.semanaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get solidosTotalesPct => $composableBuilder(
+    column: $table.solidosTotalesPct,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get celulasSomaticas => $composableBuilder(
+    column: $table.celulasSomaticas,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get conteoBacterial => $composableBuilder(
+    column: $table.conteoBacterial,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CalidadLecheTableOrderingComposer
+    extends Composer<_$AppDatabase, $CalidadLecheTable> {
+  $$CalidadLecheTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get semanaId => $composableBuilder(
+    column: $table.semanaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get solidosTotalesPct => $composableBuilder(
+    column: $table.solidosTotalesPct,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get celulasSomaticas => $composableBuilder(
+    column: $table.celulasSomaticas,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get conteoBacterial => $composableBuilder(
+    column: $table.conteoBacterial,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CalidadLecheTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CalidadLecheTable> {
+  $$CalidadLecheTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get lecheriaId => $composableBuilder(
+    column: $table.lecheriaId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get semanaId =>
+      $composableBuilder(column: $table.semanaId, builder: (column) => column);
+
+  GeneratedColumn<double> get solidosTotalesPct => $composableBuilder(
+    column: $table.solidosTotalesPct,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get celulasSomaticas => $composableBuilder(
+    column: $table.celulasSomaticas,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get conteoBacterial => $composableBuilder(
+    column: $table.conteoBacterial,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$CalidadLecheTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CalidadLecheTable,
+          CalidadLecheRow,
+          $$CalidadLecheTableFilterComposer,
+          $$CalidadLecheTableOrderingComposer,
+          $$CalidadLecheTableAnnotationComposer,
+          $$CalidadLecheTableCreateCompanionBuilder,
+          $$CalidadLecheTableUpdateCompanionBuilder,
+          (
+            CalidadLecheRow,
+            BaseReferences<_$AppDatabase, $CalidadLecheTable, CalidadLecheRow>,
+          ),
+          CalidadLecheRow,
+          PrefetchHooks Function()
+        > {
+  $$CalidadLecheTableTableManager(_$AppDatabase db, $CalidadLecheTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CalidadLecheTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CalidadLecheTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CalidadLecheTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> lecheriaId = const Value.absent(),
+                Value<String> semanaId = const Value.absent(),
+                Value<double?> solidosTotalesPct = const Value.absent(),
+                Value<double?> celulasSomaticas = const Value.absent(),
+                Value<double?> conteoBacterial = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CalidadLecheCompanion(
+                id: id,
+                lecheriaId: lecheriaId,
+                semanaId: semanaId,
+                solidosTotalesPct: solidosTotalesPct,
+                celulasSomaticas: celulasSomaticas,
+                conteoBacterial: conteoBacterial,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String lecheriaId,
+                required String semanaId,
+                Value<double?> solidosTotalesPct = const Value.absent(),
+                Value<double?> celulasSomaticas = const Value.absent(),
+                Value<double?> conteoBacterial = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CalidadLecheCompanion.insert(
+                id: id,
+                lecheriaId: lecheriaId,
+                semanaId: semanaId,
+                solidosTotalesPct: solidosTotalesPct,
+                celulasSomaticas: celulasSomaticas,
+                conteoBacterial: conteoBacterial,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CalidadLecheTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CalidadLecheTable,
+      CalidadLecheRow,
+      $$CalidadLecheTableFilterComposer,
+      $$CalidadLecheTableOrderingComposer,
+      $$CalidadLecheTableAnnotationComposer,
+      $$CalidadLecheTableCreateCompanionBuilder,
+      $$CalidadLecheTableUpdateCompanionBuilder,
+      (
+        CalidadLecheRow,
+        BaseReferences<_$AppDatabase, $CalidadLecheTable, CalidadLecheRow>,
+      ),
+      CalidadLecheRow,
+      PrefetchHooks Function()
+    >;
 typedef $$CurvaReferenciaTableCreateCompanionBuilder =
     CurvaReferenciaCompanion Function({
       required String id,
@@ -17091,6 +18041,8 @@ class $AppDatabaseManager {
       $$PesasSesionesTableTableManager(_db, _db.pesasSesiones);
   $$PesasLecheTableTableManager get pesasLeche =>
       $$PesasLecheTableTableManager(_db, _db.pesasLeche);
+  $$CalidadLecheTableTableManager get calidadLeche =>
+      $$CalidadLecheTableTableManager(_db, _db.calidadLeche);
   $$CurvaReferenciaTableTableManager get curvaReferencia =>
       $$CurvaReferenciaTableTableManager(_db, _db.curvaReferencia);
   $$ConfigReporteTableTableManager get configReporte =>

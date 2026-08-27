@@ -4,6 +4,7 @@ import 'config/supabase_config.dart';
 import 'connectivity/estado_conexion.dart';
 import 'data/local/database.dart';
 import 'data/repositories/animales_repository.dart';
+import 'data/repositories/calidad_repository.dart';
 import 'data/repositories/cuentas_repository.dart';
 import 'data/repositories/curva_repository.dart';
 import 'data/repositories/eventos_repository.dart';
@@ -24,6 +25,10 @@ final LecheriasRepository lecheriasRepo = LecheriasRepository(db);
 final CuentasRepository cuentasRepo = CuentasRepository(db);
 final FinanzasRepository finanzasRepo = FinanzasRepository(db);
 final AnimalesRepository animalesRepo = AnimalesRepository(
+  db,
+  finanzasRepository: finanzasRepo,
+);
+final CalidadRepository calidadRepo = CalidadRepository(
   db,
   finanzasRepository: finanzasRepo,
 );

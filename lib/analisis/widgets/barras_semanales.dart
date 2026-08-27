@@ -7,6 +7,7 @@ class BarraSemanal {
     required this.etiqueta,
     required this.valor,
     required this.texto,
+    this.color,
   });
 
   /// Qué semana es, corto: "10/8".
@@ -17,6 +18,13 @@ class BarraSemanal {
 
   /// El valor ya formateado, como se muestra encima de la barra.
   final String texto;
+
+  /// Color propio de esta barra, cuando el color dice algo del valor y no de
+  /// la serie: en calidad de leche cada semana se pinta del color de su grado,
+  /// así que un mes malo se ve rojo sin tener que leer los números.
+  ///
+  /// null = el color del gráfico.
+  final Color? color;
 }
 
 /// Gráfico de barras simple, semana a semana.
@@ -82,7 +90,9 @@ class BarrasSemanales extends StatelessWidget {
                       alto: alto,
                       // Proporción del alto disponible, siempre positiva.
                       fraccion: b.valor.abs() / rango,
-                      color: b.valor < 0 ? (colorNegativo ?? color) : color,
+                      color:
+                          b.color ??
+                          (b.valor < 0 ? (colorNegativo ?? color) : color),
                     ),
                 ].reversed.toList(),
               ),

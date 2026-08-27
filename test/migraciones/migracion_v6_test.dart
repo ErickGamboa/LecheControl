@@ -116,10 +116,9 @@ void main() {
           ),
         );
 
-    final observacion =
-        await (db.select(db.eventosAnimal)
-              ..where((t) => t.tipo.equals(TipoEventoAnimal.observacion)))
-            .getSingle();
+    final observacion = await (db.select(
+      db.eventosAnimal,
+    )..where((t) => t.tipo.equals(TipoEventoAnimal.observacion))).getSingle();
     expect(observacion.detalle, 'cojea de la pata de atrás');
   });
 

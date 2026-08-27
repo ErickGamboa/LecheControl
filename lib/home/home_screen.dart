@@ -9,7 +9,7 @@ import '../data/local/database.dart';
 import '../data/repositories/pesas_repository.dart';
 import '../finanzas/finanzas_screen.dart';
 import '../inventario/inventario_screen.dart';
-import '../pesa/pesa_screen.dart';
+import '../pesa/registro_leche_screen.dart';
 import '../sanidad/sanidad_screen.dart';
 import '../services.dart';
 import '../trabajo/trabajo_screen.dart';
@@ -78,13 +78,16 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       _Modulo(
-        valueKey: 'home.pesa',
+        valueKey: 'home.registroLeche',
         icono: Icons.water_drop_outlined,
-        titulo: 'Pesa de leche',
+        titulo: 'Registro de leche',
         color: kVerdeLeche,
         onTap: () => _abrir(
           context,
-          PesaScreen(lecheriaId: lecheria.id, nombreLecheria: lecheria.nombre),
+          RegistroLecheScreen(
+            lecheriaId: lecheria.id,
+            nombreLecheria: lecheria.nombre,
+          ),
         ),
       ),
       _Modulo(
@@ -396,9 +399,9 @@ class _ModuloCard extends StatelessWidget {
                 child: Icon(modulo.icono, size: 32, color: modulo.color),
               ),
               const SizedBox(height: LecheSpacing.sm),
-              // En una sola línea, encogiéndose si hace falta. Partir "Pesa
-              // de leche" en dos renglones le pedía a la tarjeta un alto que
-              // ya no tiene: ese espacio se lo llevó el gráfico.
+              // En una sola línea, encogiéndose si hace falta. Partir
+              // "Registro de leche" en dos renglones le pedía a la tarjeta un
+              // alto que ya no tiene: ese espacio se lo llevó el gráfico.
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(

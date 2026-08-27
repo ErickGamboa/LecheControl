@@ -137,9 +137,19 @@ void main() {
         label: 'home.syncStatus',
       );
 
-      // 4) Módulo Pesa de leche: registrar litros del animal recién creado.
+      // 4) Módulo Registro de leche -> Pesa: registrar litros del animal
+      //    recién creado.
       await e2eStep('registrar litros en Pesa de leche');
-      await tapKey(tester, const ValueKey('home.pesa'), label: 'home.pesa');
+      await tapKey(
+        tester,
+        const ValueKey('home.registroLeche'),
+        label: 'home.registroLeche',
+      );
+      await tapKey(
+        tester,
+        const ValueKey('registro.pesa'),
+        label: 'registro.pesa',
+      );
       await waitFor(
         tester,
         find.byKey(const ValueKey('pesa.identificador')),
@@ -165,6 +175,8 @@ void main() {
       await pumpBounded(tester);
 
       await e2eStep('volver al home desde Pesa de leche');
+      // Dos pasos atrás: la pesa cuelga del menú de Registro de leche.
+      await tapBack(tester);
       await tapBack(tester);
       await waitFor(
         tester,

@@ -45,12 +45,14 @@ Ver también `lib/data/sync/sync_service.dart` para el mapeo exacto de columnas
 | `animales` | `id`, `lecheria_id`, `identificador` (único por lechería, activos), `sexo`, `grupo`, `estado`, `estado_reproductivo`, `origen`, `precio_compra`, `fecha_compra`, `madre_id`, `fecha_probable_parto`, `retiro_leche_hasta`, `fecha_ultimo_parto` | `grupo` ∈ `en_ordeno, secas, novillas, terneros`. El estado **pronta** (le falta poco para parir) no se guarda: sale de `fecha_probable_parto`, justamente para que la vaca no tenga que salir de Secas. `retiro_leche_hasta` quedó sin uso — los medicamentos ya no llevan días de retiro. `fecha_ultimo_parto` es la base de los días de lactancia (DLac) del reporte de producción: la fija el evento `parto` y se puede corregir a mano desde la hoja de vida, que es como se cargan las vacas que ya estaban en la finca. |
 | `eventos_animal` | `id`, `animal_id`, `lecheria_id`, `tipo`, `fecha`, + columnas específicas por tipo (`medicamento_id`/`dosis`/`dias_retiro`/`costo` para sanidad; `resultado` para palpación; `toro_pajilla` para servicio; `grupo_anterior`/`grupo_nuevo` para cambios de grupo/secado; `motivo_baja`/`precio_venta` para bajas; `sexo_cria`/`cria_animal_id` para partos) | Es la hoja de vida completa (Módulo 6): un registro append-only por evento. `tipo` ∈ `sanidad, celo, monta, inseminacion, palpacion, secado, parto, cambio_grupo, baja, concentrado`. |
 
-## Pesa de leche (Módulo 3)
+## Registro de leche (Módulo 3)
 
 | Tabla | Columnas clave | Notas |
 |---|---|---|
 | `pesas_sesiones` | `id`, `lecheria_id`, `fecha`, `cerrada` | Una sesión por día (se reutiliza si ya hay una abierta). |
 | `pesas_leche` | `id`, `sesion_id`, `animal_id`, `identificador_manual`, `litros`, `litros_manana`, `litros_tarde`, `concentrado_kg` | Sin `lecheria_id` propio: la membresía se valida vía `pesas_sesiones.lecheria_id`. Un registro por vaca por sesión (se corrige, no se duplica). `litros` es el total del día y lo calcula el cliente. Viene `animal_id` (vaca del inventario) **o** `identificador_manual` (vaca que se pesa sin ficha, sin días de lactancia), nunca los dos. Las filas anteriores a v2 no tienen desglose mañana/tarde y el reporte las marca como tales. |
+
+| `calidad_leche` | `id`, `lecheria_id`, `semana_id`, `solidos_totales_pct`, `celulas_somaticas`, `conteo_bacterial` | Lo que reporta la planta de la leche entregada, **una fila por semana** (única por `(lecheria_id, semana_id)` entre las activas). La semana es la misma de las finanzas (`semanas`), por eso cuelga de `semana_id` y no lleva su propio calendario. Los tres análisis son opcionales por separado: la planta no siempre manda los tres el mismo día. Una fila que se queda sin ningún valor se borra suave — una lectura vacía no es una semana medida y haría un hueco en los gráficos. La app no calcula nada con esto: solo dice en qué escalón cayó cada número (`domain/calidad_leche.dart`, donde viven las tablas de la planta y las de referencia). |
 
 ## Reporte de producción (Módulo 3)
 

@@ -302,6 +302,7 @@ class SyncService {
     _semanasSpec,
     _ingresosSemanaSpec,
     _gastosSemanaSpec,
+    _calidadLecheSpec,
     _categoriasGastoSpec,
     _medicamentosSpec,
   ];
@@ -1022,6 +1023,61 @@ class SyncService {
               categoria: r['categoria'] as String,
               monto: (r['monto'] as num).toDouble(),
               detalle: r['detalle'] as String?,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: _fechaOpcional(r['deleted_at']),
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
+
+  TableSyncSpec get _calidadLecheSpec => TableSyncSpec(
+    tabla: 'calidad_leche',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.calidadLeche,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final c in filas)
+            (
+              c.id,
+              {
+                'id': c.id,
+                'lecheria_id': c.lecheriaId,
+                'semana_id': c.semanaId,
+                'solidos_totales_pct': c.solidosTotalesPct,
+                'celulas_somaticas': c.celulasSomaticas,
+                'conteo_bacterial': c.conteoBacterial,
+                'created_at': c.createdAt.toIso8601String(),
+                'deleted_at': c.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.calidadLeche)..where((t) => t.id.equals(id))).write(
+            const CalidadLecheCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.calidadLeche,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.calidadLeche)
+          .insertOnConflictUpdate(
+            CalidadLecheRow(
+              id: r['id'] as String,
+              lecheriaId: r['lecheria_id'] as String,
+              semanaId: r['semana_id'] as String,
+              solidosTotalesPct: (r['solidos_totales_pct'] as num?)?.toDouble(),
+              celulasSomaticas: (r['celulas_somaticas'] as num?)?.toDouble(),
+              conteoBacterial: (r['conteo_bacterial'] as num?)?.toDouble(),
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: _fechaOpcional(r['deleted_at']),

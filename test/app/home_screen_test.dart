@@ -39,7 +39,7 @@ void main() {
     for (final clave in [
       'home.trabajo',
       'home.inventario',
-      'home.pesa',
+      'home.registroLeche',
       'home.finanzas',
       'home.sanidad',
       'home.analisis',

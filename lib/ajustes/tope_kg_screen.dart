@@ -56,8 +56,10 @@ class _TopeKgScreenState extends State<TopeKgScreen> {
     final tope = texto.isEmpty ? null : double.tryParse(texto);
 
     if (texto.isNotEmpty && (tope == null || tope <= 0)) {
-      _avisar('Escribí un número de kilos mayor que cero, o dejá el campo '
-          'vacío para quitar el tope.');
+      _avisar(
+        'Escribí un número de kilos mayor que cero, o dejá el campo '
+        'vacío para quitar el tope.',
+      );
       return;
     }
 

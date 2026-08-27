@@ -391,9 +391,7 @@ class _TarjetaAnimal extends StatelessWidget {
                 ),
               if (animal.estadoReproductivo == EstadoReproductivo.preniada)
                 _BotonEvento(
-                  icono: const ImageIcon(
-                    AssetImage('assets/icono_parto.png'),
-                  ),
+                  icono: const ImageIcon(AssetImage('assets/icono_parto.png')),
                   etiqueta: 'Parto',
                   onTap: () => _partoDialog(context),
                 ),

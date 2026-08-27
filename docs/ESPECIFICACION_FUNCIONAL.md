@@ -72,7 +72,18 @@ Cada evento queda en la **hoja de vida** con su fecha. Eventos disponibles:
 
 ---
 
-## Módulo 3 — Pesa de leche (semanal)
+## Módulo 3 — Registro de leche (semanal)
+
+Todo lo que se anota de la leche de la semana. Al entrar se elige entre dos cosas distintas:
+
+- **Pesa de leche** — cuánta leche dio cada vaca, en el corral.
+- **Calidad de leche** — cómo viene esa leche, según los análisis que manda la planta.
+
+Se anotan en momentos distintos y con datos que no se parecen, por eso no comparten pantalla.
+
+---
+
+### Pesa de leche
 
 Una vez por semana el ganadero **pesa la leche** de las vacas en ordeño para sacar conclusiones. Es un flujo rápido, animal por animal.
 
@@ -123,6 +134,35 @@ A los ~3 meses de pesas la app muestra el **promedio real del hato** por tramo j
 
 ---
 
+### Calidad de leche
+
+Cada semana la planta reporta el resultado de los análisis de la leche que se le entregó. **No se calcula nada:** son datos que llegan de afuera y acá solo se anotan, uno por semana.
+
+Se digitan tres:
+
+- **Sólidos totales** (%) — grasa + proteína + lactosa y minerales.
+- **Células somáticas** (cél./mL).
+- **Conteo bacterial** (UFC/mL).
+
+Los tres son **opcionales por separado**: la planta no siempre manda los tres el mismo día. Hay **una sola lectura por semana**: si llega otra, se corrige la que está. Si se borran los tres valores, la lectura desaparece.
+
+La semana es la misma de Finanzas (lunes a domingo) y se navega con flechas, igual que ahí.
+
+**Lo único que la app agrega** es decir en qué escalón cayó cada número, mientras se digita, según las tablas de la planta. Y muestra esas tablas plegadas debajo, para no tener que buscar el papel:
+
+| Tabla | Qué dice | De dónde sale |
+|---|---|---|
+| Recuento bacterial | De 0 a 290.000 → **Premium** (base +1,5 %); 291.000-600.000 → **Excelente** (base); 601.000-1.550.000 → **A** (−25 %); 1.551.000-2.220.000 → **B** (−50 %); mayor de 2.221.000 → **C** (−100 %) | Tabla de la planta |
+| Precios por kilo de sólido | Grasa y proteína ₡3.140,90 / ₡2.355,67 / ₡1.570,45 y lactosa y min. ₡2.556,87 / ₡1.917,65 / ₡1.278,44, según cuota suscrita, no suscrita y no suscrita > 20 % | Tabla de la planta |
+| Células somáticas | < 200.000 excelente; 200.000-400.000 bueno; 400.000-750.000 vigilar; ≥ 750.000 alto | Referencia general de manejo, **no** tabla de pago |
+| Sólidos totales | ≥ 12,5 % excelente; 11,5-12,5 % bueno; 10,5-11,5 % vigilar; < 10,5 % bajo | Referencia general de manejo, **no** tabla de pago |
+
+Un valor que caiga en un hueco de la tabla (entre 290.000 y 291.000, por ejemplo) baja al renglón siguiente: ante la duda, el grado que se muestra es el peor, no el que conviene.
+
+La app **no calcula el pago**: la plata que entra se sigue digitando en Finanzas, que es la que de verdad se recibió. Los precios están para explicar por qué los sólidos importan.
+
+---
+
 ## Módulo 4 — Finanzas (semanal)
 
 Una sola pantalla. El período es la **semana, de lunes a domingo**.
@@ -154,6 +194,14 @@ El resto de la app trabaja sobre **la semana en curso**: se pesa esta semana, se
 Todas las pesas, semana por semana: **vacas, litros y promedio**, con un gráfico de litros por semana y cuánto **subió o bajó** contra la semana anterior. Tocando una semana se abre su **reporte de producción**.
 
 Las sesiones sin ninguna vaca pesada no se listan: son las que la app abre sola al entrar a la pantalla de pesa, y contarlas torcería los promedios.
+
+### Calidad de leche
+Las semanas con análisis anotados, una al lado de la otra:
+
+- **Última lectura:** los tres análisis con su valor, su grado y **cuánto cambiaron** contra la última vez que se midió *ese mismo* análisis (no contra la semana pasada a secas: si esa semana no lo traía, la comparación sería falsa). El cambio se pinta verde o rojo según si mejora o empeora — en sólidos, subir es mejorar; en células y bacterias, es al revés.
+- **Un gráfico por análisis**, semana a semana, con cada barra **del color de su grado**: un mes malo se ve rojo sin leer los números. Las semanas sin ese análisis no se dibujan (una barra en cero se leería como "cero bacterias", que es lo contrario de "no se midió"). Los conteos van en miles para que quepan.
+- **Semana por semana:** los tres valores y su grado.
+- Las mismas **tablas de referencia**, con el renglón de la última lectura marcado.
 
 ### Finanzas
 **Ingresos, gastos y utilidad de todas las semanas**, con el acumulado, el promedio semanal y el precio real por litro de cada una. Las semanas con pérdida salen en rojo, también en el gráfico.

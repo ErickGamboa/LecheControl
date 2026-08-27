@@ -5,9 +5,12 @@ Flutter offline-first app for dairy farm management (`lechería`), built around
 three things:
 
 1. **Cattle inventory and events** — births, health, reproduction, culling.
-2. **Weekly milk weighing** — morning + evening litres and concentrate kg per
-   cow, feeding a production report that grades each cow against a reference
-   lactation curve.
+2. **Weekly milk recording** (`Registro de leche`) — the per-cow weighing
+   (morning + evening litres and concentrate kg, feeding a production report
+   that grades each cow against a reference lactation curve), plus the weekly
+   **milk quality** figures the plant reports back (total solids, somatic
+   cells, bacterial count). Quality is typed in, never computed; the app only
+   states which band each figure falls in.
 3. **Weekly finances** — income (milk, cattle sales) and expenses are typed in,
    not calculated; the week's profit is the difference.
 
@@ -28,9 +31,9 @@ Architecture is intentionally aligned with sibling project `../HatoControlRun` (
 - `lib/data/local/database.dart`: Drift schema and migrations.
 - `lib/data/repositories/`: local-first business operations. UI calls repositories, not Supabase.
 - `lib/data/sync/sync_service.dart`: bidirectional sync Drift ↔ Supabase.
-- Feature UI: `auth/`, `cuenta/`, `home/`, `trabajo/`, `inventario/`, `pesa/` (captura + reporte de producción), `finanzas/`, `hoja_vida/`, `sanidad/`.
+- Feature UI: `auth/`, `cuenta/`, `home/`, `trabajo/`, `inventario/`, `pesa/` (Registro de leche: menú, pesa + reporte de producción, calidad de leche), `analisis/`, `finanzas/`, `hoja_vida/`, `sanidad/`.
 - `lib/data/domain/`: reglas de negocio puras y testeables sin base de datos
-  (`curva_lactancia.dart`, `semana.dart`, `grupos.dart`).
+  (`curva_lactancia.dart`, `semana.dart`, `grupos.dart`, `calidad_leche.dart`).
 
 ## Non-negotiable invariants
 1. Offline-first: writes go to Drift first and set `pendiente=true`.

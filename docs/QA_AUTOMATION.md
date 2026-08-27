@@ -49,7 +49,7 @@ anything against it.
    - `integration_test/supabase_e2e_test.dart`: the visible dairy flow
      against a **real** Supabase project and a **real, pre-seeded** user —
      login → (create lechería if it's the user's first run) → Trabajo (alta
-     animal) → Pesa de leche (register litros) → Gastos (set prices) →
+     animal) → Registro de leche → Pesa (register litros) → Gastos (set prices) →
      Rentabilidad (see the row) → confirm the animal synced to Supabase.
      Skips (does not fail) if `LECHE_E2E_EMAIL`/`LECHE_E2E_PASSWORD` are
      unset.
@@ -73,11 +73,15 @@ both integration tests and manual QA can target elements reliably:
 |---|---|
 | `auth/login_screen.dart` (pre-existing) | `login.email`, `login.password`, `login.submit`, `login.offline` |
 | `cuenta/cuenta_gate.dart` | `lecheria.nombre`, `lecheria.crear` |
-| `home/home_screen.dart` | `home.trabajo`, `home.inventario`, `home.pesa`, `home.finanzas`, `home.sanidad`, `home.analisis`, `home.syncStatus`, `home.curva` |
-| `analisis/analisis_screen.dart` | `analisis.leche`, `analisis.finanzas` |
+| `home/home_screen.dart` | `home.trabajo`, `home.inventario`, `home.registroLeche`, `home.finanzas`, `home.sanidad`, `home.analisis`, `home.syncStatus`, `home.curva` |
+| `analisis/analisis_screen.dart` | `analisis.leche`, `analisis.calidad`, `analisis.finanzas`, `analisis.dieta` |
 | `trabajo/trabajo_screen.dart` | `trabajo.identificador`, `trabajo.buscar`, `trabajo.alta.abrir`, `trabajo.alta.identificador`, `trabajo.alta.sexoHembra`, `trabajo.alta.sexoMacho`, `trabajo.alta.grupo` (+ `trabajo.alta.grupo.<codigo>` per chip), `trabajo.alta.origenNacido`, `trabajo.alta.origenComprado`, `trabajo.alta.guardar`, `trabajo.animal.tarjeta` |
 | `pesa/pesa_screen.dart` | `pesa.elegirVaca`, `pesa.cambiarVaca`, `pesa.manana`, `pesa.tarde`, `pesa.concentrado`, `pesa.guardar`, `pesa.cerrar`, `pesa.contador`, `pesa.historial`, `pesa.verReporte` |
 | `pesa/selector_vaca_sheet.dart` | `selectorVaca.busqueda`, `selectorVaca.manual` |
+| `pesa/registro_leche_screen.dart` | `registro.pesa`, `registro.calidad` |
+| `pesa/calidad_leche_screen.dart` | `calidad.solidos`, `calidad.somaticas`, `calidad.bacterial`, `calidad.guardar`, `calidad.semanaAnterior`, `calidad.semanaSiguiente`, `calidad.historial` |
+| `pesa/widgets/guia_calidad_leche.dart` | `calidad.guia.solidos`, `calidad.guia.somaticas`, `calidad.guia.bacterial`, `calidad.guia.precios` |
+| `analisis/analisis_calidad_screen.dart` | `analisis.calidad.solidos`, `analisis.calidad.somaticas`, `analisis.calidad.bacterial` (un gráfico por análisis) |
 
 `pesa.abrirSesion` was **not** added: `PesaScreen` opens/reuses today's
 session automatically in `initState`, there is no button for it in the UI.

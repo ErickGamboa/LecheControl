@@ -4,10 +4,7 @@ import 'package:leche_control/data/domain/dieta_concentrado.dart';
 void main() {
   group('racionConcentrado', () {
     test('con 3 kg de leche por kilo, una vaca de 18 L come 6 kg', () {
-      expect(
-        racionConcentrado(litrosLeche: 18, kgLechePorKg: 3),
-        6,
-      );
+      expect(racionConcentrado(litrosLeche: 18, kgLechePorKg: 3), 6);
     });
 
     test('la proporción cambia la ración', () {
