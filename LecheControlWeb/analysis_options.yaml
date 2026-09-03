@@ -1,0 +1,8 @@
+# Las mismas reglas que el proyecto móvil: el código que se escribe acá tiene
+# que aguantar la misma vara que el que consume.
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    - prefer_single_quotes
+    - avoid_print

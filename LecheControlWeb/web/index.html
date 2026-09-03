@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="LecheControl: control de lechería. Inventario del hato, registro de leche y finanzas semanales.">
+
+  <!--
+    Sin esta línea el navegador del celular supone una página de escritorio de
+    ~980 px, y con eso LecheControl entraría por encima del corte de 1000 px:
+    el teléfono mostraría la barra lateral en miniatura en vez de la app.
+    `viewport-fit=cover` es para las pantallas con muesca; el recorte lo
+    resuelven los `SafeArea` que ya traen las pantallas.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <meta name="theme-color" content="#082850">
+
+  <!-- iOS: que al agregarlo a la pantalla de inicio se abra sin barras -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LecheControl">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>LecheControl</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /*
+      El body va clavado al viewport y sin scroll propio.
+
+      Sin esto, en el celular la página mide más que la pantalla visible y el
+      navegador esconde y muestra su barra de direcciones al arrastrar: la app
+      "brinca" mientras se hace una pesa. Todo el desplazamiento tiene que
+      quedar adentro de Flutter, que es donde las listas ya saben scrollear.
+
+      `overscroll-behavior: none` mata además el rebote y el "recargar
+      arrastrando" de Android, que en medio de un formulario borra lo escrito.
+    */
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      /* kCremaLeche, el mismo fondo claro del tema. Se pinta acá para que el
+         primer cuadro no sea un flash blanco antes de que Flutter arranque.
+
+         Sin variante para `prefers-color-scheme: dark` a propósito: la web va
+         siempre en claro (ver `themeMode` en lib/main.dart). Si el fondo
+         siguiera al sistema, quien tenga el navegador en oscuro vería un
+         instante negro y después la app clara. */
+      background-color: #F5F7FA;
+    }
+
+    /* Mientras baja el motor de Flutter. Queda debajo de la vista de Flutter,
+       que es opaca, así que se tapa solo cuando la app pinta. */
+    #arrancando {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    #arrancando img {
+      width: 120px;
+      height: 120px;
+      animation: latir 1.6s ease-in-out infinite;
+    }
+
+    /*
+      El logo no lleva placa detrás: el fondo es siempre el crema claro y el
+      dibujo azul marino se lee solo. La placa hace falta cuando el logo cae
+      sobre una superficie oscura, que en la web ya no pasa.
+    */
+
+    @keyframes latir {
+      0%, 100% { opacity: 0.45; }
+      50%      { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #arrancando img { animation: none; opacity: 0.8; }
+    }
+  </style>
+</head>
+<body>
+  <div id="arrancando">
+    <img src="assets/assets/logo_lechecontrol.png" alt="LecheControl">
+  </div>
+
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

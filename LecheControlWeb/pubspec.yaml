@@ -1,0 +1,42 @@
+name: leche_control_web
+description: "LecheControl en el navegador: la misma app del teléfono, más una distribución de escritorio."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # El producto entero —pantallas, repositorios, base local, sincronización,
+  # tema— vive acá. Este proyecto no reimplementa nada: solo decide entre la
+  # distribución de teléfono y la de escritorio, y sirve los archivos de web/.
+  #
+  # Es dependencia de RUTA, no un copiado: los dos proyectos tienen que estar
+  # en el mismo repositorio, uno al lado del otro. Si se separan, quien clone
+  # este proyecto no encuentra ../LecheControlMovil y no compila nada.
+  leche_control:
+    path: ../LecheControlMovil
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Flutter solo encuentra Image.asset('assets/...') en el paquete que corre,
+  # no en sus dependencias de ruta, así que los archivos están copiados en
+  # este proyecto. Van declarados uno por uno y no como carpeta: así nada
+  # entra al bundle sin que alguien lo haya decidido.
+  #
+  # Para resincronizarlos después de cambiar un PNG en el móvil:
+  #   ./scripts/sincronizar_web_assets.sh
+  assets:
+    - assets/logo_lechecontrol.png
+    - assets/icono_parto.png
+    - assets/icono_dieta.png
+    - assets/icono_palpacion.png
