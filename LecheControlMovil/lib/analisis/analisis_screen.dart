@@ -7,6 +7,7 @@ import 'analisis_finanzas_screen.dart';
 import 'analisis_leche_screen.dart';
 import 'dieta_concentrado_screen.dart';
 import 'palpacion_screen.dart';
+import 'partos_screen.dart';
 
 /// Análisis (Módulo 6): mirar la finca **a lo largo del tiempo**, no la
 /// semana de hoy.
@@ -102,6 +103,24 @@ class AnalisisScreen extends StatelessWidget {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => PalpacionScreen(
+                    lecheriaId: lecheriaId,
+                    nombreLecheria: nombreLecheria,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: LecheSpacing.md),
+            OpcionMenuCard(
+              valueKey: 'analisis.partos',
+              icono: const ImageIcon(AssetImage('assets/icono_parto.png')),
+              color: kVerdeLeche,
+              titulo: 'Partos por mes',
+              detalle:
+                  'Los próximos 12 meses y qué vacas paren en cada uno, '
+                  'contando nueve meses desde que quedaron preñadas.',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PartosScreen(
                     lecheriaId: lecheriaId,
                     nombreLecheria: nombreLecheria,
                   ),

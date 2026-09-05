@@ -46,6 +46,7 @@ class BarrasSemanales extends StatelessWidget {
     this.alto = 140,
     this.piso,
     this.nota,
+    this.desdeElFinal = true,
   });
 
   final String titulo;
@@ -72,6 +73,14 @@ class BarrasSemanales extends StatelessWidget {
 
   /// Un renglón chico bajo el título, para advertir de la escala recortada.
   final String? nota;
+
+  /// Por cuál punta arranca el gráfico cuando no caben todas las barras.
+  ///
+  /// En las series de semanas la última es la que interesa —qué pasó ahora—,
+  /// así que se arranca viéndola. En una serie que mira **hacia adelante**, en
+  /// cambio, lo que interesa es lo primero que viene: ahí se pasa `false` y el
+  /// gráfico arranca por la izquierda.
+  final bool desdeElFinal;
 
   @override
   Widget build(BuildContext context) {
@@ -101,8 +110,9 @@ class BarrasSemanales extends StatelessWidget {
             const SizedBox(height: LecheSpacing.md),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              // La última semana es la que más interesa: se arranca viéndola.
-              reverse: true,
+              // En una serie de semanas la última es la que más interesa: se
+              // arranca viéndola. Ver [desdeElFinal].
+              reverse: desdeElFinal,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,

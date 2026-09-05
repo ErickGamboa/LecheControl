@@ -9,7 +9,17 @@ import 'package:leche_control/app/theme.dart';
 import 'package:leche_control/pesa/registro_leche_screen.dart';
 
 void main() {
-  Future<void> montar(WidgetTester tester, Widget pantalla) async {
+  Future<void> montar(
+    WidgetTester tester,
+    Widget pantalla, {
+    Size? tamano,
+  }) async {
+    if (tamano != null) {
+      tester.view.physicalSize = tamano;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    }
     await tester.pumpWidget(
       MaterialApp(theme: LecheTheme.light, home: pantalla),
     );
@@ -30,13 +40,16 @@ void main() {
     expect(find.byKey(const ValueKey('registro.calidad')), findsOneWidget);
   });
 
-  testWidgets('Análisis ofrece las cinco miradas', (tester) async {
+  testWidgets('Análisis ofrece las seis miradas', (tester) async {
     await montar(
       tester,
       const AnalisisScreen(
         lecheriaId: 'lecheria-1',
         nombreLecheria: 'LecheriaErick',
       ),
+      // Alta a propósito: las seis opciones no caben en una pantalla de
+      // teléfono y las de abajo no se montarían.
+      tamano: const Size(400, 1400),
     );
 
     for (final clave in [
@@ -44,6 +57,7 @@ void main() {
       'analisis.calidad',
       'analisis.palpacion',
       'analisis.finanzas',
+      'analisis.partos',
       'analisis.dieta',
     ]) {
       expect(
