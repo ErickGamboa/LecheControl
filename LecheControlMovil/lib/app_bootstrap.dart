@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'app/teclado/teclado_del_app.dart';
 import 'app/theme.dart';
 import 'auth/auth_gate.dart';
 import 'config/supabase_config.dart';
@@ -87,6 +88,12 @@ class LecheControlApp extends StatelessWidget {
       // `ThemeMode.system` y con el teléfono en oscuro no se leía lo que se
       // digitaba en los campos (ver `LecheTheme`).
       themeMode: ThemeMode.light,
+      // El teclado propio de la app, para cuando el lector de identificadores
+      // está conectado y el sistema esconde el suyo. Envuelve todo, incluido
+      // el login: el lector se empareja una vez y queda conectado, así que sin
+      // esto no se podría ni escribir la contraseña. Ver `TecladoDelApp`.
+      builder: (context, child) =>
+          TecladoDelApp(child: child ?? const SizedBox.shrink()),
       home: const AuthGate(),
     );
   }
