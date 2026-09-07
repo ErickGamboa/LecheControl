@@ -33,7 +33,6 @@ class OpcionMenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final oscuro = Theme.of(context).brightness == Brightness.dark;
     return Card(
       key: ValueKey(valueKey),
       child: InkWell(
@@ -45,7 +44,7 @@ class OpcionMenuCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(LecheSpacing.md),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: oscuro ? 0.20 : 0.10),
+                  color: color.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(LecheRadius.md),
                 ),
                 child: IconTheme(

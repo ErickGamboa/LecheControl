@@ -8,7 +8,12 @@ const Color kAzulLeche = Color(0xFF082850); // azul marino de la "L"
 const Color kVerdeLeche = Color(0xFF287038); // verde de la "C" y la hoja
 const Color kAmbarLeche = Color(0xFFC98A00); // ámbar de apoyo, para avisos
 const Color kCremaLeche = Color(0xFFF5F7FA); // fondo claro, azulado
-const Color kCarbonLeche = Color(0xFF0B1220); // fondo oscuro, azulado
+
+/// El color de la letra que se escribe en los campos y de los títulos.
+///
+/// Va puesto a mano y no heredado del esquema: es lo único que garantiza que
+/// lo que el ganadero digita se **vea**, tenga el teléfono el modo que tenga.
+const Color kTintaLeche = Color(0xFF11161D);
 
 /// Colores de estado, para no repetir `Colors.red.shade700` por toda la app.
 const Color kExito = kVerdeLeche;
@@ -32,28 +37,53 @@ abstract final class LecheRadius {
   static const double lg = 22;
 }
 
-/// Tema visual de LecheControl, en claro y oscuro.
+/// Tema visual de LecheControl. **Siempre claro.**
+///
+/// No hay tema oscuro y no es un olvido: la app se usa a pleno sol, en el
+/// corral y en la lechería, y los fondos, los tintes de las tarjetas y los
+/// colores de los gráficos están pensados para eso.
+///
+/// Antes seguía el modo del teléfono, y con el teléfono en oscuro pasaba lo
+/// peor que puede pasar en una app de captura: las pantallas que pintan su
+/// fondo blanco a mano —el login, las tarjetas— quedaban con letra clara
+/// sobre blanco, y **lo que el ganadero digitaba no se veía**. Un dato que no
+/// se lee mientras se escribe es un dato que se anota mal.
 abstract final class LecheTheme {
-  static ThemeData get light => _build(Brightness.light);
-  static ThemeData get dark => _build(Brightness.dark);
+  static ThemeData get light => _build();
 
-  static ThemeData _build(Brightness brightness) {
-    final claro = brightness == Brightness.light;
+  static ThemeData _build() {
     final scheme =
         ColorScheme.fromSeed(
           seedColor: kAzulLeche,
-          brightness: brightness,
+          brightness: Brightness.light,
         ).copyWith(
-          // En oscuro el marino y el verde del logo se hunden contra el
-          // fondo, así que se usan versiones aclaradas de los mismos tonos.
-          primary: claro ? kAzulLeche : const Color(0xFF8FB4E8),
-          secondary: claro ? kVerdeLeche : const Color(0xFF6FCB7E),
-          tertiary: claro ? kVerdeLeche : const Color(0xFF6FCB7E),
-          error: claro ? kPeligro : const Color(0xFFFF8A8A),
-          surface: claro ? kCremaLeche : kCarbonLeche,
+          primary: kAzulLeche,
+          secondary: kVerdeLeche,
+          tertiary: kVerdeLeche,
+          error: kPeligro,
+          surface: kCremaLeche,
+          onSurface: kTintaLeche,
         );
 
-    final base = ThemeData(colorScheme: scheme, useMaterial3: true);
+    final base = ThemeData(
+      colorScheme: scheme,
+      useMaterial3: true,
+      // El brillo del tema manda sobre el del sistema en todo lo que Flutter
+      // no resuelve por el esquema de color: el cursor, las manijas de
+      // selección, el fondo de los menús emergentes.
+      brightness: Brightness.light,
+    );
+
+    // Cada estilo de texto sale con su color escrito, no heredado.
+    //
+    // Es la red que ataja el problema de raíz: un `Text` o un `TextField` sin
+    // color propio lo toma del tema de más cerca, y basta un widget que herede
+    // de otro lado para que la letra salga clara sobre blanco. Con el color
+    // puesto en todos los estilos, eso no puede pasar en ninguna pantalla.
+    final textos = base.textTheme.apply(
+      bodyColor: kTintaLeche,
+      displayColor: kTintaLeche,
+    );
 
     return base.copyWith(
       scaffoldBackgroundColor: scheme.surface,
@@ -61,13 +91,13 @@ abstract final class LecheTheme {
       // La barra va del color de la marca y con el título alineado a la
       // izquierda: en Android es lo que la gente espera.
       appBarTheme: AppBarTheme(
-        backgroundColor: claro ? kAzulLeche : scheme.surfaceContainerHigh,
-        foregroundColor: claro ? Colors.white : scheme.onSurface,
+        backgroundColor: kAzulLeche,
+        foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 2,
         centerTitle: false,
         titleTextStyle: base.textTheme.titleLarge?.copyWith(
-          color: claro ? Colors.white : scheme.onSurface,
+          color: Colors.white,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -77,7 +107,7 @@ abstract final class LecheTheme {
       cardTheme: CardThemeData(
         clipBehavior: Clip.antiAlias,
         elevation: 0,
-        color: claro ? Colors.white : scheme.surfaceContainerHigh,
+        color: Colors.white,
         margin: const EdgeInsets.symmetric(vertical: LecheSpacing.xs),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(LecheRadius.md),
@@ -85,11 +115,30 @@ abstract final class LecheTheme {
         ),
       ),
 
+      // Lo que se digita: fondo blanco y letra oscura, dichos los dos a mano.
+      //
+      // El relleno blanco ya estaba; lo que faltaba era el color de la letra.
+      // Sin él, el campo se pintaba blanco y el texto salía del tema, así que
+      // con el teléfono en oscuro quedaba gris clarito sobre blanco y **no se
+      // leía lo que se estaba escribiendo**. En una app donde todo el trabajo
+      // es digitar en el corral, eso es un dato mal anotado.
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: kAzulLeche,
+        selectionHandleColor: kAzulLeche,
+      ),
+
       // Campos rellenos y sin borde duro: menos ruido visual en pantallas que
       // son casi puros formularios.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: claro ? Colors.white : scheme.surfaceContainerHighest,
+        fillColor: Colors.white,
+        // El rótulo y la pista van más tenues que la letra que se digita, pero
+        // los dos oscuros: nunca al revés.
+        labelStyle: TextStyle(color: kTintaLeche.withValues(alpha: 0.70)),
+        floatingLabelStyle: const TextStyle(color: kAzulLeche),
+        hintStyle: TextStyle(color: kTintaLeche.withValues(alpha: 0.45)),
+        prefixStyle: const TextStyle(color: kTintaLeche),
+        suffixStyle: const TextStyle(color: kTintaLeche),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: LecheSpacing.lg,
           vertical: LecheSpacing.md,
@@ -128,8 +177,8 @@ abstract final class LecheTheme {
       ),
 
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: claro ? kAzulLeche : scheme.primaryContainer,
-        foregroundColor: claro ? Colors.white : scheme.onPrimaryContainer,
+        backgroundColor: kAzulLeche,
+        foregroundColor: Colors.white,
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(LecheRadius.md),
@@ -179,15 +228,13 @@ abstract final class LecheTheme {
 
       // Números un poco más apretados y con más peso: la app muestra muchas
       // cifras y así se leen de un vistazo.
-      textTheme: base.textTheme.copyWith(
-        titleLarge: base.textTheme.titleLarge?.copyWith(
+      textTheme: textos.copyWith(
+        titleLarge: textos.titleLarge?.copyWith(
           fontWeight: FontWeight.w600,
           letterSpacing: -0.3,
         ),
-        titleMedium: base.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-        headlineSmall: base.textTheme.headlineSmall?.copyWith(
+        titleMedium: textos.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        headlineSmall: textos.headlineSmall?.copyWith(
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
         ),

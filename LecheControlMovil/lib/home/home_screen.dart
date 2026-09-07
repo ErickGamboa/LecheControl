@@ -224,10 +224,9 @@ class _ModuloCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final oscuro = Theme.of(context).brightness == Brightness.dark;
     // El color del módulo tiñe apenas el fondo: distingue las tarjetas de un
     // vistazo sin convertir la pantalla en un semáforo.
-    final tinte = modulo.color.withValues(alpha: oscuro ? 0.18 : 0.10);
+    final tinte = modulo.color.withValues(alpha: 0.10);
 
     return Card(
       key: ValueKey(modulo.valueKey),

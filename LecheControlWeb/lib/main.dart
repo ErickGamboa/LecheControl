@@ -37,11 +37,9 @@ class AppLecheControlWeb extends StatelessWidget {
       // el galpón y en la oficina, y el mismo tono claro en las tres versiones
       // evita que la misma pantalla se vea de dos maneras según el aparato.
       //
-      // Ojo: el paquete móvil sí trae `LecheTheme.dark` y la app instalada
-      // sigue el ajuste del sistema (`ThemeMode.system` en `app_bootstrap`).
-      // El tema oscuro no se borró; acá simplemente no se usa. Para
-      // devolverle el modo oscuro a la web alcanza con volver a poner
-      // `darkTheme: LecheTheme.dark` y `themeMode: ThemeMode.system`.
+      // Ya no hay tema oscuro que elegir: `LecheTheme` es claro y nada más, y
+      // la app instalada también fuerza el claro. Las tres versiones se ven
+      // igual por construcción, no por acuerdo.
       themeMode: ThemeMode.light,
       // `AuthGate` es el de siempre. La decisión de ancho va adentro, en el
       // home, y no acá arriba: si envolviera el gate en un `LayoutBuilder`,

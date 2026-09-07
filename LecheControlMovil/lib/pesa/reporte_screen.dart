@@ -443,12 +443,7 @@ class _CeldaDiferencia extends StatelessWidget {
     }
 
     final subio = d > 0;
-    // En oscuro los shade700 se hunden contra el fondo, igual que pasa con el
-    // marino del logo (ver LecheTheme).
-    final oscuro = theme.brightness == Brightness.dark;
-    final color = subio
-        ? (oscuro ? Colors.green.shade300 : Colors.green.shade700)
-        : (oscuro ? Colors.red.shade300 : Colors.red.shade700);
+    final color = subio ? Colors.green.shade700 : Colors.red.shade700;
 
     return Text(
       '${subio ? '+' : '-'}${d.abs().toStringAsFixed(1)}',

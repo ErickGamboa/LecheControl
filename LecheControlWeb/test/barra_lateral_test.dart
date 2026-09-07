@@ -9,15 +9,11 @@ import 'package:leche_control_web/escritorio/barra_lateral.dart';
 import 'package:leche_control_web/escritorio/modulos_escritorio.dart';
 
 void main() {
-  Future<List<int>> montar(
-    WidgetTester tester, {
-    int indiceActivo = 0,
-    Brightness brillo = Brightness.light,
-  }) async {
+  Future<List<int>> montar(WidgetTester tester, {int indiceActivo = 0}) async {
     final seleccionados = <int>[];
     await tester.pumpWidget(
       MaterialApp(
-        theme: brillo == Brightness.light ? LecheTheme.light : LecheTheme.dark,
+        theme: LecheTheme.light,
         home: Scaffold(
           body: Row(
             children: [
@@ -69,14 +65,22 @@ void main() {
     expect(find.textContaining('LECHE'), findsOneWidget);
   });
 
-  testWidgets('el logo se dibuja en claro y en oscuro', (tester) async {
-    for (final brillo in Brightness.values) {
-      await montar(tester, brillo: brillo);
-      expect(
-        find.byType(Image),
-        findsOneWidget,
-        reason: 'el logo no aparece en $brillo',
-      );
-    }
+  testWidgets('el logo se dibuja, y sin disco blanco detrás', (tester) async {
+    await montar(tester);
+    expect(find.byType(Image), findsOneWidget);
+  });
+
+  testWidgets('la barra es clara aunque el sistema esté en oscuro', (
+    tester,
+  ) async {
+    // El tema es claro y nada más: no hay `LecheTheme.dark` que elegir. Si
+    // alguien devolviera un tema oscuro, esta prueba lo cuenta.
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+    await montar(tester);
+
+    final contexto = tester.element(find.byType(BarraLateral));
+    expect(Theme.of(contexto).brightness, Brightness.light);
   });
 }

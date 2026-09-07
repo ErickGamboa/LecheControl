@@ -214,29 +214,15 @@ class _LogoLogin extends StatelessWidget {
 
   static const double _lado = 180;
 
+  /// Va sin disco blanco detrás: la app es siempre clara (ver [LecheTheme]),
+  /// así que el azul marino del logo cae sobre fondo claro y se ve solo.
   @override
   Widget build(BuildContext context) {
-    final logo = Image.asset(
+    return Image.asset(
       'assets/logo_lechecontrol.png',
       width: _lado,
       height: _lado,
       fit: BoxFit.contain,
-    );
-
-    if (Theme.of(context).brightness == Brightness.light) return logo;
-
-    // En oscuro el azul marino del logo se pierde contra el fondo, así que
-    // se le pone un disco claro detrás. Disco y no cuadro: el borde recto
-    // era justo lo que se veía como una caja pegada encima.
-    return Container(
-      width: _lado + 24,
-      height: _lado + 24,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: logo,
     );
   }
 }

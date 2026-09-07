@@ -314,10 +314,7 @@ class _CeldaFalta extends StatelessWidget {
     }
 
     final falta = d > 0;
-    final oscuro = theme.brightness == Brightness.dark;
-    final color = falta
-        ? (oscuro ? Colors.orange.shade300 : Colors.orange.shade800)
-        : (oscuro ? Colors.lightBlue.shade200 : Colors.blue.shade700);
+    final color = falta ? Colors.orange.shade800 : Colors.blue.shade700;
 
     return Text(
       '${falta ? '+' : '-'}${_num(d.abs())}',

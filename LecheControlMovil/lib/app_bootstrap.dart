@@ -82,8 +82,11 @@ class LecheControlApp extends StatelessWidget {
       title: 'LecheControl',
       debugShowCheckedModeBanner: false,
       theme: LecheTheme.light,
-      darkTheme: LecheTheme.dark,
-      themeMode: ThemeMode.system,
+      // LecheControl es SIEMPRE clara, tenga el teléfono el modo que tenga.
+      // Se trabaja al sol y las pantallas están pensadas para eso. Antes decía
+      // `ThemeMode.system` y con el teléfono en oscuro no se leía lo que se
+      // digitaba en los campos (ver `LecheTheme`).
+      themeMode: ThemeMode.light,
       home: const AuthGate(),
     );
   }

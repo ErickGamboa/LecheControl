@@ -127,28 +127,13 @@ class _MarcaLateral extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // El PNG es transparente y el dibujo es azul marino y verde: en modo
-          // oscuro se hunde contra el fondo. Va sobre un disco claro, igual
-          // que en el login del teléfono, y disco y no cuadro porque el borde
-          // recto se lee como una caja pegada encima.
-          if (theme.brightness == Brightness.dark)
-            Container(
-              width: _ladoLogo + 10,
-              height: _ladoLogo + 10,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: logo,
-            )
-          else
-            logo,
+          // Va sin disco blanco detrás: el tema es siempre claro, así que el
+          // azul marino y el verde del PNG caen sobre fondo claro.
+          logo,
           const SizedBox(width: LecheSpacing.md),
           // Cada palabra con el color de su letra en el logo, como en el
           // login: LECHE con el azul de la "L", CONTROL con el verde de la
-          // "C". Salen del esquema y no de las constantes para que en oscuro
-          // usen las versiones aclaradas, que son las que se leen.
+          // "C".
           Expanded(
             child: Text.rich(
               TextSpan(
@@ -190,12 +175,11 @@ class _ItemLateral extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final oscuro = theme.brightness == Brightness.dark;
 
     // El módulo activo se marca con su propio color de fondo apenas teñido,
     // el mismo tinte que usan las tarjetas del teléfono.
     final fondo = activo
-        ? modulo.color.withValues(alpha: oscuro ? 0.24 : 0.12)
+        ? modulo.color.withValues(alpha: 0.12)
         : Colors.transparent;
     final colorTexto = activo
         ? theme.colorScheme.onSurface
