@@ -14,6 +14,10 @@ Future<void> seedCuentaLocal(
   String nombre = 'Usuario Offline',
   String plan = 'pro',
   int limiteLecherias = 5,
+  // Espejo del servidor. La app no los mira: están para poder probar que una
+  // cuenta suspendida o con la prueba vencida entra igual.
+  String estado = 'activa',
+  DateTime? pruebaTermina,
 }) async {
   final ts = now ?? DateTime(2026, 1, 1);
   await db
@@ -34,7 +38,8 @@ Future<void> seedCuentaLocal(
           nombre: 'Cuenta offline',
           duenoId: usuarioId,
           plan: plan,
-          estado: 'activa',
+          estado: estado,
+          pruebaTermina: Value(pruebaTermina),
           createdAt: ts,
           updatedAt: ts,
         ),

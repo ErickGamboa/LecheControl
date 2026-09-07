@@ -4,37 +4,47 @@ import 'package:uuid/uuid.dart';
 import '../local/database.dart';
 import 'curva_repository.dart';
 
-/// Estado de la licencia de una cuenta: qué plan tiene y cuántas lecherías
-/// permite. Sirve para validar el límite al crear (spec: una lechería activa
-/// por cuenta en v1).
-class EstadoLicencia {
-  const EstadoLicencia({
+/// Cuántas lecherías admite una cuenta y cuántas tiene hechas.
+///
+/// Es un límite **estructural**, no comercial: LecheControl trabaja con una
+/// lechería activa por cuenta (spec Módulo 0), y toda la app —el home, la
+/// pesa, las finanzas— está armada sobre ese supuesto. No hay nada que
+/// comprar para levantarlo.
+class CupoDeLecherias {
+  const CupoDeLecherias({
     required this.cuentaId,
-    required this.planNombre,
     required this.limite,
     required this.usadas,
   });
 
   final String cuentaId;
-  final String planNombre;
   final int limite;
   final int usadas;
 
   bool get alcanzoLimite => usadas >= limite;
 }
 
-/// Se lanza al intentar crear una lechería habiendo alcanzado el límite del
-/// plan (v1: normalmente 1).
+/// Se lanza al intentar crear una lechería teniendo el cupo lleno.
+///
+/// En la práctica casi no se alcanza: el formulario de crear solo aparece
+/// cuando el usuario todavía no tiene ninguna.
 class LimiteLecheriasException implements Exception {
-  const LimiteLecheriasException(this.limite, this.planNombre);
+  const LimiteLecheriasException(this.limite);
+
   final int limite;
-  final String planNombre;
+
+  /// Cómo se lo dice al ganadero. Sin nombrar planes ni pedirle nada: es un
+  /// hecho de cómo trabaja la app.
+  String get mensaje => limite == 1
+      ? 'Ya tenés tu lechería creada.'
+      : 'Ya tenés $limite lecherías creadas.';
 }
 
-/// Se lanza si todavía no conocemos la cuenta del usuario (no se ha
-/// sincronizado). Requiere conectarse a internet una vez.
-class LicenciaNoDisponibleException implements Exception {
-  const LicenciaNoDisponibleException();
+/// Se lanza si todavía no bajó la cuenta del usuario. La lechería se cuelga
+/// de una cuenta, así que hay que saber cuál es antes de crearla: pide
+/// conectarse a internet **una vez**, no autoriza nada.
+class CuentaNoSincronizadaException implements Exception {
+  const CuentaNoSincronizadaException();
 }
 
 /// Acceso a la(s) lechería(s). SIEMPRE lee y escribe en la base local
@@ -77,9 +87,9 @@ class LecheriasRepository {
     return observarLecheriaDeUsuario(usuarioId).first;
   }
 
-  /// Calcula el estado de licencia del usuario (plan y límite de lecherías).
+  /// Cuántas lecherías admite la cuenta del usuario y cuántas tiene hechas.
   /// Devuelve null si todavía no se conoce la cuenta (sin sincronizar).
-  Future<EstadoLicencia?> estadoLicencia(String usuarioId) async {
+  Future<CupoDeLecherias?> cupoDeLecherias(String usuarioId) async {
     final usuario = await (db.select(
       db.usuarios,
     )..where((u) => u.id.equals(usuarioId))).getSingleOrNull();
@@ -91,14 +101,15 @@ class LecheriasRepository {
     )..where((c) => c.id.equals(cuentaId))).getSingleOrNull();
     if (cuenta == null) return null;
 
-    final plan = await (db.select(
+    // El número sale de la configuración que baja el sync. Es un tope
+    // estructural —una lechería por cuenta— y no algo que se compre.
+    final config = await (db.select(
       db.planes,
     )..where((p) => p.codigo.equals(cuenta.plan))).getSingleOrNull();
 
-    return EstadoLicencia(
+    return CupoDeLecherias(
       cuentaId: cuentaId,
-      planNombre: plan?.nombre ?? cuenta.plan,
-      limite: plan?.limiteLecherias ?? 1,
+      limite: config?.limiteLecherias ?? 1,
       usadas: await _contarLecheriasPropias(cuentaId),
     );
   }
@@ -121,12 +132,12 @@ class LecheriasRepository {
     required String nombre,
     required String creadaPor,
   }) async {
-    final estado = await estadoLicencia(creadaPor);
-    if (estado == null) {
-      throw const LicenciaNoDisponibleException();
+    final cupo = await cupoDeLecherias(creadaPor);
+    if (cupo == null) {
+      throw const CuentaNoSincronizadaException();
     }
-    if (estado.alcanzoLimite) {
-      throw LimiteLecheriasException(estado.limite, estado.planNombre);
+    if (cupo.alcanzoLimite) {
+      throw LimiteLecheriasException(cupo.limite);
     }
 
     final ahora = DateTime.now();
@@ -140,7 +151,7 @@ class LecheriasRepository {
               id: lecheriaId,
               nombre: nombre,
               creadaPor: creadaPor,
-              cuentaId: Value(estado.cuentaId),
+              cuentaId: Value(cupo.cuentaId),
               createdAt: ahora,
               updatedAt: ahora,
               pendiente: const Value(true),

@@ -204,22 +204,6 @@ abstract final class ResultadoPalpacion {
   };
 }
 
-/// Planes de licencia de la cuenta.
-abstract final class PlanCuenta {
-  static const invitado = 'invitado';
-  static const light = 'light';
-  static const medium = 'medium';
-  static const pro = 'pro';
-
-  static const todos = [invitado, light, medium, pro];
-}
-
-/// Estado de la cuenta.
-abstract final class EstadoCuenta {
-  static const activa = 'activa';
-  static const suspendida = 'suspendida';
-}
-
 /// Rol de un miembro dentro de una lechería.
 abstract final class RolMiembro {
   static const admin = 'admin';

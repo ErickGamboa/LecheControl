@@ -4,8 +4,6 @@ import '../data/local/database.dart';
 import '../data/repositories/lecherias_repository.dart';
 import '../home/home_screen.dart';
 import '../services.dart';
-import 'suscripcion_screen.dart';
-import 'suspendida_screen.dart';
 
 /// Cómo construir el home una vez que ya hay cuenta activa y lechería.
 ///
@@ -18,13 +16,18 @@ typedef ConstructorHome =
     Widget Function({required LecheriaRow lecheria, required String usuarioId});
 
 /// Decide, una vez con sesión iniciada, qué pantalla mostrar:
-///   - cuenta suspendida por el admin (`estado != 'activa'`) → SuspendidaScreen.
-///   - prueba gratis vencida y todavía sin licencia pagada → SuscripcionScreen.
 ///   - sin lechería todavía (primera vez) → formulario mínimo para crearla.
 ///   - en cualquier otro caso → HomeScreen con la lechería activa (spec:
 ///     "una lechería activa", se entra directo, sin lista de fincas).
-/// Es reactivo: cuando el admin la reactiva o le asigna un plan (y se
-/// sincroniza), la pantalla cambia sola.
+///
+/// **Acá no se le cierra la puerta a nadie.** Antes este gate podía dejar al
+/// ganadero afuera de sus propios datos —cuenta suspendida, prueba vencida— y
+/// mandarlo a una pantalla a contactar soporte. Eso ya no existe: el que
+/// inicia sesión entra a su lechería, punto.
+///
+/// Lo único que todavía espera es la **primera** sincronización de la cuenta,
+/// y no para autorizar nada: la lechería se crea colgada de una cuenta, así
+/// que hay que saber cuál es antes de ofrecer el formulario.
 class CuentaGate extends StatefulWidget {
   const CuentaGate({
     super.key,
@@ -57,22 +60,13 @@ class _CuentaGateState extends State<CuentaGate> {
       stream: cuentasRepo.observarMiCuenta(widget.usuarioId),
       builder: (context, snapshot) {
         final cuenta = snapshot.data;
-        // Mientras no conocemos la cuenta (aún sin sincronizar), dejamos
-        // entrar; el home dispara el sync y, si corresponde, se bloqueará
-        // al recibir el dato.
-        if (cuenta != null) {
-          if (cuenta.estado != 'activa') {
-            return const SuspendidaScreen();
-          }
-          final fin = cuenta.pruebaTermina;
-          if (cuenta.plan != 'invitado' &&
-              fin != null &&
-              fin.isBefore(DateTime.now())) {
-            return const SuscripcionScreen();
-          }
-        } else if (!widget.sinConexion) {
-          // Online pero todavía no bajó la cuenta: esperamos el sync en
-          // vez de ofrecer crear lechería (eso falla con LicenciaNoDisponible).
+        // Con conexión pero sin la cuenta bajada todavía: se espera el sync
+        // en vez de ofrecer crear la lechería, porque sin cuenta la creación
+        // no tiene de dónde colgarla (ver `CuentaNoSincronizadaException`).
+        //
+        // Sin conexión se sigue de largo: la app es offline-first y no se le
+        // va a pedir internet al que está parado en el corral.
+        if (cuenta == null && !widget.sinConexion) {
           return const Scaffold(
             body: Center(
               child: Column(
@@ -165,12 +159,12 @@ class _CrearLecheriaScreenState extends State<_CrearLecheriaScreen> {
         creadaPor: widget.usuarioId,
       );
       sincronizarSiSePuede();
-    } on LicenciaNoDisponibleException {
+    } on CuentaNoSincronizadaException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Conectate a internet una vez para activar tu cuenta.',
+              'Conectate a internet una vez para sincronizar tu cuenta.',
             ),
           ),
         );
@@ -178,11 +172,7 @@ class _CrearLecheriaScreenState extends State<_CrearLecheriaScreen> {
     } on LimiteLecheriasException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Tu plan ${e.planNombre} permite ${e.limite} lechería(s).',
-            ),
-          ),
+          SnackBar(content: Text(e.mensaje)),
         );
       }
     } finally {

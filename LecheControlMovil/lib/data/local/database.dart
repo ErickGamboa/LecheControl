@@ -14,11 +14,15 @@ part 'database.g.dart';
 // "nada se borra").
 // ============================================================================
 
-/// Catálogo de licencias (referencia, se baja del servidor). Define cuántas
-/// lecherías permite cada plan.
+/// Configuración de cuenta que baja del servidor (solo lectura).
+///
+/// De acá la app usa **una sola cosa**: `limiteLecherias`, el tope estructural
+/// de lecherías por cuenta (una, en v1). El resto de las columnas quedan
+/// porque el servidor las manda y la tabla es un espejo suyo; ninguna pantalla
+/// las lee, y no hay nada en la app que se compre ni que se venza.
 @DataClassName('PlanRow')
 class Planes extends Table {
-  TextColumn get codigo => text()(); // 'invitado' | 'light' | 'medium' | 'pro'
+  TextColumn get codigo => text()();
   TextColumn get nombre => text()();
   IntColumn get limiteLecherias => integer()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -27,15 +31,19 @@ class Planes extends Table {
   Set<Column> get primaryKey => {codigo};
 }
 
-/// Cuenta = unidad de licenciamiento. Cada lechería pertenece a una cuenta.
+/// Cuenta: a quién pertenecen las lecherías. Cada lechería cuelga de una.
+///
+/// `plan`, `estado` y `pruebaTermina` son espejo del servidor y **la app no
+/// los mira**. Antes decidían si dejar entrar al ganadero o mandarlo a una
+/// pantalla de suscripción; eso se quitó. Siguen acá porque el sync los baja y
+/// quitarlos pide una migración, no porque signifiquen algo para la app.
 @DataClassName('CuentaRow')
 class Cuentas extends Table {
   TextColumn get id => text()();
   TextColumn get nombre => text()();
   TextColumn get duenoId => text()();
-  TextColumn get plan => text()(); // 'invitado' | 'light' | 'medium' | 'pro'
-  TextColumn get estado => text()(); // 'activa' | 'suspendida'
-  // Fin de la prueba gratis. null = sin prueba (pagado o invitado).
+  TextColumn get plan => text()();
+  TextColumn get estado => text()();
   DateTimeColumn get pruebaTermina => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();

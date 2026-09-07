@@ -33,10 +33,9 @@ Distribucion distribucionPara(double ancho) =>
 /// Elige la distribución según el ancho disponible.
 ///
 /// Se pasa a `AuthGate.construirHome`, así que corre **después** de resolver
-/// sesión, cuenta y lechería: el login, la cuenta suspendida, la pantalla de
-/// suscripción y el formulario de crear lechería son siempre los del paquete
-/// móvil, sin marco, porque ya vienen centrados y limitados en ancho y se ven
-/// bien en un monitor.
+/// sesión, cuenta y lechería: el login y el formulario de crear lechería son
+/// siempre los del paquete móvil, sin marco, porque ya vienen centrados y
+/// limitados en ancho y se ven bien en un monitor.
 ///
 /// Es una función de nivel superior y no un cierre creado al construir: así
 /// su identidad no cambia entre reconstrucciones y `AuthGate` no se rearma.

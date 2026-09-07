@@ -10,8 +10,8 @@ import 'panel_modulo.dart';
 /// arriba y el módulo abierto en el centro.
 ///
 /// Sustituye a `HomeScreen` sólo por encima del corte de ancho (ver
-/// `adaptador_leche.dart`), y sólo al home: todo lo de antes —login, cuenta
-/// suspendida, suscripción, crear lechería— sigue siendo el del paquete móvil.
+/// `adaptador_leche.dart`), y sólo al home: todo lo de antes —login y crear
+/// lechería— sigue siendo el del paquete móvil.
 ///
 /// Lo que va adentro del panel central son **las mismas pantallas del
 /// teléfono**, sin adaptar. La distribución cambia; el producto, no.

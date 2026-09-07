@@ -30,8 +30,9 @@ de verdad del producto). Última actualización: 2026-07-29.
 - Entrada sin conexión con sesión cacheada; al iniciar sesión entra directo
   al Home con la lechería activa (o a un formulario mínimo si es la primera
   vez y todavía no existe la lechería).
-- Cuenta suspendida / prueba vencida → pantallas simples con contacto de
-  soporte, en vez de bloquear con un error genérico.
+- Nada de licencias ni de vencimientos: el que inicia sesión entra a su
+  lechería. No hay pantalla de suscripción ni de cuenta suspendida, y ningún
+  mensaje le pide pagar nada.
 
 ### Módulo 1 — Pantalla de Trabajo
 - Identificación por `ScanField` (RFID o manual) contra el inventario local.

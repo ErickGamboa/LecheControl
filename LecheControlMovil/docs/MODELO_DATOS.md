@@ -23,12 +23,18 @@ Ver también `lib/data/sync/sync_service.dart` para el mapeo exacto de columnas
 - **Sync**: `planes`, `cuentas`, `usuarios` son *pull-only* (las administra
   soporte). El resto de las tablas de dominio son *push + pull*.
 
-## Tablas de solo lectura (licenciamiento)
+## Tablas de solo lectura (cuenta)
+
+Las administra soporte y el cliente nunca las escribe. **La app no cobra nada
+ni se vence**: de todo esto solo lee `limite_lecherias`, que es el tope
+estructural de una lechería por cuenta. Las columnas `plan`, `estado` y
+`prueba_termina` son espejo del servidor y ninguna pantalla las mira; están
+porque el sync las baja y quitarlas pide una migración.
 
 | Tabla | Columnas clave | Notas |
 |---|---|---|
-| `planes` | `codigo` PK, `nombre`, `limite_lecherias`, `updated_at` | Catálogo fijo: `invitado`, `light`, `medium`, `pro`. |
-| `cuentas` | `id`, `nombre`, `dueno_id`, `plan`, `estado` (`activa`/`suspendida`), `prueba_termina` | Unidad de licenciamiento; una cuenta puede tener varias lecherías según el límite del plan. |
+| `planes` | `codigo` PK, `nombre`, `limite_lecherias`, `updated_at` | De acá sale el tope de lecherías por cuenta. |
+| `cuentas` | `id`, `nombre`, `dueno_id`, `plan`, `estado`, `prueba_termina` | A quién pertenecen las lecherías. |
 | `usuarios` | `id` (= `auth.users.id`), `nombre`, `email`, `cuenta_id` | Perfil del usuario autenticado. |
 
 ## Lechería y membresía

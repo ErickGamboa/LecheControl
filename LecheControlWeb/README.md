@@ -61,9 +61,7 @@ se pasa como `construirHome` a `AuthGate`, del paquete móvil, así que corre
 
 ```
 AuthGate ─┬─ sin sesión ────────────► LoginScreen        (siempre la del móvil)
-          └─ con sesión ─► CuentaGate ─┬─ suspendida ───► SuspendidaScreen
-                                       ├─ prueba vencida► SuscripcionScreen
-                                       ├─ sin lechería ─► crear lechería
+          └─ con sesión ─► CuentaGate ─┬─ sin lechería ─► crear lechería
                                        └─ todo bien ────► construirHome(...)
                                                              │
                                               ┌──────────────┴──────────────┐
@@ -71,11 +69,15 @@ AuthGate ─┬─ sin sesión ────────────► LoginScre
                                          HomeScreen                ShellEscritorio
 ```
 
+`CuentaGate` no bloquea a nadie: el que inicia sesión entra a su lechería. No
+hay pantallas de suscripción ni de cuenta suspendida, y no hay nada en la app
+que se compre ni que se venza.
+
 Dos consecuencias buscadas:
 
-1. **El login y las pantallas de cuenta son siempre las del móvil**, sin marco.
-   Ya vienen centradas y limitadas a 420 px, así que en un monitor se ven bien
-   sin ayuda. Y sobre todo: la lógica de sesión, estado de la cuenta y licencia
+1. **El login y el formulario de crear lechería son siempre los del móvil**,
+   sin marco. Ya vienen centrados y limitados a 420 px, así que en un monitor
+   se ven bien sin ayuda. Y sobre todo: la lógica de sesión, cuenta y lechería
    no se escribe dos veces.
 
 2. **No se rearma el árbol al arrastrar la ventana.** Si el `LayoutBuilder`

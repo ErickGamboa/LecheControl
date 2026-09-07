@@ -435,7 +435,8 @@ class SyncService {
     _medicamentosSpec,
   ];
 
-  /// Catálogo de licencias (solo lectura). No usa borrado suave ni `pendiente`.
+  /// Configuración de cuenta que baja del servidor (solo lectura). No usa
+  /// borrado suave ni `pendiente`.
   TableSyncSpec get _planesSpec => TableSyncSpec(
     tabla: 'planes',
     bajada: PullSpec(

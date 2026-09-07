@@ -10,7 +10,7 @@ class CuentasRepository {
 
   /// Stream reactivo con la cuenta propia del usuario. Emite null si todavía
   /// no se conoce (no sincronizada). Se actualiza solo cuando cambia (p. ej.
-  /// el admin la suspende y se sincroniza).
+  /// cambia de nombre en el servidor y se sincroniza).
   Stream<CuentaRow?> observarMiCuenta(String usuarioId) {
     final consulta = db.select(db.usuarios).join([
       innerJoin(db.cuentas, db.cuentas.id.equalsExp(db.usuarios.cuentaId)),
