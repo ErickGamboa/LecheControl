@@ -334,12 +334,38 @@ Los dos proyectos van en **un solo repositorio**:
 ```
 LecheControl/
 ├── vercel.json
+├── VERCEL.md              ← cómo se publica
 ├── LecheControlMovil/     ← el producto
 └── LecheControlWeb/       ← este proyecto
 ```
 
 Si se separan, quien clone el repo web no encuentra `../LecheControlMovil` y no
 compila nada. Vercel incluido.
+
+## El sitio público
+
+Lo que se publica no es solo la app: `sitio/` trae la portada, la privacidad y
+el soporte en **HTML estático**, y la app queda colgada de `/app/`.
+
+| URL           | Qué es                                   |
+| ------------- | ---------------------------------------- |
+| `/`           | Portada de LecheControl (HTML estático)  |
+| `/privacidad` | Política de privacidad                   |
+| `/soporte`    | Soporte y preguntas frecuentes           |
+| `/app/`       | Esta app Flutter: el login y lo demás    |
+
+Las dos páginas legales son HTML plano a propósito: App Store y Google Play
+piden un enlace público a cada una, y el revisor tiene que poder leerlas sin
+esperar a que baje un bundle de Flutter de varios megas.
+
+Para verlo en la computadora:
+
+```bash
+bash LecheControlWeb/scripts/construir_sitio.sh   # deja todo en build/sitio/
+```
+
+Ojo con un servidor estático cualquiera: sin Vercel, `/privacidad` no resuelve
+sola (le falta el `.html`). Es `cleanUrls` el que lo arregla en producción.
 
 ## Vercel
 
@@ -350,3 +376,5 @@ build necesita ver `LecheControlMovil/` para resolver la dependencia de ruta.
 La versión de Flutter está fijada en el `installCommand` (**3.44.1**, la misma
 con la que se desarrolló). Al subir la versión de Flutter en la máquina, hay
 que subirla también ahí.
+
+Los detalles del deploy están en [`VERCEL.md`](../VERCEL.md).
