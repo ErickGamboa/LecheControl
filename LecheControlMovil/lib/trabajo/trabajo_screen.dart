@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
+import '../app/widgets/aviso_rapido.dart';
 import '../app/widgets/scan_field.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
@@ -242,6 +243,50 @@ class _TarjetaAnimal extends StatelessWidget {
 
   bool get _pronta => esPronta(animal.fechaProbableParto);
 
+  /// Anota un evento y **avisa en pantalla si quedó o no**.
+  ///
+  /// Todos los eventos de esta pantalla pasan por acá, y no cada uno con su
+  /// `await` suelto, por dos razones:
+  ///
+  /// 1. El acuse es el mismo siempre. El ganadero aprende una sola cosa —check
+  ///    verde quedó, equis roja no quedó— en vez de una por evento.
+  /// 2. **Un fallo no puede pasar callado.** Antes, si el registro reventaba,
+  ///    el diálogo ya se había cerrado y la pantalla se quedaba igual: se veía
+  ///    idéntico a que hubiera funcionado. El evento no quedaba y nadie se
+  ///    enteraba hasta buscar la vaca en la hoja de vida.
+  ///
+  /// [queQuedo] es lo que dice el check. Va como "Anotado: Parto" y no como
+  /// "Parto anotado" por una razón boba pero real: los eventos son unos
+  /// masculinos y otros femeninos —el celo, la monta, la inseminación—, y
+  /// pegarle el participio al nombre daba "Monta anotado". Con el participio
+  /// adelante concuerda siempre.
+  ///
+  /// Devuelve si el evento quedó anotado, para el que necesite seguir: la
+  /// baja, por ejemplo, cierra la ficha, y no debe cerrarla si falló.
+  Future<bool> _anotar(
+    BuildContext context, {
+    required String queQuedo,
+    required Future<void> Function() registrar,
+  }) async {
+    try {
+      await registrar();
+      if (context.mounted) AvisoRapido.exito(context, queQuedo);
+      return true;
+    } catch (error, pila) {
+      // El motivo real va a la consola para poder depurarlo; en pantalla va
+      // en palabras del ganadero, que es quien lo lee.
+      debugPrint('Trabajo: no se pudo anotar «$queQuedo»: $error\n$pila');
+      if (context.mounted) {
+        AvisoRapido.fallo(context, 'No quedó anotado. Volvé a intentar.');
+      }
+      return false;
+    } finally {
+      // Se refresca pase lo que pase: si falló, la ficha tiene que mostrar el
+      // estado de verdad y no el que se esperaba.
+      onCambio();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -361,7 +406,11 @@ class _TarjetaAnimal extends StatelessWidget {
                 icono: const Icon(Icons.medical_services_outlined),
                 etiqueta: 'Sanidad',
                 onTap: () async {
-                  await showModalBottomSheet(
+                  // La hoja de sanidad aplica ella misma los medicamentos y
+                  // sabe si aplicó alguno: devuelve `true` solo cuando quedó
+                  // algo anotado. Cerrarla sin aplicar nada no es un fallo, y
+                  // no tiene que sacar ni check ni equis.
+                  final aplicado = await showModalBottomSheet<bool>(
                     context: context,
                     isScrollControlled: true,
                     builder: (_) => SanidadAplicarSheet(
@@ -371,6 +420,15 @@ class _TarjetaAnimal extends StatelessWidget {
                     ),
                   );
                   onCambio();
+                  if (aplicado == null || !context.mounted) return;
+                  if (aplicado) {
+                    AvisoRapido.exito(context, 'Anotado: Sanidad');
+                  } else {
+                    AvisoRapido.fallo(
+                      context,
+                      'No quedó anotado. Volvé a intentar.',
+                    );
+                  }
                 },
               ),
               _BotonEvento(
@@ -470,14 +528,18 @@ class _TarjetaAnimal extends StatelessWidget {
       ),
     );
     if (confirmado != true) return;
-    await eventosRepo.registrarServicio(
-      animalId: animal.id,
-      lecheriaId: lecheriaId,
-      tipo: tipo,
-      toroPajilla: toroCtrl.text.trim().isEmpty ? null : toroCtrl.text.trim(),
-      registradoPor: usuarioId,
+    if (!context.mounted) return;
+    await _anotar(
+      context,
+      queQuedo: 'Anotado: ${TipoEventoAnimal.etiqueta(tipo)}',
+      registrar: () => eventosRepo.registrarServicio(
+        animalId: animal.id,
+        lecheriaId: lecheriaId,
+        tipo: tipo,
+        toroPajilla: toroCtrl.text.trim().isEmpty ? null : toroCtrl.text.trim(),
+        registradoPor: usuarioId,
+      ),
     );
-    onCambio();
   }
 
   Future<void> _palpacionDialog(BuildContext context) async {
@@ -540,16 +602,22 @@ class _TarjetaAnimal extends StatelessWidget {
       ),
     );
     if (confirmado != true) return;
-    await eventosRepo.registrarPalpacion(
-      animalId: animal.id,
-      lecheriaId: lecheriaId,
-      resultado: resultado,
-      fechaProbableParto: resultado == ResultadoPalpacion.preniada
-          ? fechaProbableParto
-          : null,
-      registradoPor: usuarioId,
+    if (!context.mounted) return;
+    await _anotar(
+      context,
+      // El resultado y no "Palpación": lo que el ganadero quiere confirmar de
+      // un vistazo es que quedó preñada, no que se hizo la palpación.
+      queQuedo: 'Anotado: ${ResultadoPalpacion.etiqueta(resultado)}',
+      registrar: () => eventosRepo.registrarPalpacion(
+        animalId: animal.id,
+        lecheriaId: lecheriaId,
+        resultado: resultado,
+        fechaProbableParto: resultado == ResultadoPalpacion.preniada
+            ? fechaProbableParto
+            : null,
+        registradoPor: usuarioId,
+      ),
     );
-    onCambio();
   }
 
   Future<void> _secadoDialog(BuildContext context) async {
@@ -573,12 +641,16 @@ class _TarjetaAnimal extends StatelessWidget {
       ),
     );
     if (confirmado != true) return;
-    await eventosRepo.registrarSecado(
-      animalId: animal.id,
-      lecheriaId: lecheriaId,
-      registradoPor: usuarioId,
+    if (!context.mounted) return;
+    await _anotar(
+      context,
+      queQuedo: 'Anotado: Secado',
+      registrar: () => eventosRepo.registrarSecado(
+        animalId: animal.id,
+        lecheriaId: lecheriaId,
+        registradoPor: usuarioId,
+      ),
     );
-    onCambio();
   }
 
   /// Nota libre sobre la vaca. Es el único evento que no cambia nada de la
@@ -618,13 +690,17 @@ class _TarjetaAnimal extends StatelessWidget {
       ),
     );
     if (guardar != true) return;
-    await eventosRepo.registrarObservacion(
-      animalId: animal.id,
-      lecheriaId: lecheriaId,
-      texto: textoCtrl.text,
-      registradoPor: usuarioId,
+    if (!context.mounted) return;
+    await _anotar(
+      context,
+      queQuedo: 'Anotado: Observación',
+      registrar: () => eventosRepo.registrarObservacion(
+        animalId: animal.id,
+        lecheriaId: lecheriaId,
+        texto: textoCtrl.text,
+        registradoPor: usuarioId,
+      ),
     );
-    onCambio();
   }
 
   Future<void> _partoDialog(BuildContext context) async {
@@ -670,16 +746,22 @@ class _TarjetaAnimal extends StatelessWidget {
       ),
     );
     if (confirmado != true) return;
-    await eventosRepo.registrarParto(
-      animalId: animal.id,
-      lecheriaId: lecheriaId,
-      sexoCria: sexoCria,
-      identificadorCria: identificadorCtrl.text.trim().isEmpty
-          ? null
-          : identificadorCtrl.text.trim(),
-      registradoPor: usuarioId,
+    if (!context.mounted) return;
+    await _anotar(
+      context,
+      // El parto crea la cría además de anotar el evento, así que el acuse lo
+      // dice: es lo que el ganadero va a ir a buscar después.
+      queQuedo: 'Anotado: Parto · cría registrada',
+      registrar: () => eventosRepo.registrarParto(
+        animalId: animal.id,
+        lecheriaId: lecheriaId,
+        sexoCria: sexoCria,
+        identificadorCria: identificadorCtrl.text.trim().isEmpty
+            ? null
+            : identificadorCtrl.text.trim(),
+        registradoPor: usuarioId,
+      ),
     );
-    onCambio();
   }
 
   Future<void> _cambiarGrupoDialog(BuildContext context) async {
@@ -697,13 +779,17 @@ class _TarjetaAnimal extends StatelessWidget {
       ),
     );
     if (nuevoGrupo == null || nuevoGrupo == animal.grupo) return;
-    await animalesRepo.cambiarGrupo(
-      animalId: animal.id,
-      lecheriaId: lecheriaId,
-      nuevoGrupo: nuevoGrupo,
-      registradoPor: usuarioId,
+    if (!context.mounted) return;
+    await _anotar(
+      context,
+      queQuedo: 'Anotado: pasó a ${GrupoAnimal.etiqueta(nuevoGrupo)}',
+      registrar: () => animalesRepo.cambiarGrupo(
+        animalId: animal.id,
+        lecheriaId: lecheriaId,
+        nuevoGrupo: nuevoGrupo,
+        registradoPor: usuarioId,
+      ),
     );
-    onCambio();
   }
 
   Future<void> _bajaDialog(BuildContext context) async {
@@ -757,15 +843,22 @@ class _TarjetaAnimal extends StatelessWidget {
       ),
     );
     if (confirmado != true) return;
-    await animalesRepo.registrarBaja(
-      animalId: animal.id,
-      lecheriaId: lecheriaId,
-      motivo: motivo,
-      precioVenta: double.tryParse(precioCtrl.text.replaceAll(',', '.')),
-      registradoPor: usuarioId,
+    if (!context.mounted) return;
+    final quedo = await _anotar(
+      context,
+      queQuedo: 'Anotado: baja por ${MotivoBaja.etiqueta(motivo).toLowerCase()}',
+      registrar: () => animalesRepo.registrarBaja(
+        animalId: animal.id,
+        lecheriaId: lecheriaId,
+        motivo: motivo,
+        precioVenta: double.tryParse(precioCtrl.text.replaceAll(',', '.')),
+        registradoPor: usuarioId,
+      ),
     );
-    if (context.mounted) Navigator.of(context).maybePop();
-    onCambio();
+    // Solo se cierra la ficha si la baja quedó: si falló, el animal sigue en
+    // la finca y hay que poder volver a intentarlo sin buscarlo de nuevo. El
+    // check se ve igual, porque vive en el overlay de la app y no en la ficha.
+    if (quedo && context.mounted) Navigator.of(context).maybePop();
   }
 }
 

@@ -30,17 +30,28 @@ class _SanidadAplicarSheetState extends State<SanidadAplicarSheet> {
   final _seleccionados = <String>{};
   bool _guardando = false;
 
+  /// Aplica lo seleccionado y se cierra devolviendo **si quedó anotado**:
+  /// `true` si sí, `false` si falló, y `null` si se cerró sin aplicar nada.
+  ///
+  /// Quien la abre usa eso para acusar recibo —el check verde o la equis roja
+  /// de Trabajo—. Antes se cerraba siempre igual, así que un fallo se veía
+  /// idéntico a un éxito.
   Future<void> _aplicar() async {
     if (_seleccionados.isEmpty) return;
     setState(() => _guardando = true);
-    await sanidadRepo.aplicarMedicamentos(
-      animalId: widget.animalId,
-      lecheriaId: widget.lecheriaId,
-      medicamentoIds: _seleccionados.toList(),
-      registradoPor: widget.usuarioId,
-    );
-    sincronizarSiSePuede();
-    if (mounted) Navigator.pop(context);
+    try {
+      await sanidadRepo.aplicarMedicamentos(
+        animalId: widget.animalId,
+        lecheriaId: widget.lecheriaId,
+        medicamentoIds: _seleccionados.toList(),
+        registradoPor: widget.usuarioId,
+      );
+      sincronizarSiSePuede();
+      if (mounted) Navigator.pop(context, true);
+    } catch (error, pila) {
+      debugPrint('Sanidad: no se pudo aplicar: $error\n$pila');
+      if (mounted) Navigator.pop(context, false);
+    }
   }
 
   @override
