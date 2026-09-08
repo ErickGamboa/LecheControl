@@ -19,10 +19,17 @@ class RemoteWrite {
 /// (ver `SupabaseSyncRemoteGateway.consultar`) para que los tests de
 /// desempate con timestamps iguales sean representativos.
 class FakeSyncRemoteGateway implements SyncRemoteGateway {
-  FakeSyncRemoteGateway({this.tieneUsuario = true, this.tieneSesion = false});
+  FakeSyncRemoteGateway({
+    this.tieneUsuario = true,
+    this.tieneSesion = false,
+    this.usuarioId = 'user-fake',
+  });
 
   @override
   final bool tieneUsuario;
+
+  @override
+  final String? usuarioId;
 
   @override
   final bool tieneSesion;

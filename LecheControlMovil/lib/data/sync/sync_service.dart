@@ -381,10 +381,25 @@ class SyncService {
 
   // -------------------------------------------------------------- MARCADORES
 
+  /// De quién son los cursores que se están usando.
+  ///
+  /// Sin sesión no hay cursor: se devuelve cadena vacía y la bajada arranca
+  /// de cero, que es lo correcto porque tampoco hay nada que bajar.
+  String get _duenoDelCursor => _remote.usuarioId ?? '';
+
+  /// El cursor de **este** usuario para esta tabla.
+  ///
+  /// El usuario va en la clave a propósito: con un cursor por tabla, entrar
+  /// con otra cuenta en el mismo teléfono podía dejar la fila propia detrás
+  /// del cursor de la anterior, y no bajaba nunca. Ver `SyncCursores`.
   Future<SyncCursor> _leerCursor(String tabla) async {
-    final row = await (db.select(
-      db.syncCursores,
-    )..where((t) => t.tabla.equals(tabla))).getSingleOrNull();
+    final row =
+        await (db.select(db.syncCursores)..where(
+              (t) =>
+                  t.tabla.equals(tabla) &
+                  t.usuarioId.equals(_duenoDelCursor),
+            ))
+            .getSingleOrNull();
     if (row == null || row.ultimaBajada == null) return SyncCursor.vacio;
     return SyncCursor(updatedAt: row.ultimaBajada, id: row.ultimaBajadaId);
   }
@@ -395,6 +410,7 @@ class SyncService {
         .insertOnConflictUpdate(
           SyncCursorRow(
             tabla: tabla,
+            usuarioId: _duenoDelCursor,
             ultimaBajada: cursor.updatedAt,
             ultimaBajadaId: cursor.id,
           ),

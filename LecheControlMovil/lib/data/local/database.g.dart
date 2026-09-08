@@ -11044,6 +11044,17 @@ class $SyncCursoresTable extends SyncCursores
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _usuarioIdMeta = const VerificationMeta(
+    'usuarioId',
+  );
+  @override
+  late final GeneratedColumn<String> usuarioId = GeneratedColumn<String>(
+    'usuario_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _ultimaBajadaMeta = const VerificationMeta(
     'ultimaBajada',
   );
@@ -11067,7 +11078,12 @@ class $SyncCursoresTable extends SyncCursores
     requiredDuringInsert: false,
   );
   @override
-  List<GeneratedColumn> get $columns => [tabla, ultimaBajada, ultimaBajadaId];
+  List<GeneratedColumn> get $columns => [
+    tabla,
+    usuarioId,
+    ultimaBajada,
+    ultimaBajadaId,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -11087,6 +11103,14 @@ class $SyncCursoresTable extends SyncCursores
       );
     } else if (isInserting) {
       context.missing(_tablaMeta);
+    }
+    if (data.containsKey('usuario_id')) {
+      context.handle(
+        _usuarioIdMeta,
+        usuarioId.isAcceptableOrUnknown(data['usuario_id']!, _usuarioIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usuarioIdMeta);
     }
     if (data.containsKey('ultima_bajada')) {
       context.handle(
@@ -11110,7 +11134,7 @@ class $SyncCursoresTable extends SyncCursores
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {tabla};
+  Set<GeneratedColumn> get $primaryKey => {tabla, usuarioId};
   @override
   SyncCursorRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -11118,6 +11142,10 @@ class $SyncCursoresTable extends SyncCursores
       tabla: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}tabla'],
+      )!,
+      usuarioId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}usuario_id'],
       )!,
       ultimaBajada: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -11138,10 +11166,28 @@ class $SyncCursoresTable extends SyncCursores
 
 class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   final String tabla;
+
+  /// De quién es este cursor. **Va en la clave a propósito.**
+  ///
+  /// La bajada es incremental: pide las filas con `(updated_at, id) >` el
+  /// cursor. Y lo que cada usuario ve del servidor lo decide RLS: solo sus
+  /// propias filas.
+  ///
+  /// Con un cursor por tabla —sin el usuario— pasaba esto: si en el teléfono
+  /// se sincronizaba la cuenta A, el cursor quedaba en la fecha de la fila de
+  /// A; al entrar después con la cuenta B, si la fila de B era **más vieja**
+  /// que la de A, quedaba detrás del cursor y **no bajaba nunca**. La app se
+  /// quedaba esperando una cuenta que el servidor tenía y le habría dado.
+  ///
+  /// Pasó de verdad: dos cuentas con `usuarios.updated_at` de 20:44 y 20:36.
+  /// La de las 20:44 funcionaba siempre; la de las 20:36 se trababa en cuanto
+  /// la otra hubiera entrado una vez en ese teléfono.
+  final String usuarioId;
   final DateTime? ultimaBajada;
   final String? ultimaBajadaId;
   const SyncCursorRow({
     required this.tabla,
+    required this.usuarioId,
     this.ultimaBajada,
     this.ultimaBajadaId,
   });
@@ -11149,6 +11195,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['tabla'] = Variable<String>(tabla);
+    map['usuario_id'] = Variable<String>(usuarioId);
     if (!nullToAbsent || ultimaBajada != null) {
       map['ultima_bajada'] = Variable<DateTime>(ultimaBajada);
     }
@@ -11161,6 +11208,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   SyncCursoresCompanion toCompanion(bool nullToAbsent) {
     return SyncCursoresCompanion(
       tabla: Value(tabla),
+      usuarioId: Value(usuarioId),
       ultimaBajada: ultimaBajada == null && nullToAbsent
           ? const Value.absent()
           : Value(ultimaBajada),
@@ -11177,6 +11225,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SyncCursorRow(
       tabla: serializer.fromJson<String>(json['tabla']),
+      usuarioId: serializer.fromJson<String>(json['usuarioId']),
       ultimaBajada: serializer.fromJson<DateTime?>(json['ultimaBajada']),
       ultimaBajadaId: serializer.fromJson<String?>(json['ultimaBajadaId']),
     );
@@ -11186,6 +11235,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'tabla': serializer.toJson<String>(tabla),
+      'usuarioId': serializer.toJson<String>(usuarioId),
       'ultimaBajada': serializer.toJson<DateTime?>(ultimaBajada),
       'ultimaBajadaId': serializer.toJson<String?>(ultimaBajadaId),
     };
@@ -11193,10 +11243,12 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
 
   SyncCursorRow copyWith({
     String? tabla,
+    String? usuarioId,
     Value<DateTime?> ultimaBajada = const Value.absent(),
     Value<String?> ultimaBajadaId = const Value.absent(),
   }) => SyncCursorRow(
     tabla: tabla ?? this.tabla,
+    usuarioId: usuarioId ?? this.usuarioId,
     ultimaBajada: ultimaBajada.present ? ultimaBajada.value : this.ultimaBajada,
     ultimaBajadaId: ultimaBajadaId.present
         ? ultimaBajadaId.value
@@ -11205,6 +11257,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   SyncCursorRow copyWithCompanion(SyncCursoresCompanion data) {
     return SyncCursorRow(
       tabla: data.tabla.present ? data.tabla.value : this.tabla,
+      usuarioId: data.usuarioId.present ? data.usuarioId.value : this.usuarioId,
       ultimaBajada: data.ultimaBajada.present
           ? data.ultimaBajada.value
           : this.ultimaBajada,
@@ -11218,6 +11271,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   String toString() {
     return (StringBuffer('SyncCursorRow(')
           ..write('tabla: $tabla, ')
+          ..write('usuarioId: $usuarioId, ')
           ..write('ultimaBajada: $ultimaBajada, ')
           ..write('ultimaBajadaId: $ultimaBajadaId')
           ..write(')'))
@@ -11225,41 +11279,49 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   }
 
   @override
-  int get hashCode => Object.hash(tabla, ultimaBajada, ultimaBajadaId);
+  int get hashCode =>
+      Object.hash(tabla, usuarioId, ultimaBajada, ultimaBajadaId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is SyncCursorRow &&
           other.tabla == this.tabla &&
+          other.usuarioId == this.usuarioId &&
           other.ultimaBajada == this.ultimaBajada &&
           other.ultimaBajadaId == this.ultimaBajadaId);
 }
 
 class SyncCursoresCompanion extends UpdateCompanion<SyncCursorRow> {
   final Value<String> tabla;
+  final Value<String> usuarioId;
   final Value<DateTime?> ultimaBajada;
   final Value<String?> ultimaBajadaId;
   final Value<int> rowid;
   const SyncCursoresCompanion({
     this.tabla = const Value.absent(),
+    this.usuarioId = const Value.absent(),
     this.ultimaBajada = const Value.absent(),
     this.ultimaBajadaId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SyncCursoresCompanion.insert({
     required String tabla,
+    required String usuarioId,
     this.ultimaBajada = const Value.absent(),
     this.ultimaBajadaId = const Value.absent(),
     this.rowid = const Value.absent(),
-  }) : tabla = Value(tabla);
+  }) : tabla = Value(tabla),
+       usuarioId = Value(usuarioId);
   static Insertable<SyncCursorRow> custom({
     Expression<String>? tabla,
+    Expression<String>? usuarioId,
     Expression<DateTime>? ultimaBajada,
     Expression<String>? ultimaBajadaId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (tabla != null) 'tabla': tabla,
+      if (usuarioId != null) 'usuario_id': usuarioId,
       if (ultimaBajada != null) 'ultima_bajada': ultimaBajada,
       if (ultimaBajadaId != null) 'ultima_bajada_id': ultimaBajadaId,
       if (rowid != null) 'rowid': rowid,
@@ -11268,12 +11330,14 @@ class SyncCursoresCompanion extends UpdateCompanion<SyncCursorRow> {
 
   SyncCursoresCompanion copyWith({
     Value<String>? tabla,
+    Value<String>? usuarioId,
     Value<DateTime?>? ultimaBajada,
     Value<String?>? ultimaBajadaId,
     Value<int>? rowid,
   }) {
     return SyncCursoresCompanion(
       tabla: tabla ?? this.tabla,
+      usuarioId: usuarioId ?? this.usuarioId,
       ultimaBajada: ultimaBajada ?? this.ultimaBajada,
       ultimaBajadaId: ultimaBajadaId ?? this.ultimaBajadaId,
       rowid: rowid ?? this.rowid,
@@ -11285,6 +11349,9 @@ class SyncCursoresCompanion extends UpdateCompanion<SyncCursorRow> {
     final map = <String, Expression>{};
     if (tabla.present) {
       map['tabla'] = Variable<String>(tabla.value);
+    }
+    if (usuarioId.present) {
+      map['usuario_id'] = Variable<String>(usuarioId.value);
     }
     if (ultimaBajada.present) {
       map['ultima_bajada'] = Variable<DateTime>(ultimaBajada.value);
@@ -11302,6 +11369,7 @@ class SyncCursoresCompanion extends UpdateCompanion<SyncCursorRow> {
   String toString() {
     return (StringBuffer('SyncCursoresCompanion(')
           ..write('tabla: $tabla, ')
+          ..write('usuarioId: $usuarioId, ')
           ..write('ultimaBajada: $ultimaBajada, ')
           ..write('ultimaBajadaId: $ultimaBajadaId, ')
           ..write('rowid: $rowid')
@@ -17440,6 +17508,7 @@ typedef $$MedicamentosTableProcessedTableManager =
 typedef $$SyncCursoresTableCreateCompanionBuilder =
     SyncCursoresCompanion Function({
       required String tabla,
+      required String usuarioId,
       Value<DateTime?> ultimaBajada,
       Value<String?> ultimaBajadaId,
       Value<int> rowid,
@@ -17447,6 +17516,7 @@ typedef $$SyncCursoresTableCreateCompanionBuilder =
 typedef $$SyncCursoresTableUpdateCompanionBuilder =
     SyncCursoresCompanion Function({
       Value<String> tabla,
+      Value<String> usuarioId,
       Value<DateTime?> ultimaBajada,
       Value<String?> ultimaBajadaId,
       Value<int> rowid,
@@ -17463,6 +17533,11 @@ class $$SyncCursoresTableFilterComposer
   });
   ColumnFilters<String> get tabla => $composableBuilder(
     column: $table.tabla,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get usuarioId => $composableBuilder(
+    column: $table.usuarioId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17491,6 +17566,11 @@ class $$SyncCursoresTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get usuarioId => $composableBuilder(
+    column: $table.usuarioId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get ultimaBajada => $composableBuilder(
     column: $table.ultimaBajada,
     builder: (column) => ColumnOrderings(column),
@@ -17513,6 +17593,9 @@ class $$SyncCursoresTableAnnotationComposer
   });
   GeneratedColumn<String> get tabla =>
       $composableBuilder(column: $table.tabla, builder: (column) => column);
+
+  GeneratedColumn<String> get usuarioId =>
+      $composableBuilder(column: $table.usuarioId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get ultimaBajada => $composableBuilder(
     column: $table.ultimaBajada,
@@ -17557,11 +17640,13 @@ class $$SyncCursoresTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> tabla = const Value.absent(),
+                Value<String> usuarioId = const Value.absent(),
                 Value<DateTime?> ultimaBajada = const Value.absent(),
                 Value<String?> ultimaBajadaId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SyncCursoresCompanion(
                 tabla: tabla,
+                usuarioId: usuarioId,
                 ultimaBajada: ultimaBajada,
                 ultimaBajadaId: ultimaBajadaId,
                 rowid: rowid,
@@ -17569,11 +17654,13 @@ class $$SyncCursoresTableTableManager
           createCompanionCallback:
               ({
                 required String tabla,
+                required String usuarioId,
                 Value<DateTime?> ultimaBajada = const Value.absent(),
                 Value<String?> ultimaBajadaId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SyncCursoresCompanion.insert(
                 tabla: tabla,
+                usuarioId: usuarioId,
                 ultimaBajada: ultimaBajada,
                 ultimaBajadaId: ultimaBajadaId,
                 rowid: rowid,

@@ -22,6 +22,10 @@ class SyncCursor {
 /// tests se reemplaza por un fake en memoria sin credenciales ni red.
 abstract class SyncRemoteGateway {
   bool get tieneUsuario;
+
+  /// Quién tiene la sesión, o `null` si no hay. Los cursores de bajada van
+  /// por usuario: ver `SyncCursores` y `_leerCursor`.
+  String? get usuarioId;
   bool get tieneSesion;
 
   Future<void> insertarOActualizar(
@@ -67,6 +71,9 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
 
   @override
   bool get tieneUsuario => _sb.auth.currentUser != null;
+
+  @override
+  String? get usuarioId => _sb.auth.currentUser?.id;
 
   @override
   bool get tieneSesion => _sb.auth.currentSession != null;

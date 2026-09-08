@@ -464,11 +464,29 @@ class Medicamentos extends Table {
 @DataClassName('SyncCursorRow')
 class SyncCursores extends Table {
   TextColumn get tabla => text()();
+
+  /// De quién es este cursor. **Va en la clave a propósito.**
+  ///
+  /// La bajada es incremental: pide las filas con `(updated_at, id) >` el
+  /// cursor. Y lo que cada usuario ve del servidor lo decide RLS: solo sus
+  /// propias filas.
+  ///
+  /// Con un cursor por tabla —sin el usuario— pasaba esto: si en el teléfono
+  /// se sincronizaba la cuenta A, el cursor quedaba en la fecha de la fila de
+  /// A; al entrar después con la cuenta B, si la fila de B era **más vieja**
+  /// que la de A, quedaba detrás del cursor y **no bajaba nunca**. La app se
+  /// quedaba esperando una cuenta que el servidor tenía y le habría dado.
+  ///
+  /// Pasó de verdad: dos cuentas con `usuarios.updated_at` de 20:44 y 20:36.
+  /// La de las 20:44 funcionaba siempre; la de las 20:36 se trababa en cuanto
+  /// la otra hubiera entrado una vez en ese teléfono.
+  TextColumn get usuarioId => text()();
+
   DateTimeColumn get ultimaBajada => dateTime().nullable()();
   TextColumn get ultimaBajadaId => text().nullable()();
 
   @override
-  Set<Column> get primaryKey => {tabla};
+  Set<Column> get primaryKey => {tabla, usuarioId};
 }
 
 /// Estado de sincronización por tabla, solo local: para que el usuario/soporte
@@ -532,7 +550,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -623,6 +641,16 @@ class AppDatabase extends _$AppDatabase {
         // Solo el índice de la tabla nueva, no todos: los demás son de
         // tablas que esta migración no toca.
         await _crearIndiceCalidadLeche();
+      }
+      // v8 -> v9: el cursor de bajada pasa a ser por usuario (ver
+      // `SyncCursores`). Se recrea la tabla en vez de agregarle la columna
+      // porque cambia la clave primaria, y **se pierden los cursores a
+      // propósito**: quedar sin cursor solo cuesta una bajada completa la
+      // próxima vez, y de paso arregla a cualquier cuenta que hoy esté
+      // trabada detrás de un cursor ajeno.
+      if (from < 9) {
+        await m.deleteTable('sync_cursores');
+        await m.createTable(syncCursores);
       }
     },
   );
