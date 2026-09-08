@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 
 import '../data/domain/grupos.dart';
@@ -9,7 +10,8 @@ import '../data/repositories/finanzas_repository.dart';
 import '../data/repositories/lecherias_repository.dart';
 import '../data/repositories/medicamentos_repository.dart';
 import '../data/repositories/pesas_repository.dart';
-import '../services.dart';
+import "../services.dart" as servicios;
+import "../services.dart";
 import 'demo_env.dart';
 
 /// IDs y nombres fijos del set de datos de demostración (para poder
@@ -348,4 +350,84 @@ Future<void> maybeSeedDemoOnStartup() async {
     // Demo: no requiere sesión real de Supabase.
   }
   await activateDemoOfflineSession(usuarioId: uid);
+}
+
+/// Borra los restos del set de demostración cuando la build **no** es demo.
+///
+/// Hace falta porque una build demo deja la finca falsa guardada en el
+/// teléfono, y al instalar encima una build normal esos datos siguen ahí: el
+/// ganadero abre y ve «Lechería Demo LecheControl» con animales que no son
+/// suyos. Sin esto habría que decirle que borre la app y la instale de nuevo.
+///
+/// Se reconoce por los ids fijos de [DemoSeedIds], así que no toca nada de
+/// nadie: solo lo que sembró el demo.
+Future<void> limpiarRestosDeDemo({AppDatabase? base}) async {
+  final db = base ?? servicios.db;
+  final lecheriasDemo =
+      await (db.select(db.lecherias)..where(
+            (t) => t.cuentaId.equals(DemoSeedIds.cuentaId),
+          ))
+          .get();
+  final hayCuenta =
+      await (db.select(db.cuentas)
+            ..where((t) => t.id.equals(DemoSeedIds.cuentaId)))
+          .getSingleOrNull() !=
+      null;
+  if (lecheriasDemo.isEmpty && !hayCuenta) return;
+
+  final ids = lecheriasDemo.map((l) => l.id).toList();
+  await db.transaction(() async {
+    if (ids.isNotEmpty) {
+      await (db.delete(db.eventosAnimal)..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      // Las pesas cuelgan de la sesión, no de la lechería: hay que buscar
+      // primero las sesiones para saber cuáles borrar.
+      final sesiones =
+          await (db.select(db.pesasSesiones)
+                ..where((t) => t.lecheriaId.isIn(ids)))
+              .get();
+      final sesionIds = sesiones.map((s) => s.id).toList();
+      if (sesionIds.isNotEmpty) {
+        await (db.delete(db.pesasLeche)
+              ..where((t) => t.sesionId.isIn(sesionIds)))
+            .go();
+      }
+      await (db.delete(db.pesasSesiones)..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      await (db.delete(db.calidadLeche)..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      await (db.delete(db.ingresosSemana)..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      await (db.delete(db.gastosSemana)..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      await (db.delete(db.semanas)..where((t) => t.lecheriaId.isIn(ids))).go();
+      await (db.delete(db.categoriasGasto)
+            ..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      await (db.delete(db.medicamentos)..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      await (db.delete(db.animales)..where((t) => t.lecheriaId.isIn(ids))).go();
+      await (db.delete(db.configReporte)..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      await (db.delete(db.curvaReferencia)..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      await (db.delete(db.lecheriaMiembros)
+            ..where((t) => t.lecheriaId.isIn(ids)))
+          .go();
+      await (db.delete(db.lecherias)..where((t) => t.id.isIn(ids))).go();
+    }
+    await (db.delete(db.usuarios)
+          ..where((t) => t.id.equals(DemoSeedIds.userId)))
+        .go();
+    await (db.delete(db.cuentas)
+          ..where((t) => t.id.equals(DemoSeedIds.cuentaId)))
+        .go();
+    // La sesión demo también: es la que hacía entrar sin login a la finca
+    // falsa. Se borra solo si es la del usuario demo, para no sacar de la app
+    // a quien esté usándola de verdad sin conexión.
+    await (db.delete(db.sesionesLocales)
+          ..where((t) => t.usuarioId.equals(DemoSeedIds.userId)))
+        .go();
+  });
+  debugPrint('Demo: se limpiaron los restos del set de demostración.');
 }

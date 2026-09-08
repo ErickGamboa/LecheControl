@@ -33,8 +33,24 @@ Future<void> bootstrapLecheControl() async {
     );
   }
 
+  if (kDemoPedidoPeroIgnorado) {
+    // Que no quede la duda de si el define "funcionó": una build que no es de
+    // depuración ignora el modo demo a propósito (ver `demo_env.dart`).
+    debugPrint(
+      'LECHE_DEMO se pidió pero esta build no es de depuración: se ignora. '
+      'El modo demo le cierra la sesión al usuario en cada arranque, así que '
+      'no puede salir en una build de release.',
+    );
+  }
+
   await sesionLocalRepo.cargar();
   await maybeSeedDemoOnStartup();
+  if (!kSeedDemoEnabled) {
+    // Si el teléfono viene de una build demo, la finca falsa quedó guardada.
+    // Se limpia acá para que el ganadero no tenga que borrar la app.
+    await limpiarRestosDeDemo();
+    await sesionLocalRepo.cargar();
+  }
   await estadoConexion.iniciar(alRecuperarConexion: syncService.sincronizar);
 
   if (!kSeedDemoEnabled && SupabaseConfig.estaConfigurado) {
