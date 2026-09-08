@@ -104,6 +104,50 @@ Future<bool> faltaLaPrimeraBajada() async {
   return cuantas.isEmpty;
 }
 
+/// Qué dijo el sync la última vez, en una línea, para mostrarlo en pantalla.
+///
+/// **Por qué existe.** Los errores del sync van a `debugPrint`, que en una app
+/// instalada de TestFlight o de la tienda **no se ve**. Cuando algo falla en
+/// el teléfono del ganadero, ni él ni soporte tienen con qué: solo una
+/// pantalla que espera. Diagnosticar así es adivinar.
+///
+/// `SyncEstados` ya guardaba el último error de cada tabla; lo único que
+/// faltaba era sacarlo a la luz.
+/// Nunca lanza: es una ayuda para entender una falla, así que reventar acá
+/// sería tapar el problema con otro. Si no se puede leer, lo dice y ya.
+Future<String> diagnosticoDeSync({AppDatabase? base}) async {
+  try {
+    return await _diagnosticoDeSync(base: base);
+  } catch (e) {
+    return 'No se pudo leer el estado de la sincronización ($e).';
+  }
+}
+
+Future<String> _diagnosticoDeSync({AppDatabase? base}) async {
+  final d = base ?? db;
+  final filas = await d.select(d.syncEstados).get();
+  if (filas.isEmpty) {
+    // Ni éxito ni error en ninguna tabla: la sincronización no llegó a
+    // correr. Eso ya dice mucho —no es el servidor, es que no se intentó—.
+    return 'La sincronización no llegó a correr.';
+  }
+
+  final conError = filas.where((f) => f.ultimoError != null).toList()
+    ..sort(
+      (a, b) => (b.ultimoErrorEn ?? DateTime(0)).compareTo(
+        a.ultimoErrorEn ?? DateTime(0),
+      ),
+    );
+
+  if (conError.isEmpty) {
+    final ok = filas.where((f) => f.ultimaSincronizacionOk != null).length;
+    return 'Bajó $ok de ${filas.length} tablas sin errores.';
+  }
+
+  final peor = conError.first;
+  return '${peor.tabla}: ${peor.ultimoError}';
+}
+
 Future<void> cerrarSesion() async {
   await sesionLocalRepo.borrar();
   final client = supabaseClientOrNull;

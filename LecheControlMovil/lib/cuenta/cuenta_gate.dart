@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../app/theme.dart';
 import '../data/local/database.dart';
 import '../data/repositories/lecherias_repository.dart';
 import '../home/home_screen.dart';
@@ -123,6 +124,11 @@ class _EsperandoCuentaState extends State<_EsperandoCuenta> {
   Timer? _rendicion;
   bool _seTardo = false;
 
+  /// Lo último que dijo el sync. Se muestra en pantalla porque en una app
+  /// instalada los `debugPrint` no se ven, y sin esto ni el ganadero ni
+  /// soporte tienen con qué saber qué pasó.
+  String? _diagnostico;
+
   @override
   void initState() {
     super.initState();
@@ -148,7 +154,16 @@ class _EsperandoCuentaState extends State<_EsperandoCuenta> {
         (_) => sincronizarSiSePuede(),
       );
       setState(() => _seTardo = true);
+      // El diagnóstico se busca aparte y **sin esperarlo**: el aviso y los
+      // botones tienen que estar ahí de una. Si leerlo tarda o no se puede,
+      // el recuadro no sale y la pantalla sigue sirviendo igual.
+      _cargarDiagnostico();
     });
+  }
+
+  Future<void> _cargarDiagnostico() async {
+    final texto = await diagnosticoDeSync();
+    if (mounted) setState(() => _diagnostico = texto);
   }
 
   void _reintentarAMano() {
@@ -208,10 +223,30 @@ class _EsperandoCuentaState extends State<_EsperandoCuenta> {
     const SizedBox(height: 10),
     Text(
       'Seguimos intentando por si vuelve la señal. Si querés, probá de una '
-      'vez o volvé a entrar más tarde; si sigue igual, escribinos a soporte.',
+      'vez o volvé a entrar más tarde; si sigue igual, escribinos a soporte '
+      'con lo que dice el recuadro de abajo.',
       textAlign: TextAlign.center,
       style: theme.textTheme.bodyMedium,
     ),
+    if (_diagnostico case final texto?) ...[
+      const SizedBox(height: 16),
+      // Se puede seleccionar y copiar a propósito: es lo que hay que
+      // mandarle a soporte, y de un teléfono no se saca de otra forma.
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(LecheSpacing.md),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(LecheRadius.sm),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+        ),
+        child: SelectableText(
+          texto,
+          key: const ValueKey('cuenta.diagnostico'),
+          style: theme.textTheme.bodySmall,
+        ),
+      ),
+    ],
     const SizedBox(height: 24),
     FilledButton.icon(
       key: const ValueKey('cuenta.reintentar'),

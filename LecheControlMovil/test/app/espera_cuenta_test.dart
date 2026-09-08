@@ -57,6 +57,11 @@ void main() {
     );
   });
 
+  // Lo que muestra el recuadro se prueba en `diagnostico_sync_test.dart`:
+  // esa lógica lee la base y acá no hay una de verdad. Lo que importa fijar
+  // en esta pantalla es que el aviso y los botones salgan **sin esperar** el
+  // diagnóstico, para que un diagnóstico lento no la deje inservible.
+
   testWidgets('tras avisar, sigue intentando sola de fondo', (tester) async {
     // Es lo que hace que se cure sin reinstalar nada: el ganadero puede estar
     // en un punto con señal intermitente, y cuando vuelve, la pantalla pasa
