@@ -307,13 +307,13 @@ flutter test
 flutter build web
 ```
 
-Para ver el escritorio con datos, sin necesitar una cuenta de Supabase:
+Para ver el escritorio hay que entrar con una cuenta de verdad (no hay modo
+demo; ver el README del móvil). `LECHE_DB_NAME` sirve para aislar la base
+local del navegador de la del uso diario:
 
 ```bash
-flutter run -d chrome --dart-define=LECHE_DEMO=true --dart-define=LECHE_DB_NAME=demoweb
+flutter run -d chrome --dart-define=LECHE_DB_NAME=pruebas
 ```
-
-`LECHE_DB_NAME` aísla la base de demostración de la del uso diario.
 
 **Antes de dar por buena cualquier cosa que toque `lib/` del móvil**, este
 proyecto tiene que compilar:

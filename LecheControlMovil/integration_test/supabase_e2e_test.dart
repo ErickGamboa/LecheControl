@@ -34,6 +34,9 @@ void main() {
       final stamp = DateTime.now().millisecondsSinceEpoch;
       final lecheriaNombre = 'E2E Lechería $stamp';
       final identificador = 'E2E-${stamp % 1000000}';
+      // Monto irrepetible: así se puede buscar exactamente esta fila en el
+      // servidor sin confundirla con gastos de otra corrida.
+      final montoGasto = 1000 + (stamp % 9000);
 
       await e2eStep('arrancar la app');
       await app.main();
@@ -130,12 +133,7 @@ void main() {
       await pauseIntegration(tester, multiplier: 2);
 
       await e2eStep('volver al home desde Trabajo');
-      await tapBack(tester);
-      await waitFor(
-        tester,
-        find.byKey(const ValueKey('home.syncStatus')),
-        label: 'home.syncStatus',
-      );
+      await volverAlHome(tester);
 
       // 4) Módulo Registro de leche -> Pesa: registrar litros del animal
       //    recién creado.
@@ -152,118 +150,122 @@ void main() {
       );
       await waitFor(
         tester,
-        find.byKey(const ValueKey('pesa.identificador')),
-        label: 'pesa.identificador',
+        find.byKey(const ValueKey('pesa.elegirVaca')),
+        label: 'pesa.elegirVaca',
       );
       await pauseIntegration(tester);
 
-      await tester.enterText(
-        find.byKey(const ValueKey('pesa.identificador')),
-        identificador,
-      );
-      await tester.testTextInput.receiveAction(TextInputAction.next);
-      await pumpBounded(tester);
+      // La pesa ya no se digita por identificador: se elige la vaca de la
+      // lista de las que faltan en la sesión (ver `SelectorVacaSheet`).
+      await invokeButton(tester, find.byKey(const ValueKey('pesa.elegirVaca')));
       await waitFor(
         tester,
-        find.byKey(const ValueKey('pesa.litros')),
-        label: 'pesa.litros',
+        find.byKey(const ValueKey('selectorVaca.busqueda')),
+        label: 'selectorVaca.busqueda',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('selectorVaca.busqueda')),
+        identificador,
+      );
+      await pumpBounded(tester);
+      await tapKey(
+        tester,
+        ValueKey('selectorVaca.vaca.$identificador'),
+        label: 'selectorVaca.vaca.$identificador',
+      );
+
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('pesa.manana')),
+        label: 'pesa.manana',
       );
       await pauseIntegration(tester);
-      await tester.enterText(find.byKey(const ValueKey('pesa.litros')), '18.5');
+      await tester.enterText(find.byKey(const ValueKey('pesa.manana')), '10.5');
+      await tester.enterText(find.byKey(const ValueKey('pesa.tarde')), '8.0');
       await pauseIntegration(tester);
       await invokeButton(tester, find.byKey(const ValueKey('pesa.guardar')));
       await pumpBounded(tester);
 
       await e2eStep('volver al home desde Pesa de leche');
-      // Dos pasos atrás: la pesa cuelga del menú de Registro de leche.
-      await tapBack(tester);
-      await tapBack(tester);
-      await waitFor(
-        tester,
-        find.byKey(const ValueKey('home.syncStatus')),
-        label: 'home.syncStatus',
-      );
+      await volverAlHome(tester);
 
-      // 5) Módulo Gastos: fijar precio del litro y del concentrado del mes.
-      await e2eStep('configurar precios en Gastos');
-      await tapKey(tester, const ValueKey('home.gastos'), label: 'home.gastos');
+      // 5) Módulo Finanzas: anotar un gasto de la semana.
+      await e2eStep('anotar un gasto en Finanzas');
+      await tapKey(
+        tester,
+        const ValueKey('home.finanzas'),
+        label: 'home.finanzas',
+      );
       await waitFor(
         tester,
-        find.byKey(const ValueKey('gastos.editarParametros')),
-        label: 'gastos.editarParametros',
+        find.byKey(const ValueKey('finanzas.agregarGasto')),
+        label: 'finanzas.agregarGasto',
       );
       await pauseIntegration(tester);
 
-      await tester.tap(find.byKey(const ValueKey('gastos.editarParametros')));
+      await invokeButton(
+        tester,
+        find.byKey(const ValueKey('finanzas.agregarGasto')),
+      );
       await waitFor(
         tester,
-        find.byKey(const ValueKey('gastos.precioLitro')),
-        label: 'gastos.precioLitro',
+        find.byKey(const ValueKey('finanzas.gasto.monto')),
+        label: 'finanzas.gasto.monto',
       );
-      await pauseIntegration(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('gastos.precioLitro')),
-        '400',
+      await tapKey(
+        tester,
+        const ValueKey('finanzas.gasto.cat.Concentrado'),
+        label: 'finanzas.gasto.cat.Concentrado',
       );
-      await pauseIntegration(tester);
       await tester.enterText(
-        find.byKey(const ValueKey('gastos.precioConcentrado')),
-        '350',
-      );
-      await pauseIntegration(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('gastos.umbralSecado')),
-        '8',
+        find.byKey(const ValueKey('finanzas.gasto.monto')),
+        montoGasto.toStringAsFixed(0),
       );
       await pauseIntegration(tester);
       await invokeButton(
         tester,
-        find.byKey(const ValueKey('gastos.guardarParametros')),
+        find.byKey(const ValueKey('finanzas.gasto.guardar')),
       );
       await pumpBounded(tester);
 
-      await e2eStep('volver al home desde Gastos');
-      await tapBack(tester);
-      await waitFor(
-        tester,
-        find.byKey(const ValueKey('home.syncStatus')),
-        label: 'home.syncStatus',
-      );
-
-      // 6) Módulo Rentabilidad: ver la fila calculada para el animal.
-      await e2eStep('ver la fila de rentabilidad del animal');
-      await tapKey(
-        tester,
-        const ValueKey('home.rentabilidad'),
-        label: 'home.rentabilidad',
-      );
-      await waitFor(
-        tester,
-        find.byKey(const ValueKey('rentabilidad.lista')),
-        label: 'rentabilidad.lista',
-      );
-      await scrollUntilVisible(tester, find.text(identificador));
-      expect(find.text(identificador), findsWidgets);
-      await pauseIntegration(tester, multiplier: 2);
-
-      await e2eStep('volver al home desde Rentabilidad');
-      await tapBack(tester);
-      await waitFor(
-        tester,
-        find.byKey(const ValueKey('home.syncStatus')),
-        label: 'home.syncStatus',
-      );
+      await e2eStep('volver al home desde Finanzas');
+      await volverAlHome(tester);
 
       // 7) Forzar sync y confirmar que el animal quedó en la nube.
       await e2eStep('esperar sincronización con Supabase');
       await syncService.sincronizar();
       await pumpBounded(tester, ticks: 80);
-      await waitForSupabaseRow(
+      final animalEnLaNube = await waitForSupabaseRow(
         table: 'animales',
         column: 'identificador',
         equals: identificador,
         timeout: const Duration(seconds: 60),
       );
+
+      // Y la pesa también. El animal solo prueba que sube el alta; los litros
+      // son lo que el ganadero digita todos los días, así que si esto no
+      // llega, la sincronización no sirve de nada.
+      final pesaEnLaNube = await waitForSupabaseRow(
+        table: 'pesas_leche',
+        column: 'animal_id',
+        equals: animalEnLaNube['id'] as String,
+        timeout: const Duration(seconds: 60),
+      );
+      expect(
+        (pesaEnLaNube['litros'] as num).toDouble(),
+        closeTo(18.5, 0.001),
+        reason: 'los litros del día son mañana + tarde',
+      );
+
+      // Y el gasto. Sube por otro camino (cuelga de la semana, que la app
+      // crea sola), así que vale la pena verlo aparte.
+      final gastoEnLaNube = await waitForSupabaseRow(
+        table: 'gastos_semana',
+        column: 'monto',
+        equals: montoGasto,
+        timeout: const Duration(seconds: 60),
+      );
+      expect(gastoEnLaNube['categoria'], 'Concentrado');
     },
   );
 }

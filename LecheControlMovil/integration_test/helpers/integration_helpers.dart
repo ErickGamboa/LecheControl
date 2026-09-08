@@ -198,6 +198,24 @@ Future<void> tapBack(WidgetTester tester) async {
   await pumpBounded(tester);
 }
 
+/// Vuelve al home apretando atrás las veces que haga falta.
+///
+/// Hace falta porque contar los "atrás" a mano es frágil en un dispositivo de
+/// verdad: si al guardar quedó un aviso encima, o una hoja todavía se está
+/// cerrando, el toque no llega al botón y el conteo se desfasa. Acá se aprieta
+/// hasta que aparece el home, que es lo que en realidad se quiere.
+Future<void> volverAlHome(WidgetTester tester, {int maximo = 4}) async {
+  final home = find.byKey(const ValueKey('home.syncStatus'));
+  for (var intento = 0; intento < maximo; intento++) {
+    await pumpBounded(tester, ticks: 20);
+    if (home.evaluate().isNotEmpty) return;
+    final backs = find.byTooltip('Back');
+    if (backs.evaluate().isEmpty) continue;
+    await tester.tap(backs.last, warnIfMissed: false);
+  }
+  await waitFor(tester, home, timeoutSeconds: 15, label: 'home.syncStatus');
+}
+
 /// Closes the soft keyboard so the next tap hits the intended control
 /// (on iOS the first tap often only dismisses the keyboard).
 Future<void> dismissKeyboard(WidgetTester tester) async {
@@ -256,9 +274,7 @@ Future<void> invokeButton(WidgetTester tester, Finder finder) async {
       try {
         await result.timeout(const Duration(seconds: 3));
       } on TimeoutException {
-        e2eLog(
-          'invokeButton: onPressed sigue pendiente (modal abierto); sigo',
-        );
+        e2eLog('invokeButton: onPressed sigue pendiente (modal abierto); sigo');
       }
     }
   }

@@ -17,7 +17,6 @@
 #   DEVICE                    Target device id for `flutter run -d`
 #                              (default: the only attached Android emulator,
 #                              else you must pass it).
-#   LECHE_DEMO                Set to true to seed demo data.
 #
 # Usage:
 #   ./scripts/run_dev.sh
@@ -37,7 +36,6 @@ fi
 DEVICE="${DEVICE:-}"
 LECHE_SUPABASE_URL="${LECHE_SUPABASE_URL:-}"
 LECHE_SUPABASE_ANON_KEY="${LECHE_SUPABASE_ANON_KEY:-}"
-LECHE_DEMO="${LECHE_DEMO:-false}"
 
 # Hard guard: never point the app at HatoControl by accident
 if [[ "$LECHE_SUPABASE_URL" == *"geocoundyilwxrnbhcqu"* ]]; then
@@ -67,5 +65,4 @@ fi
 
 flutter run "$@" \
   --dart-define=LECHE_SUPABASE_URL="$LECHE_SUPABASE_URL" \
-  --dart-define=LECHE_SUPABASE_ANON_KEY="$LECHE_SUPABASE_ANON_KEY" \
-  --dart-define=LECHE_DEMO="$LECHE_DEMO"
+  --dart-define=LECHE_SUPABASE_ANON_KEY="$LECHE_SUPABASE_ANON_KEY"

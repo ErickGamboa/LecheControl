@@ -13,16 +13,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 3));
 
-    // En un dispositivo/simulador reutilizado (p. ej. de una corrida de
-    // `LECHE_DEMO` anterior) puede quedar una sesión local offline activa;
-    // la limpiamos para que este smoke test sea determinístico.
+    // En un dispositivo/simulador reutilizado puede quedar una sesión local
+    // offline activa de una corrida anterior; la limpiamos para que este
+    // smoke test sea determinístico.
     if (sesionLocalRepo.offlineActiva) {
       await sesionLocalRepo.borrar();
       await tester.pumpAndSettle();
     }
 
     // Sin `LECHE_SUPABASE_URL`/`LECHE_SUPABASE_ANON_KEY` configurados,
-    // `AuthGate` se queda en modo offline/demo y, sin sesión local guardada,
+    // `AuthGate` se queda en modo sin conexión y, sin sesión local guardada,
     // muestra `LoginScreen` directamente (ver `app_bootstrap.dart`).
     expect(find.byType(MaterialApp), findsOneWidget);
     expect(find.byKey(const ValueKey('login.email')), findsOneWidget);

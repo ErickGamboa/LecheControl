@@ -15,7 +15,7 @@ import 'login_screen.dart';
 /// cerrar sesión la app cambia de pantalla automáticamente. Si no hay cliente
 /// de Supabase disponible (`supabaseClientOrNull == null`: sin configuración,
 /// o `Supabase.initialize` todavía no corrió), solo se admite la sesión local
-/// (modo offline/demo).
+/// (modo sin conexión).
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key, this.construirHome});
 

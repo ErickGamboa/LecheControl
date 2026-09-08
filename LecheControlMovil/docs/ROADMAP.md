@@ -19,9 +19,9 @@ de verdad del producto). Última actualización: 2026-07-29.
   cada tabla, triggers `updated_at`, seed de planes.
 - Sesión local offline (`SesionLocalRepository`) + `AuthGate` (sesión
   Supabase → offline → login) + arranque tolerante a Supabase sin configurar.
-- Modo demo (`LECHE_DEMO=true`): siembra una lechería con 5 animales,
-  medicamentos, parámetros del mes y una sesión de pesa cerrada, sin
-  necesitar un proyecto de Supabase.
+- Modo demo: **existió y se quitó** (ver "No hay modo demo" en el README).
+  Sembraba una finca falsa y cerraba la sesión en cada arranque; se perdieron
+  datos reales de un ganadero. No se vuelve a poner.
 - Tema visual propio (verde/teal + crema, sin morado) y widgets táctiles
   compartidos (`ScanField`, `QuickNumberField`).
 

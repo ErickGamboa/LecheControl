@@ -291,12 +291,14 @@ class _Seccion extends StatelessWidget {
   const _Seccion({
     required this.titulo,
     required this.textoBoton,
+    required this.claveBoton,
     required this.onAgregar,
     required this.hijo,
   });
 
   final String titulo;
   final String textoBoton;
+  final String claveBoton;
   final VoidCallback onAgregar;
   final Widget hijo;
 
@@ -319,6 +321,7 @@ class _Seccion extends StatelessWidget {
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 TextButton.icon(
+                  key: ValueKey(claveBoton),
                   onPressed: onAgregar,
                   icon: const Icon(Icons.add, size: 18),
                   label: Text(textoBoton),
@@ -344,6 +347,7 @@ class _SeccionIngresos extends StatelessWidget {
     return _Seccion(
       titulo: 'INGRESOS',
       textoBoton: 'Anotar',
+      claveBoton: 'finanzas.agregarIngreso',
       onAgregar: onAgregar,
       hijo: resumen.ingresos.isEmpty
           ? const Padding(
@@ -398,6 +402,7 @@ class _SeccionGastos extends StatelessWidget {
     return _Seccion(
       titulo: 'GASTOS',
       textoBoton: 'Anotar',
+      claveBoton: 'finanzas.agregarGasto',
       onAgregar: onAgregar,
       hijo: resumen.gastos.isEmpty
           ? const Padding(

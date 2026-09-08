@@ -54,7 +54,7 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
   /// Se resuelve recién al primer uso, no en el constructor: así crear
   /// `SyncService`/`SupabaseSyncRemoteGateway` (p. ej. al tomar el tear-off
   /// `syncService.sincronizar` en `app_bootstrap.dart`) no falla cuando
-  /// Supabase todavía no está inicializado (modo offline/demo, ver
+  /// Supabase todavía no está inicializado (modo sin conexión, ver
   /// `SupabaseConfig.estaConfigurado`). Los llamadores (`sincronizarSiSePuede`)
   /// ya verifican esa configuración antes de invocar `sincronizar()`.
   SupabaseClient get _sb => _override ?? Supabase.instance.client;

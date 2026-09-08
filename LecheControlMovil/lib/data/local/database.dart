@@ -739,7 +739,7 @@ class AppDatabase extends _$AppDatabase {
 QueryExecutor _abrirConexion() {
   // drift_flutter resuelve la ruta del archivo y las librerías nativas de
   // SQLite en Android/iOS/escritorio automáticamente.
-  // `LECHE_DB_NAME` aísla e2e/demo del archivo diario del usuario.
+  // `LECHE_DB_NAME` aísla las pruebas del archivo diario del usuario.
   const nombre = String.fromEnvironment(
     'LECHE_DB_NAME',
     defaultValue: 'lechecontrol',

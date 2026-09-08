@@ -42,17 +42,23 @@ anything against it.
      (`waitForSupabaseRow`, `listSupabaseRows`) to confirm sync landed.
    - `integration_test/app_smoke_test.dart`: boots the real app
      (`package:leche_control/main.dart`) and asserts the login screen
-     renders. Works with **no** Supabase configuration (offline/demo mode) —
+     renders. Works with **no** Supabase configuration (modo sin conexión) —
      see `lib/app_bootstrap.dart`: without `LECHE_SUPABASE_URL`/
      `LECHE_SUPABASE_ANON_KEY`, `AuthGate` skips `Supabase.initialize` and,
      with no local session saved, shows `LoginScreen` directly.
    - `integration_test/supabase_e2e_test.dart`: the visible dairy flow
      against a **real** Supabase project and a **real, pre-seeded** user —
      login → (create lechería if it's the user's first run) → Trabajo (alta
-     animal) → Registro de leche → Pesa (register litros) → Gastos (set prices) →
-     Rentabilidad (see the row) → confirm the animal synced to Supabase.
-     Skips (does not fail) if `LECHE_E2E_EMAIL`/`LECHE_E2E_PASSWORD` are
-     unset.
+     animal) → Registro de leche → Pesa (elegir vaca, mañana/tarde) →
+     Finanzas (anotar un gasto) → confirm the animal, the pesa and the gasto
+     all landed in Supabase. Skips (does not fail) if `LECHE_E2E_EMAIL` /
+     `LECHE_E2E_PASSWORD` are unset. Deja animales `E2E-*` en la cuenta: se
+     limpian con `supabase/scripts/limpiar_animales_de_prueba.sql`.
+   - `integration_test/login_repetido_test.dart`: entrar → salir → entrar con
+     la MISMA cuenta, tres veces, exigiendo cada vez llegar al home (no a
+     «Preparando tu cuenta…») y que la lechería de la cuenta esté con sus
+     animales. Es el bug que se reportó desde TestFlight; no escribe nada en
+     el servidor.
    - Run smoke: `flutter test -d macos integration_test/app_smoke_test.dart`
      (or `-d <simulator name>`).
    - Run the Supabase e2e: `scripts/run_e2e.sh` (see below).
@@ -133,10 +139,10 @@ LecheControl Supabase project (`yskvlaovqvjfodiroaqz`).
 
 | Variable | Used by | Purpose |
 |---|---|---|
-| `LECHE_SUPABASE_URL` | `lib/config/supabase_config.dart` | Supabase project URL. Required for anything beyond offline/demo mode. |
+| `LECHE_SUPABASE_URL` | `lib/config/supabase_config.dart` | Supabase project URL. Required for anything beyond offline mode. |
 | `LECHE_SUPABASE_ANON_KEY` | `lib/config/supabase_config.dart` | Supabase anon/publishable key (safe to embed — RLS does the real enforcement). |
-| `LECHE_DEMO` | `lib/demo/demo_env.dart` | `true`/`1`/`yes` seeds an offline demo lechería on startup (see `lib/demo/demo_seed.dart`). Not used by the test suite. |
-| `LECHE_E2E_EMAIL` / `LECHE_E2E_PASSWORD` | `integration_test/supabase_e2e_test.dart` | Credentials of the pre-seeded e2e user. Test skips (not fails) when empty. |
+| ~~`LECHE_DEMO`~~ | — | **Ya no existe.** Sembraba una finca falsa y llamaba a `signOut()` en cada arranque; se quitó por completo (ver "No hay modo demo" en el README). No se vuelve a poner. |
+| `LECHE_E2E_EMAIL` / `LECHE_E2E_PASSWORD` | `supabase_e2e_test.dart` y `login_repetido_test.dart` | Credentials of the pre-seeded e2e user. Test skips (not fails) when empty. |
 | `LECHE_E2E_SLOW_MS` | `integration_test/helpers/integration_helpers.dart` | Pause (ms) after each e2e step, useful when demoing on a visible simulator. Defaults to `0`. |
 
 Example manual run once credentials exist:

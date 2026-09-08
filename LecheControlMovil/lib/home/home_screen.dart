@@ -143,6 +143,7 @@ class HomeScreen extends StatelessWidget {
                 _abrir(context, AjustesScreen(lecheriaId: lecheria.id)),
           ),
           IconButton(
+            key: const ValueKey('home.cerrarSesion'),
             tooltip: 'Cerrar sesión',
             icon: const Icon(Icons.logout),
             onPressed: cerrarSesion,

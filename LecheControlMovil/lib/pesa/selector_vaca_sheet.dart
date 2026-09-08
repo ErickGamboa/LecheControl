@@ -206,6 +206,7 @@ class _FilaVaca extends StatelessWidget {
     final dlac = diasLactancia(animal.fechaUltimoParto);
 
     return ListTile(
+      key: ValueKey('selectorVaca.vaca.${animal.identificador}'),
       leading: CircleAvatar(
         backgroundColor: colores.primaryContainer,
         foregroundColor: colores.onPrimaryContainer,

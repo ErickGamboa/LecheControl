@@ -107,16 +107,21 @@ Accounts are **not** self-registered in the app (Módulo 0, invariant no. 9):
 an administrator creates the `cuentas`/`usuarios` rows and gives credentials
 to the farmer. See the bottom of the migration file for a manual example.
 
-### Demo mode / modo demo
+### No hay modo demo / There is no demo mode
 
-To explore every module without a Supabase project, run with
-`LECHE_DEMO=true`. On first launch it seeds a local-only lechería with 5
-animals, medications, monthly parameters, and a closed milk-weighing
-session, then logs in offline automatically:
+Hubo uno (`LECHE_DEMO=true`) y **no se vuelve a poner**. Sembraba una lechería
+falsa y llamaba a `supabase.auth.signOut()` en *cada* arranque, así que en la
+build de TestFlight que salió con esa bandera el ganadero abría la app y en vez
+de su finca veía una inventada con 3 animales, ya sin sesión y sin poder subir
+lo que había digitado. Se perdieron datos reales.
 
-```bash
-flutter run --dart-define=LECHE_DEMO=true
-```
+Si hace falta enseñar la app sin tocar datos de nadie, se crea una cuenta de
+verdad en Supabase (`supabase/scripts/dar_de_alta_usuario.sql`) y se entra con
+ella. Nunca sembrando datos desde el arranque.
+
+No queda nada de ese modo en el código. Si algún teléfono todavía tiene la
+finca falsa guardada de una build vieja, se borra la app y se instala de nuevo:
+no había nada real que perder.
 
 ## Agent-friendly repo notes / Notas para agentes
 

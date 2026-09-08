@@ -7,8 +7,6 @@ import 'app/teclado/teclado_del_app.dart';
 import 'app/theme.dart';
 import 'auth/auth_gate.dart';
 import 'config/supabase_config.dart';
-import 'demo/demo_env.dart';
-import 'demo/demo_seed.dart';
 import 'services.dart';
 
 export 'app/theme.dart' show kAzulLeche, kCremaLeche, kVerdeLeche;
@@ -16,12 +14,17 @@ export 'app/theme.dart' show kAzulLeche, kCremaLeche, kVerdeLeche;
 /// Cada cuánto se reintenta solo la sincronización si quedó algo pendiente.
 const kReintentoSyncCada = Duration(minutes: 2);
 
-/// Inicializa Supabase (si hay configuración), la sesión local, la
-/// conectividad y, si aplica, la siembra de datos demo.
+/// Inicializa Supabase (si hay configuración), la sesión local y la
+/// conectividad, y deja la base lista para el usuario que tenga sesión.
 ///
 /// Si `SupabaseConfig.url`/`anonKey` están vacíos (proyecto de Supabase
-/// todavía no creado), se salta `Supabase.initialize` por completo: la app
-/// sigue funcionando en modo offline/demo (ver `LECHE_DEMO=true`).
+/// todavía no creado), se salta `Supabase.initialize` por completo y la app
+/// queda en modo sin conexión con lo que haya guardado.
+///
+/// **Acá no se inventan datos ni se toca la sesión de nadie.** Hubo un modo
+/// demo que en cada arranque sembraba una finca falsa y llamaba a
+/// `signOut()`, y eso dejaba al ganadero fuera de su cuenta una y otra vez.
+/// Se quitó por completo: no queda ni la bandera ni el código que sembraba.
 Future<void> bootstrapLecheControl() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -33,27 +36,10 @@ Future<void> bootstrapLecheControl() async {
     );
   }
 
-  if (kDemoPedidoPeroIgnorado) {
-    // Que no quede la duda de si el define "funcionó": una build que no es de
-    // depuración ignora el modo demo a propósito (ver `demo_env.dart`).
-    debugPrint(
-      'LECHE_DEMO se pidió pero esta build no es de depuración: se ignora. '
-      'El modo demo le cierra la sesión al usuario en cada arranque, así que '
-      'no puede salir en una build de release.',
-    );
-  }
-
   await sesionLocalRepo.cargar();
-  await maybeSeedDemoOnStartup();
-  if (!kSeedDemoEnabled) {
-    // Si el teléfono viene de una build demo, la finca falsa quedó guardada.
-    // Se limpia acá para que el ganadero no tenga que borrar la app.
-    await limpiarRestosDeDemo();
-    await sesionLocalRepo.cargar();
-  }
   await estadoConexion.iniciar(alRecuperarConexion: syncService.sincronizar);
 
-  if (!kSeedDemoEnabled && SupabaseConfig.estaConfigurado) {
+  if (SupabaseConfig.estaConfigurado) {
     final usuarioInicial = supabase.auth.currentUser;
     if (usuarioInicial != null) {
       // Antes de mostrar nada: si lo que hay guardado es de otra cuenta, se

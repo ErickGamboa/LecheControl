@@ -34,7 +34,7 @@ class SupabaseConfig {
 
   /// True cuando hay configuración suficiente para inicializar Supabase.
   /// `app_bootstrap.dart` usa esto para saltarse `Supabase.initialize` y
-  /// dejar la app funcionando en modo offline/demo. Con los valores por
+  /// dejar la app funcionando en modo sin conexión. Con los valores por
   /// defecto de arriba esto es siempre true; sólo da false si alguien pasa
   /// un `--dart-define` vacío a propósito.
   static bool get estaConfigurado => url.isNotEmpty && anonKey.isNotEmpty;
