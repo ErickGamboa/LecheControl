@@ -53,8 +53,16 @@ Future<void> bootstrapLecheControl() async {
   // Red de seguridad: si algo quedó sin subir —la red se cayó a mitad, el
   // servidor no respondió— se reintenta solo. El ganadero no tiene que
   // acordarse de nada ni apretar ningún botón.
+  //
+  // Se reintenta también cuando **nunca bajó nada**, y eso no es un detalle:
+  // antes la condición era solo `hayPendientes()`, que mira lo que falta
+  // *subir*. Una instalación nueva no tiene nada pendiente de subir, así que
+  // si su primera bajada fallaba, esta red de seguridad no entraba nunca y la
+  // app se quedaba esperando una cuenta que ya nadie iba a ir a buscar.
   Timer.periodic(kReintentoSyncCada, (_) async {
-    if (await syncService.hayPendientes()) await sincronizarSiSePuede();
+    if (await syncService.hayPendientes() || await faltaLaPrimeraBajada()) {
+      await sincronizarSiSePuede();
+    }
   });
 
   if (SupabaseConfig.estaConfigurado) {

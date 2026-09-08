@@ -62,15 +62,46 @@ SupabaseClient? get supabaseClientOrNull {
   }
 }
 
+/// Intenta sincronizar. Lo único que la detiene es no tener sesión.
+///
+/// **No se pregunta si hay internet, y es a propósito.** Antes esto arrancaba
+/// con `if (!estadoConexion.hayConexion.value) return;` y ahí se trababa la
+/// app entera:
+///
+/// `connectivity_plus` dice si hay una **interfaz** de red, no si internet
+/// funciona, y su primera lectura al arrancar puede contestar `none` por una
+/// carrera con el sistema. `EstadoConexion` guarda ese `false` y solo lo
+/// corrige cuando llega un evento de **cambio** de red; con un WiFi estable
+/// ese evento no llega nunca. Resultado: la app quedaba convencida de estar
+/// sin internet para siempre y no sincronizaba ni una vez, aunque la red
+/// estuviera perfecta. El que entraba por primera vez se quedaba en
+/// «Preparando tu cuenta…» hasta reinstalar, y reinstalar solo cambiaba la
+/// suerte de esa primera lectura.
+///
+/// Una detección de red es una **pista**, no un permiso. Intentar sin red
+/// cuesta una petición que falla rápido y que el sync ya sabe manejar —la
+/// registra y reintenta—; no intentar cuando la pista se equivoca deja la app
+/// inservible. El costo está todo de un lado.
+///
+/// `estadoConexion.hayConexion` sigue existiendo para lo que sí es: avisarle
+/// al ganadero en pantalla (el ícono del home, la ayuda del login).
 Future<void> sincronizarSiSePuede() async {
-  if (!estadoConexion.hayConexion.value) {
-    return;
-  }
   final client = supabaseClientOrNull;
   if (client == null || client.auth.currentSession == null) {
     return;
   }
   await syncService.sincronizar();
+}
+
+/// Si la primera bajada del servidor todavía no llegó.
+///
+/// La cuenta es lo primero que baja el sync después de los planes, y sin ella
+/// la app no puede mostrar nada: si no está, es que nunca se completó una
+/// bajada. Sirve para que la red de seguridad reintente en ese caso, que es
+/// el único en el que no hay nada pendiente de subir y aun así falta trabajo.
+Future<bool> faltaLaPrimeraBajada() async {
+  final cuantas = await db.select(db.cuentas).get();
+  return cuantas.isEmpty;
 }
 
 Future<void> cerrarSesion() async {
