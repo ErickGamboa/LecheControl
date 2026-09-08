@@ -42,8 +42,9 @@ echo "==> Armando $SALIDA"
 rm -rf "$SALIDA"
 mkdir -p "$SALIDA/img" "$SALIDA/app"
 
-# Sitio público
-cp sitio/*.html sitio/estilo.css "$SALIDA/"
+# Sitio público. El .js es la limpieza del service worker viejo, que tiene que
+# viajar con las páginas o no sirve de nada (ver sitio/limpiar_sw.js).
+cp sitio/*.html sitio/*.css sitio/*.js "$SALIDA/"
 cp web/favicon.png "$SALIDA/"
 
 # Imágenes del sitio: las mismas del logo y los íconos que usa la app, para
