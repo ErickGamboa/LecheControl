@@ -40,6 +40,9 @@ Future<void> bootstrapLecheControl() async {
   if (!kSeedDemoEnabled && SupabaseConfig.estaConfigurado) {
     final usuarioInicial = supabase.auth.currentUser;
     if (usuarioInicial != null) {
+      // Antes de mostrar nada: si lo que hay guardado es de otra cuenta, se
+      // borra. Si no, la app abre con la lechería y los animales del otro.
+      await prepararBaseParaUsuario(usuarioInicial.id);
       await sesionLocalRepo.guardarUsuarioVerificado(
         usuarioId: usuarioInicial.id,
         email: usuarioInicial.email,
@@ -70,6 +73,10 @@ Future<void> bootstrapLecheControl() async {
       if (estado.event == AuthChangeEvent.signedIn) {
         final usuario = estado.session?.user ?? supabase.auth.currentUser;
         if (usuario != null) {
+          // Acá es donde de verdad se cambia de cuenta: alguien escribió otro
+          // correo y entró. Se limpia lo del anterior **antes** de sincronizar,
+          // para no dejar las dos fincas mezcladas ni un instante.
+          await prepararBaseParaUsuario(usuario.id);
           await sesionLocalRepo.guardarUsuarioVerificado(
             usuarioId: usuario.id,
             email: usuario.email,

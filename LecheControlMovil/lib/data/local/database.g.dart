@@ -12158,6 +12158,265 @@ class SesionesLocalesCompanion extends UpdateCompanion<SesionLocalRow> {
   }
 }
 
+class $DuenoDatosLocalesTable extends DuenoDatosLocales
+    with TableInfo<$DuenoDatosLocalesTable, DuenoLocalRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DuenoDatosLocalesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _usuarioIdMeta = const VerificationMeta(
+    'usuarioId',
+  );
+  @override
+  late final GeneratedColumn<String> usuarioId = GeneratedColumn<String>(
+    'usuario_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _desdeMeta = const VerificationMeta('desde');
+  @override
+  late final GeneratedColumn<DateTime> desde = GeneratedColumn<DateTime>(
+    'desde',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, usuarioId, desde];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'dueno_datos_locales';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DuenoLocalRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('usuario_id')) {
+      context.handle(
+        _usuarioIdMeta,
+        usuarioId.isAcceptableOrUnknown(data['usuario_id']!, _usuarioIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usuarioIdMeta);
+    }
+    if (data.containsKey('desde')) {
+      context.handle(
+        _desdeMeta,
+        desde.isAcceptableOrUnknown(data['desde']!, _desdeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_desdeMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DuenoLocalRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DuenoLocalRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      usuarioId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}usuario_id'],
+      )!,
+      desde: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}desde'],
+      )!,
+    );
+  }
+
+  @override
+  $DuenoDatosLocalesTable createAlias(String alias) {
+    return $DuenoDatosLocalesTable(attachedDatabase, alias);
+  }
+}
+
+class DuenoLocalRow extends DataClass implements Insertable<DuenoLocalRow> {
+  final String id;
+  final String usuarioId;
+  final DateTime desde;
+  const DuenoLocalRow({
+    required this.id,
+    required this.usuarioId,
+    required this.desde,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['usuario_id'] = Variable<String>(usuarioId);
+    map['desde'] = Variable<DateTime>(desde);
+    return map;
+  }
+
+  DuenoDatosLocalesCompanion toCompanion(bool nullToAbsent) {
+    return DuenoDatosLocalesCompanion(
+      id: Value(id),
+      usuarioId: Value(usuarioId),
+      desde: Value(desde),
+    );
+  }
+
+  factory DuenoLocalRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DuenoLocalRow(
+      id: serializer.fromJson<String>(json['id']),
+      usuarioId: serializer.fromJson<String>(json['usuarioId']),
+      desde: serializer.fromJson<DateTime>(json['desde']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'usuarioId': serializer.toJson<String>(usuarioId),
+      'desde': serializer.toJson<DateTime>(desde),
+    };
+  }
+
+  DuenoLocalRow copyWith({String? id, String? usuarioId, DateTime? desde}) =>
+      DuenoLocalRow(
+        id: id ?? this.id,
+        usuarioId: usuarioId ?? this.usuarioId,
+        desde: desde ?? this.desde,
+      );
+  DuenoLocalRow copyWithCompanion(DuenoDatosLocalesCompanion data) {
+    return DuenoLocalRow(
+      id: data.id.present ? data.id.value : this.id,
+      usuarioId: data.usuarioId.present ? data.usuarioId.value : this.usuarioId,
+      desde: data.desde.present ? data.desde.value : this.desde,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DuenoLocalRow(')
+          ..write('id: $id, ')
+          ..write('usuarioId: $usuarioId, ')
+          ..write('desde: $desde')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, usuarioId, desde);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DuenoLocalRow &&
+          other.id == this.id &&
+          other.usuarioId == this.usuarioId &&
+          other.desde == this.desde);
+}
+
+class DuenoDatosLocalesCompanion extends UpdateCompanion<DuenoLocalRow> {
+  final Value<String> id;
+  final Value<String> usuarioId;
+  final Value<DateTime> desde;
+  final Value<int> rowid;
+  const DuenoDatosLocalesCompanion({
+    this.id = const Value.absent(),
+    this.usuarioId = const Value.absent(),
+    this.desde = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DuenoDatosLocalesCompanion.insert({
+    required String id,
+    required String usuarioId,
+    required DateTime desde,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       usuarioId = Value(usuarioId),
+       desde = Value(desde);
+  static Insertable<DuenoLocalRow> custom({
+    Expression<String>? id,
+    Expression<String>? usuarioId,
+    Expression<DateTime>? desde,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (usuarioId != null) 'usuario_id': usuarioId,
+      if (desde != null) 'desde': desde,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DuenoDatosLocalesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? usuarioId,
+    Value<DateTime>? desde,
+    Value<int>? rowid,
+  }) {
+    return DuenoDatosLocalesCompanion(
+      id: id ?? this.id,
+      usuarioId: usuarioId ?? this.usuarioId,
+      desde: desde ?? this.desde,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (usuarioId.present) {
+      map['usuario_id'] = Variable<String>(usuarioId.value);
+    }
+    if (desde.present) {
+      map['desde'] = Variable<DateTime>(desde.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DuenoDatosLocalesCompanion(')
+          ..write('id: $id, ')
+          ..write('usuarioId: $usuarioId, ')
+          ..write('desde: $desde, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -12189,6 +12448,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SesionesLocalesTable sesionesLocales = $SesionesLocalesTable(
     this,
   );
+  late final $DuenoDatosLocalesTable duenoDatosLocales =
+      $DuenoDatosLocalesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12214,6 +12475,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     syncCursores,
     syncEstados,
     sesionesLocales,
+    duenoDatosLocales,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -18106,6 +18368,177 @@ typedef $$SesionesLocalesTableProcessedTableManager =
       SesionLocalRow,
       PrefetchHooks Function()
     >;
+typedef $$DuenoDatosLocalesTableCreateCompanionBuilder =
+    DuenoDatosLocalesCompanion Function({
+      required String id,
+      required String usuarioId,
+      required DateTime desde,
+      Value<int> rowid,
+    });
+typedef $$DuenoDatosLocalesTableUpdateCompanionBuilder =
+    DuenoDatosLocalesCompanion Function({
+      Value<String> id,
+      Value<String> usuarioId,
+      Value<DateTime> desde,
+      Value<int> rowid,
+    });
+
+class $$DuenoDatosLocalesTableFilterComposer
+    extends Composer<_$AppDatabase, $DuenoDatosLocalesTable> {
+  $$DuenoDatosLocalesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get usuarioId => $composableBuilder(
+    column: $table.usuarioId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get desde => $composableBuilder(
+    column: $table.desde,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DuenoDatosLocalesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DuenoDatosLocalesTable> {
+  $$DuenoDatosLocalesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get usuarioId => $composableBuilder(
+    column: $table.usuarioId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get desde => $composableBuilder(
+    column: $table.desde,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DuenoDatosLocalesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DuenoDatosLocalesTable> {
+  $$DuenoDatosLocalesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get usuarioId =>
+      $composableBuilder(column: $table.usuarioId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get desde =>
+      $composableBuilder(column: $table.desde, builder: (column) => column);
+}
+
+class $$DuenoDatosLocalesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DuenoDatosLocalesTable,
+          DuenoLocalRow,
+          $$DuenoDatosLocalesTableFilterComposer,
+          $$DuenoDatosLocalesTableOrderingComposer,
+          $$DuenoDatosLocalesTableAnnotationComposer,
+          $$DuenoDatosLocalesTableCreateCompanionBuilder,
+          $$DuenoDatosLocalesTableUpdateCompanionBuilder,
+          (
+            DuenoLocalRow,
+            BaseReferences<
+              _$AppDatabase,
+              $DuenoDatosLocalesTable,
+              DuenoLocalRow
+            >,
+          ),
+          DuenoLocalRow,
+          PrefetchHooks Function()
+        > {
+  $$DuenoDatosLocalesTableTableManager(
+    _$AppDatabase db,
+    $DuenoDatosLocalesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DuenoDatosLocalesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DuenoDatosLocalesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DuenoDatosLocalesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> usuarioId = const Value.absent(),
+                Value<DateTime> desde = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DuenoDatosLocalesCompanion(
+                id: id,
+                usuarioId: usuarioId,
+                desde: desde,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String usuarioId,
+                required DateTime desde,
+                Value<int> rowid = const Value.absent(),
+              }) => DuenoDatosLocalesCompanion.insert(
+                id: id,
+                usuarioId: usuarioId,
+                desde: desde,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DuenoDatosLocalesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DuenoDatosLocalesTable,
+      DuenoLocalRow,
+      $$DuenoDatosLocalesTableFilterComposer,
+      $$DuenoDatosLocalesTableOrderingComposer,
+      $$DuenoDatosLocalesTableAnnotationComposer,
+      $$DuenoDatosLocalesTableCreateCompanionBuilder,
+      $$DuenoDatosLocalesTableUpdateCompanionBuilder,
+      (
+        DuenoLocalRow,
+        BaseReferences<_$AppDatabase, $DuenoDatosLocalesTable, DuenoLocalRow>,
+      ),
+      DuenoLocalRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -18150,4 +18583,6 @@ class $AppDatabaseManager {
       $$SyncEstadosTableTableManager(_db, _db.syncEstados);
   $$SesionesLocalesTableTableManager get sesionesLocales =>
       $$SesionesLocalesTableTableManager(_db, _db.sesionesLocales);
+  $$DuenoDatosLocalesTableTableManager get duenoDatosLocales =>
+      $$DuenoDatosLocalesTableTableManager(_db, _db.duenoDatosLocales);
 }

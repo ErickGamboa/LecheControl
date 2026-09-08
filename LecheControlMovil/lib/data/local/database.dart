@@ -502,6 +502,27 @@ class SyncEstados extends Table {
   Set<Column> get primaryKey => {tabla};
 }
 
+/// De quién son los datos que hay guardados en este dispositivo.
+///
+/// **Por qué hace falta.** La base local es una sola y no estaba marcada, así
+/// que los datos de dos cuentas quedaban mezclados en el mismo archivo: nadie
+/// los borraba al cerrar sesión. Con eso pasaba lo peor —una cuenta abría y
+/// aparecía la lechería y los animales de la otra— y de paso el teléfono del
+/// revisor de la tienda se quedaba con la finca de verdad de un ganadero.
+///
+/// Una fila sola, `'actual'`: la base pertenece a una cuenta a la vez. Cuando
+/// entra otra, se borra lo que había y se empieza de cero con lo suyo (ver
+/// `prepararBaseParaUsuario`).
+@DataClassName('DuenoLocalRow')
+class DuenoDatosLocales extends Table {
+  TextColumn get id => text()(); // fila única: 'actual'
+  TextColumn get usuarioId => text()();
+  DateTimeColumn get desde => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Identidad verificada localmente para permitir entrar sin conexión después
 /// de un inicio de sesión exitoso en este dispositivo (Módulo 0).
 @DataClassName('SesionLocalRow')
@@ -540,6 +561,7 @@ class SesionesLocales extends Table {
     SyncCursores,
     SyncEstados,
     SesionesLocales,
+    DuenoDatosLocales,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -550,7 +572,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -649,8 +671,16 @@ class AppDatabase extends _$AppDatabase {
       // próxima vez, y de paso arregla a cualquier cuenta que hoy esté
       // trabada detrás de un cursor ajeno.
       if (from < 9) {
-        await m.deleteTable('sync_cursores');
+        await m.deleteTable("sync_cursores");
         await m.createTable(syncCursores);
+      }
+      // v9 -> v10: la base local queda marcada con la cuenta a la que
+      // pertenece (ver `DuenoDatosLocales`). No se marca acá a propósito: en
+      // este punto no se sabe quién está en sesión. Lo hace
+      // `prepararBaseParaUsuario` al entrar, y como la tabla arranca vacía,
+      // el primero que entre se adueña de lo que ya estaba sin borrar nada.
+      if (from < 10) {
+        await m.createTable(duenoDatosLocales);
       }
     },
   );

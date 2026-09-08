@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/supabase_config.dart';
@@ -91,6 +93,88 @@ Future<void> sincronizarSiSePuede() async {
     return;
   }
   await syncService.sincronizar();
+}
+
+/// Deja la base local lista para [usuarioId], borrándola si era de otro.
+///
+/// **El problema que resuelve.** La base local es un solo archivo y nadie la
+/// limpiaba al cerrar sesión, así que los datos de dos cuentas quedaban
+/// mezclados. Con eso una cuenta podía abrir y encontrarse la lechería y los
+/// animales de la otra, y el teléfono de quien probara la app se quedaba con
+/// la finca de verdad de un ganadero.
+///
+/// La regla ahora es simple: **la base pertenece a una cuenta a la vez.** Si
+/// entra otra, se borra lo que había y baja lo suyo del servidor.
+///
+/// Tres detalles que no son obvios:
+///
+/// - **Con la base sin marcar no se borra nada.** Es lo que pasa al
+///   actualizar la app: los datos que hay son del que está entrando, así que
+///   solo se marca el dueño. Borrarlos sería tirar el trabajo de alguien por
+///   una migración.
+/// - **Antes de borrar se intenta subir lo pendiente**, para no llevarse por
+///   delante una pesa que todavía no salió del teléfono. Si no se puede
+///   subir, se borra igual: dejar dos fincas mezcladas es peor, y el que
+///   cambia de cuenta lo está haciendo a propósito.
+/// - **La sesión local no se toca**: la maneja `sesionLocalRepo`, y es lo que
+///   permite entrar sin conexión.
+Future<void> prepararBaseParaUsuario(String usuarioId) async {
+  const filaActual = 'actual';
+  final dueno = await (db.select(
+    db.duenoDatosLocales,
+  )..where((t) => t.id.equals(filaActual))).getSingleOrNull();
+
+  if (dueno?.usuarioId == usuarioId) return; // ya es suya
+
+  if (dueno != null) {
+    // Es de otra cuenta: se intenta salvar lo que no haya subido y se borra.
+    try {
+      if (await syncService.hayPendientes()) await syncService.sincronizar();
+    } catch (_) {
+      // Si no se pudo subir, se sigue: mezclar dos fincas es peor.
+    }
+    await _borrarDatosLocales();
+  }
+
+  await db
+      .into(db.duenoDatosLocales)
+      .insertOnConflictUpdate(
+        DuenoLocalRow(
+          id: filaActual,
+          usuarioId: usuarioId,
+          desde: DateTime.now(),
+        ),
+      );
+}
+
+/// Borra todo lo que es de una cuenta: el dominio, los cursores y el estado
+/// del sync. Deja los planes —son catálogo del servidor, iguales para todos—
+/// y la sesión local, que es de este dispositivo y no de la cuenta.
+Future<void> _borrarDatosLocales() async {
+  await db.transaction(() async {
+    for (final tabla in <TableInfo<Table, dynamic>>[
+      db.eventosAnimal,
+      db.pesasLeche,
+      db.pesasSesiones,
+      db.calidadLeche,
+      db.ingresosSemana,
+      db.gastosSemana,
+      db.semanas,
+      db.categoriasGasto,
+      db.medicamentos,
+      db.animales,
+      db.configReporte,
+      db.curvaReferencia,
+      db.lecheriaMiembros,
+      db.lecherias,
+      db.usuarios,
+      db.cuentas,
+      db.syncCursores,
+      db.syncEstados,
+    ]) {
+      await db.delete(tabla).go();
+    }
+  });
 }
 
 /// Si la primera bajada del servidor todavía no llegó.
