@@ -15,8 +15,54 @@
 - **Una lechería activa:** todos los módulos operan sobre la lechería de la cuenta. (Por ahora una lechería por cuenta.)
 - **Identificador único por animal:** un solo número por animal. Puede llegar por el **lector RFID** o **escribirse manualmente** en el mismo campo (es el mismo dato). No manejamos número visual aparte por ahora.
 - **Nada se borra:** el animal que se vende, muere o se descarta no se elimina; pasa a **historial** (trazabilidad).
+- **Todo lo digitado se puede corregir:** ver más abajo, *Corregir y eliminar*.
 - **Todo alimenta la Hoja de Vida:** cada acción (pesa de leche, sanidad, palpación, preñez, secado, parto, cambio de grupo, baja) queda registrada en la hoja de vida del animal con su fecha.
 - **Estados del hato:** cada animal vive en un **grupo por estado** (En ordeño, Secas, Novillas/Vaquillas, Terneros). El estado se usa para filtrar y para **repartir costos** (los costos fijos se dividen entre las vacas en ordeño). Aparte del grupo está **Pronta**: la vaca a la que le faltan 21 días o menos para parir. No es un grupo — la vaca **sigue en Secas** — sino un aviso que sale de la fecha probable de parto.
+
+---
+
+## Corregir y eliminar (aplica a toda la app)
+
+El ganadero digita en el corral, con las manos ocupadas. **Todo lo que se
+digita se puede corregir**, y siempre de la misma forma:
+
+- **Tocar la fila** abre el mismo formulario con que se creó el dato, ya
+  cargado. Corregir se siente igual que anotar, no como otra pantalla.
+- **El menú de tres puntos** al final de la fila ofrece *Corregir* y
+  *Eliminar*. Va además del deslizar porque la app también corre en
+  computadora, donde deslizar con el mouse no se descubre.
+- **Eliminar siempre pregunta, y dice qué se va**: «el gasto de ₡12.000 en
+  Concentrado», no un «¿está seguro?» pelado. Lo que evita el error es leer el
+  dato, no el botón.
+- **Borrar un dato deshace lo que ese dato arrastró.** Un evento no es solo una
+  línea del historial: el secado movió la vaca a Secas y el parto le reinició
+  los días de lactancia. Se deshacen los dos.
+- **Lo que no se puede recuperar no se inventa.** Al deshacer un parto o una
+  palpación la vaca queda **sin estado reproductivo** y sin fecha probable de
+  parto, porque nadie guardó cómo venía antes.
+
+Qué se corrige en cada lugar:
+
+| Dato | Corregir | Eliminar |
+| --- | --- | --- |
+| Ingreso / gasto de la semana | Todo, tipo o categoría incluidos | Sí |
+| Categoría de gasto escrita a mano | — | Se quita de la lista; los gastos ya anotados no cambian |
+| Pesada de una vaca | Mañana, tarde y concentrado | Sí; la vaca vuelve a las que faltan por pesar |
+| Pesa (sesión de la semana) | Se reabre desde Análisis de leche | Sí, con todas sus pesadas |
+| Calidad de leche | Se vuelve a digitar sobre la semana | Se borra dejando los tres campos vacíos |
+| Evento de la hoja de vida | Fecha y nota | Sí, deshaciendo su efecto |
+| Ficha del animal | Arete, sexo, origen, precio y fecha de compra | Solo si no tiene eventos, pesas ni crías |
+| Baja de un animal | — | *Devolver al hato*, desde el filtro «Bajas» del inventario |
+| Medicamento del catálogo | Todo | Sí |
+
+**El gasto de compra de ganado va amarrado al animal:** corregir el precio en
+la ficha corrige el gasto en Finanzas, y eliminar el animal se lleva el gasto.
+Las dos pantallas no pueden decir cosas distintas de la misma compra.
+
+**Eliminar un animal no contradice «nada se borra».** Un animal que ya trabajó
+en la finca —tiene un evento, una pesa o una cría— **no se elimina nunca**: se
+da de baja. Lo que se elimina es el que se acaba de registrar con el arete
+equivocado, que no es historia sino un error de dedo.
 
 ---
 

@@ -13,6 +13,12 @@ class AnimalDuplicadoException implements Exception {
   final String identificador;
 }
 
+/// Se lanza al intentar eliminar un animal que ya tiene historia en la finca
+/// (eventos, pesas o crías). Ese no se borra: se da de baja.
+class AnimalConHistoriaException implements Exception {
+  const AnimalConHistoriaException();
+}
+
 /// Acceso a animales (inventario). Lee y escribe en la base local; la
 /// sincronización con Supabase corre por separado (SyncService).
 class AnimalesRepository {
@@ -244,6 +250,105 @@ class AnimalesRepository {
     );
   }
 
+  /// Corrige la ficha de un animal: el arete mal digitado, el sexo, el origen
+  /// o la plata que costó.
+  ///
+  /// Si el animal es comprado, **el gasto que la app anotó sola en Finanzas se
+  /// corrige con él**: cambiar el precio acá y dejar el gasto viejo allá haría
+  /// que las dos pantallas dijeran cosas distintas de la misma compra. Si deja
+  /// de ser comprado, el gasto se elimina; si pasa a serlo, se anota.
+  ///
+  /// El grupo no se toca acá: se cambia desde Trabajo, que además deja el
+  /// movimiento en la hoja de vida.
+  Future<void> editarAnimal({
+    required String animalId,
+    required String identificador,
+    required String sexo,
+    required String origen,
+    double? precioCompra,
+    DateTime? fechaCompra,
+  }) async {
+    final animal = await (db.select(
+      db.animales,
+    )..where((t) => t.id.equals(animalId))).getSingle();
+    final nuevoIdentificador = identificador.trim();
+    if (nuevoIdentificador.isEmpty) {
+      throw ArgumentError('El identificador no puede quedar vacío.');
+    }
+    if (nuevoIdentificador != animal.identificador) {
+      final choca = await buscarPorIdentificador(
+        animal.lecheriaId,
+        nuevoIdentificador,
+      );
+      if (choca != null) throw AnimalDuplicadoException(nuevoIdentificador);
+    }
+
+    final comprado = origen == OrigenAnimal.comprado;
+    final precio = comprado ? precioCompra : null;
+    final fecha = comprado ? fechaCompra : null;
+    final ahora = DateTime.now();
+
+    await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+      AnimalesCompanion(
+        identificador: Value(nuevoIdentificador),
+        sexo: Value(sexo),
+        origen: Value(origen),
+        precioCompra: Value(precio),
+        fechaCompra: Value(fecha),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+
+    await _ajustarGastoDeCompra(
+      lecheriaId: animal.lecheriaId,
+      identificadorAnterior: animal.identificador,
+      identificador: nuevoIdentificador,
+      precioCompra: (precio != null && precio > 0) ? precio : null,
+      fechaCompra: fecha ?? animal.fechaCompra ?? ahora,
+    );
+  }
+
+  /// Deja el gasto de «Compra de ganado» diciendo lo mismo que la ficha del
+  /// animal: lo corrige, lo crea o lo elimina según haga falta.
+  Future<void> _ajustarGastoDeCompra({
+    required String lecheriaId,
+    required String identificadorAnterior,
+    required String identificador,
+    required double? precioCompra,
+    required DateTime fechaCompra,
+  }) async {
+    final gasto =
+        await _finanzas.gastoDeCompraDe(
+          lecheriaId: lecheriaId,
+          identificador: identificadorAnterior,
+        ) ??
+        await _finanzas.gastoDeCompraDe(
+          lecheriaId: lecheriaId,
+          identificador: identificador,
+        );
+
+    if (precioCompra == null) {
+      if (gasto != null) await _finanzas.eliminarGasto(gasto.id);
+      return;
+    }
+    if (gasto == null) {
+      await _anotarGastoDeCompra(
+        lecheriaId: lecheriaId,
+        identificador: identificador,
+        precioCompra: precioCompra,
+        fechaCompra: fechaCompra,
+      );
+      return;
+    }
+    await _finanzas.editarGasto(
+      id: gasto.id,
+      categoria: CategoriaGasto.compraGanado,
+      monto: precioCompra,
+      detalle: identificador,
+    );
+  }
+
   /// Corrige a mano la fecha del último parto. Sirve para cargar de una vez
   /// las vacas que ya estaban en la finca antes de usar la app, y para
   /// arreglar una fecha mal digitada.
@@ -348,5 +453,97 @@ class AnimalesRepository {
             ),
           );
     });
+  }
+
+  /// Devuelve el animal al hato: se dio de baja al equivocado.
+  ///
+  /// Vuelve a estado activo y borra el evento de baja, porque esa baja no
+  /// pasó. Es lo contrario de [registrarBaja], no un evento nuevo: dejar
+  /// «Baja» y «Reingreso» en la hoja de vida contaría como historia real un
+  /// error de dedo.
+  Future<void> deshacerBaja(String animalId) async {
+    final ahora = DateTime.now();
+    await db.transaction(() async {
+      await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+        AnimalesCompanion(
+          estado: const Value(EstadoAnimal.activo),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+      final baja =
+          await (db.select(db.eventosAnimal)
+                ..where(
+                  (t) =>
+                      t.animalId.equals(animalId) &
+                      t.tipo.equals(TipoEventoAnimal.baja) &
+                      t.deletedAt.isNull(),
+                )
+                ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
+                ..limit(1))
+              .getSingleOrNull();
+      if (baja == null) return;
+      await (db.update(
+        db.eventosAnimal,
+      )..where((t) => t.id.equals(baja.id))).write(
+        EventosAnimalCompanion(
+          deletedAt: Value(ahora),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+    });
+  }
+
+  /// Cuánta historia tiene ya el animal: eventos en su hoja de vida, pesas de
+  /// leche y crías. Mientras sean cero, el animal se puede eliminar.
+  Future<({int eventos, int pesas, int crias})> historiaDe(
+    String animalId,
+  ) async {
+    final eventos = await (db.select(db.eventosAnimal)..where(
+          (t) => t.animalId.equals(animalId) & t.deletedAt.isNull(),
+        ))
+        .get();
+    final pesas = await (db.select(db.pesasLeche)..where(
+          (t) => t.animalId.equals(animalId) & t.deletedAt.isNull(),
+        ))
+        .get();
+    final crias = await (db.select(db.animales)..where(
+          (t) => t.madreId.equals(animalId) & t.deletedAt.isNull(),
+        ))
+        .get();
+    return (eventos: eventos.length, pesas: pesas.length, crias: crias.length);
+  }
+
+  /// Un animal recién registrado con el arete equivocado no es historia de la
+  /// finca: es un error de dedo, y se borra.
+  ///
+  /// Por eso esto **no reemplaza a la baja** (D-08 sigue en pie: un animal que
+  /// vivió en la finca no se borra nunca). Solo pasa cuando el animal no tiene
+  /// nada colgando: ni un evento, ni una pesa, ni una cría. Si es comprado, se
+  /// va con él el gasto que la app anotó sola.
+  Future<void> eliminarAnimal(String animalId) async {
+    final animal = await (db.select(
+      db.animales,
+    )..where((t) => t.id.equals(animalId))).getSingle();
+    final historia = await historiaDe(animalId);
+    if (historia.eventos > 0 || historia.pesas > 0 || historia.crias > 0) {
+      throw const AnimalConHistoriaException();
+    }
+
+    final ahora = DateTime.now();
+    await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+      AnimalesCompanion(
+        deletedAt: Value(ahora),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+
+    final gasto = await _finanzas.gastoDeCompraDe(
+      lecheriaId: animal.lecheriaId,
+      identificador: animal.identificador,
+    );
+    if (gasto != null) await _finanzas.eliminarGasto(gasto.id);
   }
 }

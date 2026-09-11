@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
+import '../app/widgets/acciones_fila.dart';
 import '../data/domain/semana.dart';
 import '../data/repositories/pesas_repository.dart';
+import '../pesa/pesa_screen.dart';
 import '../pesa/reporte_screen.dart';
 import '../services.dart';
 import 'widgets/barras_semanales.dart';
@@ -91,6 +93,9 @@ class AnalisisLecheScreen extends StatelessWidget {
   }
 }
 
+/// «1 vaca» y no «1 vacas»: la app la lee gente, no una consola.
+String _vacas(int cuantas) => cuantas == 1 ? '1 vaca' : '$cuantas vacas';
+
 String _etiquetaCorta(DateTime fecha) {
   final lunes = lunesDe(fecha);
   return '${lunes.day}/${lunes.month}';
@@ -169,6 +174,46 @@ class _FilaSemana extends StatelessWidget {
   final String lecheriaId;
   final String nombreLecheria;
 
+  /// Vuelve a abrir la pesa y entra a ella para arreglarla.
+  ///
+  /// Una pesa cerrada por error, o con una vaca mal anotada que se descubre
+  /// tres días después, no tenía salida: la pantalla de pesa siempre abría la
+  /// de la semana en curso. Por eso se entra apuntando a **esta** sesión.
+  Future<void> _corregir(BuildContext context) async {
+    final navegador = Navigator.of(context);
+    if (datos.sesion.cerrada) {
+      await pesasRepo.reabrirSesion(datos.sesion.id);
+      sincronizarSiSePuede();
+    }
+    await navegador.push(
+      MaterialPageRoute(
+        builder: (_) => PesaScreen(
+          lecheriaId: lecheriaId,
+          nombreLecheria: nombreLecheria,
+          sesionId: datos.sesion.id,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _eliminar(BuildContext context) async {
+    final fecha = datos.sesion.fecha;
+    final confirmado = await confirmarEliminar(
+      context,
+      titulo: 'Eliminar la pesa',
+      queSeVa:
+          'La pesa de la semana '
+          '${etiquetaSemana(lunesDe(fecha), domingoDe(fecha))}, con '
+          '${_vacas(datos.vacas)} y ${datos.litros.toStringAsFixed(1)} L.',
+      advertencia:
+          'Se van con ella todas las pesadas de esa semana y su reporte de '
+          'producción. Esto no se puede deshacer.',
+    );
+    if (!confirmado) return;
+    await pesasRepo.eliminarSesion(datos.sesion.id);
+    sincronizarSiSePuede();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colores = Theme.of(context).colorScheme;
@@ -191,13 +236,28 @@ class _FilaSemana extends StatelessWidget {
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
-            '${datos.vacas} vacas · ${datos.litros.toStringAsFixed(1)} L · '
+            '${_vacas(datos.vacas)} · ${datos.litros.toStringAsFixed(1)} L · '
             'promedio ${datos.promedio.toStringAsFixed(1)} L',
           ),
         ),
-        trailing: diferencia == null
-            ? const Icon(Icons.chevron_right)
-            : _Variacion(diferencia: diferencia),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (diferencia == null)
+              const Icon(Icons.chevron_right)
+            else
+              _Variacion(diferencia: diferencia),
+            MenuFila(
+              key: ValueKey('analisisLeche.menu.${datos.sesion.id}'),
+              textoEditar: datos.sesion.cerrada
+                  ? 'Reabrir para corregir'
+                  : 'Seguir pesando',
+              textoEliminar: 'Eliminar la pesa',
+              onEditar: () => _corregir(context),
+              onEliminar: () => _eliminar(context),
+            ),
+          ],
+        ),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => ReporteScreen(

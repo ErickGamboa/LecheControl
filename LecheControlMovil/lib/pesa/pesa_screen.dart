@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../analisis/analisis_leche_screen.dart';
 import '../app/theme.dart';
+import '../app/widgets/acciones_fila.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../data/domain/curva_lactancia.dart';
 import '../data/domain/semana.dart';
@@ -28,10 +29,19 @@ class PesaScreen extends StatefulWidget {
     super.key,
     required this.lecheriaId,
     required this.nombreLecheria,
+    this.sesionId,
   });
 
   final String lecheriaId;
   final String nombreLecheria;
+
+  /// Pesa concreta sobre la que trabajar. En null —lo normal— se abre o se
+  /// reutiliza la de esta semana.
+  ///
+  /// Viene con algo cuando se entra desde Análisis de leche a arreglar una
+  /// pesa anterior: sin esto, la pantalla abriría igual la de la semana en
+  /// curso y las correcciones caerían en la semana equivocada.
+  final String? sesionId;
 
   @override
   State<PesaScreen> createState() => _PesaScreenState();
@@ -73,7 +83,10 @@ class _PesaScreenState extends State<PesaScreen> {
   }
 
   Future<void> _iniciar() async {
-    final sesion = await pesasRepo.abrirSesion(lecheriaId: widget.lecheriaId);
+    final pedida = widget.sesionId;
+    final sesion = pedida == null
+        ? await pesasRepo.abrirSesion(lecheriaId: widget.lecheriaId)
+        : await pesasRepo.sesionPorId(pedida);
     if (!mounted) return;
     setState(() {
       _sesion = sesion;
@@ -201,6 +214,34 @@ class _PesaScreenState extends State<PesaScreen> {
     // Encadenar es lo natural en la ordeña: guardar una vaca y que salga
     // enseguida la lista para la siguiente, sin un toque de más.
     await _elegirVaca();
+  }
+
+  /// Arregla los litros de una vaca ya pesada, desde la lista de abajo.
+  Future<void> _corregirPesada(PesaDeSesion detalle) async {
+    final guardado = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _CorregirPesaSheet(detalle: detalle),
+    );
+    if (guardado == true) sincronizarSiSePuede();
+  }
+
+  /// Quita una pesada: se pesó la vaca equivocada.
+  Future<void> _eliminarPesada(PesaDeSesion detalle) async {
+    final confirmado = await confirmarEliminar(
+      context,
+      titulo: 'Quitar la pesada',
+      queSeVa:
+          '${detalle.etiqueta}, con '
+          '${detalle.pesa.litros.toStringAsFixed(1)} L.',
+      advertencia: detalle.esManual
+          ? null
+          : 'La vaca vuelve a la lista de las que faltan por pesar.',
+      textoBoton: 'Quitar',
+    );
+    if (!confirmado) return;
+    await pesasRepo.eliminarPesa(detalle.pesa.id);
+    sincronizarSiSePuede();
   }
 
   Future<void> _cerrarSesion() async {
@@ -407,7 +448,11 @@ class _PesaScreenState extends State<PesaScreen> {
             ],
             const SizedBox(height: 16),
             const Divider(),
-            _ListaPesadas(sesionId: _sesion!.id),
+            _ListaPesadas(
+              sesionId: _sesion!.id,
+              onCorregir: _corregirPesada,
+              onEliminar: _eliminarPesada,
+            ),
           ],
         ),
       ),
@@ -534,9 +579,15 @@ class _ContadorSesion extends StatelessWidget {
 }
 
 class _ListaPesadas extends StatelessWidget {
-  const _ListaPesadas({required this.sesionId});
+  const _ListaPesadas({
+    required this.sesionId,
+    required this.onCorregir,
+    required this.onEliminar,
+  });
 
   final String sesionId;
+  final void Function(PesaDeSesion) onCorregir;
+  final void Function(PesaDeSesion) onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -553,7 +604,14 @@ class _ListaPesadas extends StatelessWidget {
           );
         }
         return Column(
-          children: [for (final d in detalle) _FilaPesada(detalle: d)],
+          children: [
+            for (final d in detalle)
+              _FilaPesada(
+                detalle: d,
+                onCorregir: () => onCorregir(d),
+                onEliminar: () => onEliminar(d),
+              ),
+          ],
         );
       },
     );
@@ -561,9 +619,15 @@ class _ListaPesadas extends StatelessWidget {
 }
 
 class _FilaPesada extends StatelessWidget {
-  const _FilaPesada({required this.detalle});
+  const _FilaPesada({
+    required this.detalle,
+    required this.onCorregir,
+    required this.onEliminar,
+  });
 
   final PesaDeSesion detalle;
+  final VoidCallback onCorregir;
+  final VoidCallback onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -577,6 +641,7 @@ class _FilaPesada extends StatelessWidget {
     final dlac = detalle.diasLactanciaHoy();
 
     return ListTile(
+      key: ValueKey('pesa.fila.${p.id}'),
       contentPadding: EdgeInsets.zero,
       leading: Icon(
         Icons.water_drop_outlined,
@@ -591,11 +656,182 @@ class _FilaPesada extends StatelessWidget {
           if (partes.isEmpty) 'sin desglose' else partes.join(' · '),
         ].join(' · '),
       ),
-      trailing: Text(
-        '${p.litros.toStringAsFixed(1)} L',
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+      // Tocar la vaca ya pesada la abre para arreglarle los litros. Es el
+      // gesto que se busca solo cuando uno se da cuenta del error mirando la
+      // lista.
+      onTap: onCorregir,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${p.litros.toStringAsFixed(1)} L',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          MenuFila(
+            key: ValueKey('pesa.fila.menu.${p.id}'),
+            onEditar: onCorregir,
+            onEliminar: onEliminar,
+            textoEliminar: 'Quitar',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Arregla los litros de una vaca que ya se pesó en esta sesión.
+///
+/// Los campos vienen cargados con lo que hay: casi siempre se corrige un solo
+/// número, y volver a digitar los tres sería pedir de más.
+class _CorregirPesaSheet extends StatefulWidget {
+  const _CorregirPesaSheet({required this.detalle});
+
+  final PesaDeSesion detalle;
+
+  @override
+  State<_CorregirPesaSheet> createState() => _CorregirPesaSheetState();
+}
+
+class _CorregirPesaSheetState extends State<_CorregirPesaSheet> {
+  late final TextEditingController _mananaCtrl;
+  late final TextEditingController _tardeCtrl;
+  late final TextEditingController _concentradoCtrl;
+
+  /// Pesas viejas que solo traen el total, sin saber cuánto fue de la mañana
+  /// y cuánto de la tarde. Se corrigen como un total y ya.
+  late final bool _soloTotal;
+  late final TextEditingController _totalCtrl;
+
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.detalle.pesa;
+    _soloTotal = p.litrosManana == null && p.litrosTarde == null;
+    _mananaCtrl = TextEditingController(text: _texto(p.litrosManana));
+    _tardeCtrl = TextEditingController(text: _texto(p.litrosTarde));
+    _concentradoCtrl = TextEditingController(text: _texto(p.concentradoKg));
+    _totalCtrl = TextEditingController(text: _texto(p.litros));
+  }
+
+  static String _texto(double? v) =>
+      v == null ? '' : (v == v.roundToDouble() ? v.toStringAsFixed(0) : '$v');
+
+  @override
+  void dispose() {
+    _mananaCtrl.dispose();
+    _tardeCtrl.dispose();
+    _concentradoCtrl.dispose();
+    _totalCtrl.dispose();
+    super.dispose();
+  }
+
+  double? _leer(TextEditingController c) {
+    final texto = c.text.trim().replaceAll(',', '.');
+    if (texto.isEmpty) return null;
+    return double.tryParse(texto);
+  }
+
+  Future<void> _guardar() async {
+    final manana = _leer(_mananaCtrl);
+    final tarde = _leer(_tardeCtrl);
+    final total = _leer(_totalCtrl);
+    if (_soloTotal ? total == null : (manana == null && tarde == null)) {
+      setState(() => _error = 'Anotá al menos un ordeño (mañana o tarde).');
+      return;
+    }
+    await pesasRepo.editarPesa(
+      pesaId: widget.detalle.pesa.id,
+      litrosManana: _soloTotal ? null : manana,
+      litrosTarde: _soloTotal ? null : tarde,
+      litrosTotal: _soloTotal ? total : null,
+      concentradoKg: _leer(_concentradoCtrl),
+    );
+    if (mounted) Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Corregir a ${widget.detalle.etiqueta}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            if (_soloTotal)
+              QuickNumberField(
+                key: const ValueKey('pesa.corregir.total'),
+                controller: _totalCtrl,
+                labelText: 'Litros del día',
+                suffixText: 'L',
+                autofocus: true,
+                textInputAction: TextInputAction.next,
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: QuickNumberField(
+                      key: const ValueKey('pesa.corregir.manana'),
+                      controller: _mananaCtrl,
+                      labelText: 'Mañana',
+                      suffixText: 'L',
+                      autofocus: true,
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: QuickNumberField(
+                      key: const ValueKey('pesa.corregir.tarde'),
+                      controller: _tardeCtrl,
+                      labelText: 'Tarde',
+                      suffixText: 'L',
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                ],
+              ),
+            const SizedBox(height: 12),
+            QuickNumberField(
+              key: const ValueKey('pesa.corregir.concentrado'),
+              controller: _concentradoCtrl,
+              labelText: 'Concentrado',
+              suffixText: 'kg',
+              onSubmitted: (_) => _guardar(),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+            const SizedBox(height: 20),
+            FilledButton(
+              key: const ValueKey('pesa.corregir.guardar'),
+              onPressed: _guardar,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
       ),
     );
   }

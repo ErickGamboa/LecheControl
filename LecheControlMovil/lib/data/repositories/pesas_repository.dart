@@ -233,6 +233,12 @@ class PesasRepository {
     });
   }
 
+  Future<PesaSesionRow?> sesionPorId(String sesionId) {
+    return (db.select(
+      db.pesasSesiones,
+    )..where((t) => t.id.equals(sesionId))).getSingleOrNull();
+  }
+
   Stream<PesaSesionRow?> observarSesion(String sesionId) {
     return (db.select(
       db.pesasSesiones,
@@ -330,6 +336,46 @@ class PesasRepository {
     return null;
   }
 
+  /// Corrige una pesada ya guardada, por su id.
+  ///
+  /// Es el camino de la lista: tocar la fila de una vaca ya pesada y arreglar
+  /// los litros. [registrarPesa] con `corregir: true` es el otro camino —el de
+  /// volver a pesar la misma vaca—, y llega al mismo lugar.
+  Future<void> editarPesa({
+    required String pesaId,
+    double? litrosManana,
+    double? litrosTarde,
+    double? litrosTotal,
+    double? concentradoKg,
+  }) async {
+    final litros = litrosTotal ?? ((litrosManana ?? 0) + (litrosTarde ?? 0));
+    await (db.update(db.pesasLeche)..where((t) => t.id.equals(pesaId))).write(
+      PesasLecheCompanion(
+        litros: Value(litros),
+        litrosManana: Value(litrosManana),
+        litrosTarde: Value(litrosTarde),
+        concentradoKg: Value(concentradoKg),
+        updatedAt: Value(DateTime.now()),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  /// Quita una pesada de la sesión: se pesó la vaca equivocada.
+  ///
+  /// La vaca vuelve a la lista de las que faltan por pesar, que es justo lo
+  /// que hace falta después de un error así.
+  Future<void> eliminarPesa(String pesaId) async {
+    final ahora = DateTime.now();
+    await (db.update(db.pesasLeche)..where((t) => t.id.equals(pesaId))).write(
+      PesasLecheCompanion(
+        deletedAt: Value(ahora),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
   Future<void> cerrarSesion(String sesionId) async {
     await (db.update(
       db.pesasSesiones,
@@ -340,6 +386,53 @@ class PesasRepository {
         pendiente: const Value(true),
       ),
     );
+  }
+
+  /// Vuelve a abrir una pesa cerrada por error, para seguir anotando vacas o
+  /// arreglar las que quedaron mal.
+  ///
+  /// El reporte se rehace solo con lo que haya en la sesión, así que no hay
+  /// nada que recalcular acá.
+  Future<void> reabrirSesion(String sesionId) async {
+    await (db.update(
+      db.pesasSesiones,
+    )..where((t) => t.id.equals(sesionId))).write(
+      PesasSesionesCompanion(
+        cerrada: const Value(false),
+        updatedAt: Value(DateTime.now()),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  /// Elimina una pesa entera con todo lo que se anotó en ella.
+  ///
+  /// Es para la sesión repetida —dos teléfonos sin señal que abrieron la suya
+  /// la misma semana— y para la que se abrió por error. Las pesadas se van con
+  /// la sesión: dejarlas colgando de una sesión que ya no existe las volvería
+  /// litros que no aparecen en ningún reporte pero siguen en la base.
+  Future<void> eliminarSesion(String sesionId) async {
+    final ahora = DateTime.now();
+    await db.transaction(() async {
+      await (db.update(
+        db.pesasLeche,
+      )..where((t) => t.sesionId.equals(sesionId) & t.deletedAt.isNull())).write(
+        PesasLecheCompanion(
+          deletedAt: Value(ahora),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+      await (db.update(
+        db.pesasSesiones,
+      )..where((t) => t.id.equals(sesionId))).write(
+        PesasSesionesCompanion(
+          deletedAt: Value(ahora),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+    });
   }
 
   /// Litros registrados en la sesión (para el contador visible: pesadas y

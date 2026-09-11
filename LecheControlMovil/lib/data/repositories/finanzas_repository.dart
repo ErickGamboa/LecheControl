@@ -319,6 +319,36 @@ class FinanzasRepository {
         );
   }
 
+  /// Corrige un ingreso ya anotado. Se puede cambiar todo lo que se digitó,
+  /// el tipo incluido: tocar el chip equivocado es el error más común.
+  Future<void> editarIngreso({
+    required String id,
+    required String tipo,
+    required double monto,
+    double? litros,
+    String? detalle,
+  }) async {
+    final ahora = DateTime.now();
+    await (db.update(db.ingresosSemana)..where((t) => t.id.equals(id))).write(
+      IngresosSemanaCompanion(
+        tipo: Value(tipo),
+        monto: Value(monto),
+        // Los kilos son solo de la leche y el animal solo de la venta de
+        // ganado: si el tipo cambió, lo que ya no aplica se limpia en vez de
+        // quedar colgando de un ingreso que no es el suyo.
+        litros: Value(tipo == TipoIngreso.leche ? litros : null),
+        animalId: tipo == TipoIngreso.ventaGanado
+            ? const Value.absent()
+            : const Value(null),
+        detalle: Value(
+          (detalle?.trim().isEmpty ?? true) ? null : detalle!.trim(),
+        ),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
   Future<void> eliminarIngreso(String id) async {
     final ahora = DateTime.now();
     await (db.update(db.ingresosSemana)..where((t) => t.id.equals(id))).write(
@@ -357,6 +387,27 @@ class FinanzasRepository {
         );
   }
 
+  /// Corrige un gasto ya anotado: en qué se gastó, cuánto y el detalle.
+  Future<void> editarGasto({
+    required String id,
+    required String categoria,
+    required double monto,
+    String? detalle,
+  }) async {
+    final ahora = DateTime.now();
+    await (db.update(db.gastosSemana)..where((t) => t.id.equals(id))).write(
+      GastosSemanaCompanion(
+        categoria: Value(categoria.trim()),
+        monto: Value(monto),
+        detalle: Value(
+          (detalle?.trim().isEmpty ?? true) ? null : detalle!.trim(),
+        ),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
   Future<void> eliminarGasto(String id) async {
     final ahora = DateTime.now();
     await (db.update(db.gastosSemana)..where((t) => t.id.equals(id))).write(
@@ -375,6 +426,40 @@ class FinanzasRepository {
         .watch();
   }
 
+  /// El gasto que la app anotó sola cuando se registró un animal comprado.
+  ///
+  /// No hay columna que los amarre —agregarla obligaría a migrar la base y
+  /// Supabase—, así que el amarre es la categoría fija «Compra de ganado» más
+  /// el identificador del animal en el detalle, que es único en la lechería.
+  Future<GastoSemanaRow?> gastoDeCompraDe({
+    required String lecheriaId,
+    required String identificador,
+  }) {
+    return (db.select(db.gastosSemana)..where(
+          (t) =>
+              t.lecheriaId.equals(lecheriaId) &
+              t.categoria.equals(CategoriaGasto.compraGanado) &
+              t.detalle.equals(identificador) &
+              t.deletedAt.isNull(),
+        ))
+        .getSingleOrNull();
+  }
+
+  /// Quita una categoría de la lista de sugerencias. Los gastos ya anotados
+  /// con ese nombre no se tocan: son plata que salió de verdad.
+  Future<void> olvidarCategoria(String categoriaId) async {
+    final ahora = DateTime.now();
+    await (db.update(
+      db.categoriasGasto,
+    )..where((t) => t.id.equals(categoriaId))).write(
+      CategoriasGastoCompanion(
+        deletedAt: Value(ahora),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
   /// Agrega una categoría que el ganadero escribió y todavía no existía, para
   /// que la próxima vez le salga como botón.
   Future<void> recordarCategoria({
@@ -383,6 +468,10 @@ class FinanzasRepository {
   }) async {
     final limpio = nombre.trim();
     if (limpio.isEmpty) return;
+    // Las de siempre ya salen como botón fijo; guardarlas otra vez las
+    // duplicaría en pantalla.
+    if (CategoriaGasto.todos.contains(limpio)) return;
+    if (limpio == CategoriaGasto.compraGanado) return;
     final existente =
         await (db.select(db.categoriasGasto)..where(
               (t) =>

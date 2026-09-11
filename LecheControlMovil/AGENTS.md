@@ -39,7 +39,13 @@ Architecture is intentionally aligned with sibling project `../HatoControlRun` (
 1. Offline-first: writes go to Drift first and set `pendiente=true`.
 2. Server writes happen in `SyncService`, not from UI screens.
 3. Every domain row uses a client-generated UUID primary key.
-4. Soft deletes / bajas use `deletedAt` or estado historial; do not hard-delete animals.
+4. Soft deletes / bajas use `deletedAt` or estado historial; never hard-delete
+   anything. An animal that already has history (events, weighings, offspring)
+   is never deleted at all — it gets a *baja*. `AnimalesRepository.eliminarAnimal`
+   is only for an animal registered by mistake and enforces that guard.
+   Deleting a row must also undo what that row caused: see
+   `EventosRepository.eliminarEvento`. UI details in
+   `docs/ESPECIFICACION_FUNCIONAL.md` § *Corregir y eliminar*.
 5. Local writes that change syncable data must update `updatedAt` and mark `pendiente=true`.
 6. Animal identifiers must be unique per lechería.
 7. Never commit Supabase `service_role` secrets.

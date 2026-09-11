@@ -261,15 +261,213 @@ class EventosRepository {
     )..where((t) => t.madreId.equals(madreId) & t.deletedAt.isNull())).watch();
   }
 
-  Future<void> eliminarEvento(String eventoId) async {
-    await (db.update(
+  /// Corrige la fecha y la nota de un evento ya registrado.
+  ///
+  /// Solo esos dos campos: lo demás (que una palpación diga preñada, que un
+  /// parto haya dado una cría) cambia la ficha del animal y la de la cría, y
+  /// enmendarlo a medias dejaría la hoja de vida diciendo una cosa y el animal
+  /// otra. Para eso se elimina el evento —que sí deshace todo— y se vuelve a
+  /// registrar.
+  ///
+  /// La fecha de un parto arrastra los días de lactancia, así que cuando el
+  /// parto corregido es el último de la vaca, se le mueve también
+  /// `fechaUltimoParto`.
+  Future<void> editarEvento({
+    required String eventoId,
+    required DateTime fecha,
+    String? detalle,
+  }) async {
+    final evento = await (db.select(
       db.eventosAnimal,
-    )..where((t) => t.id.equals(eventoId))).write(
-      EventosAnimalCompanion(
-        deletedAt: Value(DateTime.now()),
-        updatedAt: Value(DateTime.now()),
+    )..where((t) => t.id.equals(eventoId))).getSingleOrNull();
+    if (evento == null) return;
+    final ahora = DateTime.now();
+    final limpio = detalle?.trim();
+
+    await db.transaction(() async {
+      await (db.update(
+        db.eventosAnimal,
+      )..where((t) => t.id.equals(eventoId))).write(
+        EventosAnimalCompanion(
+          fecha: Value(fecha),
+          detalle: Value(limpio == null || limpio.isEmpty ? null : limpio),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+      if (evento.tipo != TipoEventoAnimal.parto) return;
+
+      final ultimoParto = await _ultimoPartoDe(evento.animalId);
+      if (ultimoParto == null || ultimoParto.id != eventoId) return;
+      await (db.update(
+        db.animales,
+      )..where((t) => t.id.equals(evento.animalId))).write(
+        AnimalesCompanion(
+          fechaUltimoParto: Value(fecha),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+    });
+  }
+
+  /// Borra un evento de la hoja de vida **y deshace lo que ese evento le hizo
+  /// al animal**.
+  ///
+  /// Un evento no es solo una línea del historial: el secado movió la vaca a
+  /// Secas, la baja la sacó del inventario, el parto le reinició los días de
+  /// lactancia. Borrar la línea y dejar el efecto sería peor que no poder
+  /// borrar: la hoja de vida no explicaría por qué la vaca está donde está.
+  ///
+  /// Lo que no se puede recuperar no se inventa. Al deshacer un parto o una
+  /// palpación, la vaca queda **sin estado reproductivo** y sin fecha probable
+  /// de parto: nadie guardó cómo venía antes, y suponerlo sería peor que
+  /// decir que no se sabe.
+  Future<void> eliminarEvento(String eventoId) async {
+    final evento = await (db.select(
+      db.eventosAnimal,
+    )..where((t) => t.id.equals(eventoId))).getSingleOrNull();
+    if (evento == null) return;
+    final ahora = DateTime.now();
+
+    await db.transaction(() async {
+      await (db.update(
+        db.eventosAnimal,
+      )..where((t) => t.id.equals(eventoId))).write(
+        EventosAnimalCompanion(
+          deletedAt: Value(ahora),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+
+      switch (evento.tipo) {
+        case TipoEventoAnimal.parto:
+          await _deshacerParto(evento, ahora);
+        case TipoEventoAnimal.palpacion:
+          await _deshacerPalpacion(evento, ahora);
+        case TipoEventoAnimal.secado:
+        case TipoEventoAnimal.cambioGrupo:
+          await _devolverAlGrupoAnterior(evento, ahora);
+        case TipoEventoAnimal.baja:
+          await (db.update(
+            db.animales,
+          )..where((t) => t.id.equals(evento.animalId))).write(
+            AnimalesCompanion(
+              estado: const Value(EstadoAnimal.activo),
+              updatedAt: Value(ahora),
+              pendiente: const Value(true),
+            ),
+          );
+        default:
+          // Sanidad, celo, monta, inseminación, concentrado y observación no
+          // tocan la ficha del animal: basta con borrar la línea.
+          break;
+      }
+    });
+  }
+
+  /// Lo que el parto había cambiado: el grupo de la madre, sus días de
+  /// lactancia y la cría que creó.
+  Future<void> _deshacerParto(EventoAnimalRow evento, DateTime ahora) async {
+    final partoPrevio = await _ultimoPartoDe(evento.animalId);
+    await (db.update(
+      db.animales,
+    )..where((t) => t.id.equals(evento.animalId))).write(
+      AnimalesCompanion(
+        grupo: evento.grupoAnterior == null
+            ? const Value.absent()
+            : Value(evento.grupoAnterior!),
+        fechaUltimoParto: Value(partoPrevio?.fecha),
+        estadoReproductivo: const Value(EstadoReproductivo.desconocido),
+        fechaProbableParto: const Value(null),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+
+    final criaId = evento.criaAnimalId;
+    if (criaId == null) return;
+    // La cría se va con el parto que la trajo, salvo que ya tenga vida
+    // propia: si le anotaron algo o ya se pesó, borrarla sería tirar datos de
+    // verdad. En ese caso queda en el inventario, suelta de su madre.
+    final tieneEventos =
+        await (db.select(db.eventosAnimal)..where(
+              (t) => t.animalId.equals(criaId) & t.deletedAt.isNull(),
+            ))
+            .get();
+    final tienePesas =
+        await (db.select(db.pesasLeche)..where(
+              (t) => t.animalId.equals(criaId) & t.deletedAt.isNull(),
+            ))
+            .get();
+    if (tieneEventos.isNotEmpty || tienePesas.isNotEmpty) {
+      await (db.update(db.animales)..where((t) => t.id.equals(criaId))).write(
+        AnimalesCompanion(
+          madreId: const Value(null),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+      return;
+    }
+    await (db.update(db.animales)..where((t) => t.id.equals(criaId))).write(
+      AnimalesCompanion(
+        deletedAt: Value(ahora),
+        updatedAt: Value(ahora),
         pendiente: const Value(true),
       ),
     );
   }
+
+  /// Vuelve al diagnóstico anterior, si quedó alguno.
+  Future<void> _deshacerPalpacion(
+    EventoAnimalRow evento,
+    DateTime ahora,
+  ) async {
+    final previa = await ultimoEventoDeTipo(
+      evento.animalId,
+      TipoEventoAnimal.palpacion,
+    );
+    final resultado = previa?.resultado;
+    await (db.update(
+      db.animales,
+    )..where((t) => t.id.equals(evento.animalId))).write(
+      AnimalesCompanion(
+        estadoReproductivo: Value(
+          resultado == ResultadoPalpacion.preniada
+              ? EstadoReproductivo.preniada
+              : resultado == ResultadoPalpacion.vacia
+              ? EstadoReproductivo.vacia
+              : EstadoReproductivo.desconocido,
+        ),
+        // La fecha probable de parto no se guarda en el evento, así que no hay
+        // de dónde sacar la anterior: se limpia y se vuelve a palpar.
+        fechaProbableParto: const Value(null),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  Future<void> _devolverAlGrupoAnterior(
+    EventoAnimalRow evento,
+    DateTime ahora,
+  ) async {
+    final anterior = evento.grupoAnterior;
+    if (anterior == null) return;
+    await (db.update(
+      db.animales,
+    )..where((t) => t.id.equals(evento.animalId))).write(
+      AnimalesCompanion(
+        grupo: Value(anterior),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  /// El último parto que le queda a la vaca (los borrados no cuentan).
+  Future<EventoAnimalRow?> _ultimoPartoDe(String animalId) =>
+      ultimoEventoDeTipo(animalId, TipoEventoAnimal.parto);
 }

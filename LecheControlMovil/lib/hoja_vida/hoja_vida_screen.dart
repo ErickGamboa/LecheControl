@@ -1,19 +1,44 @@
 import 'package:flutter/material.dart';
 
 import '../app/formato.dart';
+import '../app/widgets/acciones_fila.dart';
 import '../data/domain/curva_lactancia.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../data/repositories/pesas_repository.dart';
+import '../inventario/acciones_animal.dart';
 import '../services.dart';
 
 /// Hoja de vida de un animal (Módulo 1 y 6): identificación, estado actual y
 /// el historial completo de eventos (reproductivos, sanitarios, de manejo) y
 /// de pesas de leche, en dos pestañas.
+///
+/// Es también donde se arregla lo que quedó mal anotado: la ficha del animal,
+/// desde el menú de la barra, y cada evento, desde su propia fila.
 class HojaVidaScreen extends StatelessWidget {
   const HojaVidaScreen({super.key, required this.animalId});
 
   final String animalId;
+
+  /// Acciones sobre el animal entero. Al eliminarlo se sale de la pantalla:
+  /// quedarse viendo la hoja de vida de algo que ya no existe no tiene
+  /// sentido.
+  Future<void> _accion(
+    BuildContext context,
+    String cual,
+    AnimalRow animal,
+  ) async {
+    final navegador = Navigator.of(context);
+    switch (cual) {
+      case 'ficha':
+        await corregirFichaAnimal(context, animal);
+      case 'devolver':
+        await devolverAlHato(context, animal);
+      case 'eliminar':
+        final eliminado = await eliminarAnimal(context, animal);
+        if (eliminado) navegador.pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +51,37 @@ class HojaVidaScreen extends StatelessWidget {
           child: Scaffold(
             appBar: AppBar(
               title: Text(animal?.identificador ?? 'Hoja de vida'),
-              bottom: const TabBar(
-                tabs: [
+              actions: [
+                if (animal != null)
+                  PopupMenuButton<String>(
+                    key: const ValueKey('hojaVida.menu'),
+                    tooltip: 'Corregir este animal',
+                    onSelected: (v) => _accion(context, v, animal),
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'ficha',
+                        child: Text('Corregir la ficha'),
+                      ),
+                      if (animal.estado != EstadoAnimal.activo)
+                        const PopupMenuItem(
+                          value: 'devolver',
+                          child: Text('Devolver al hato'),
+                        ),
+                      const PopupMenuItem(
+                        value: 'eliminar',
+                        child: Text('Eliminar el animal'),
+                      ),
+                    ],
+                  ),
+              ],
+              // Los colores van a mano: por defecto Material pinta la pestaña
+              // elegida del azul de la marca, que sobre la barra —azul de la
+              // marca— desaparecía. «Eventos» se leía en blanco sobre blanco.
+              bottom: TabBar(
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
+                indicatorColor: Colors.white,
+                tabs: const [
                   Tab(text: 'Eventos', icon: Icon(Icons.timeline)),
                   Tab(text: 'Pesas', icon: Icon(Icons.water_drop_outlined)),
                 ],
@@ -172,6 +226,53 @@ class _EventoTile extends StatelessWidget {
 
   final EventoAnimalRow evento;
 
+  /// Qué se deshace al borrar este evento, dicho antes de borrarlo.
+  ///
+  /// Un evento no es solo una línea: el secado movió la vaca de grupo y el
+  /// parto le reinició los días de lactancia. El ganadero tiene que leer eso
+  /// antes de decidir, no descubrirlo después en el reporte.
+  String? get _queSeDeshace => switch (evento.tipo) {
+    TipoEventoAnimal.parto =>
+      'La vaca vuelve al grupo anterior, pierde esta fecha de último parto '
+          '—y con ella los días de lactancia— y queda sin estado '
+          'reproductivo hasta la próxima palpación. La cría se elimina si '
+          'todavía no tiene nada anotado.',
+    TipoEventoAnimal.palpacion =>
+      'La vaca vuelve al diagnóstico anterior y se le quita la fecha probable '
+          'de parto. Hay que volver a palparla para fijarla.',
+    TipoEventoAnimal.secado =>
+      'La vaca vuelve al grupo '
+          '${GrupoAnimal.etiqueta(evento.grupoAnterior ?? '')}.',
+    TipoEventoAnimal.cambioGrupo =>
+      'El animal vuelve al grupo '
+          '${GrupoAnimal.etiqueta(evento.grupoAnterior ?? '')}.',
+    TipoEventoAnimal.baja => 'El animal vuelve al inventario como activo.',
+    _ => null,
+  };
+
+  Future<void> _corregir(BuildContext context) async {
+    final corregido = await showDialog<bool>(
+      context: context,
+      builder: (_) => _CorregirEventoDialog(evento: evento),
+    );
+    if (corregido == true) sincronizarSiSePuede();
+  }
+
+  Future<void> _eliminar(BuildContext context) async {
+    final f = evento.fecha;
+    final confirmado = await confirmarEliminar(
+      context,
+      titulo: 'Eliminar el evento',
+      queSeVa:
+          '${TipoEventoAnimal.etiqueta(evento.tipo)} del '
+          '${f.day}/${f.month}/${f.year}.',
+      advertencia: _queSeDeshace,
+    );
+    if (!confirmado) return;
+    await eventosRepo.eliminarEvento(evento.id);
+    sincronizarSiSePuede();
+  }
+
   IconData get _icono => switch (evento.tipo) {
     TipoEventoAnimal.sanidad => Icons.medical_services_outlined,
     TipoEventoAnimal.celo => Icons.favorite_outline,
@@ -224,11 +325,130 @@ class _EventoTile extends StatelessWidget {
     final f = evento.fecha;
     return Card(
       child: ListTile(
+        key: ValueKey('hojaVida.evento.${evento.id}'),
         leading: CircleAvatar(child: Icon(_icono, size: 20)),
         title: Text(TipoEventoAnimal.etiqueta(evento.tipo)),
         subtitle: _subtitulo.isEmpty ? null : Text(_subtitulo),
-        trailing: Text('${f.day}/${f.month}/${f.year}'),
+        onTap: () => _corregir(context),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('${f.day}/${f.month}/${f.year}'),
+            MenuFila(
+              key: ValueKey('hojaVida.evento.menu.${evento.id}'),
+              onEditar: () => _corregir(context),
+              onEliminar: () => _eliminar(context),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+/// Corrige la fecha y la nota de un evento.
+///
+/// Solo esos dos campos, y se dice por qué: el resto de lo que trae un evento
+/// —que la palpación diera preñada, el sexo de la cría— cambió la ficha del
+/// animal cuando se registró, y enmendarlo a medias dejaría la hoja de vida
+/// diciendo una cosa y la vaca otra. Para eso se elimina el evento, que sí
+/// deshace todo, y se vuelve a registrar.
+class _CorregirEventoDialog extends StatefulWidget {
+  const _CorregirEventoDialog({required this.evento});
+
+  final EventoAnimalRow evento;
+
+  @override
+  State<_CorregirEventoDialog> createState() => _CorregirEventoDialogState();
+}
+
+class _CorregirEventoDialogState extends State<_CorregirEventoDialog> {
+  late DateTime _fecha = widget.evento.fecha;
+  late final TextEditingController _detalleCtrl = TextEditingController(
+    text: widget.evento.detalle ?? '',
+  );
+  bool _guardando = false;
+
+  @override
+  void dispose() {
+    _detalleCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _elegirFecha() async {
+    final ahora = DateTime.now();
+    final elegida = await showDatePicker(
+      context: context,
+      initialDate: _fecha,
+      firstDate: DateTime(ahora.year - 5),
+      lastDate: ahora,
+      helpText: 'Fecha del evento',
+    );
+    if (elegida != null) setState(() => _fecha = elegida);
+  }
+
+  Future<void> _guardar() async {
+    setState(() => _guardando = true);
+    await eventosRepo.editarEvento(
+      eventoId: widget.evento.id,
+      fecha: _fecha,
+      detalle: _detalleCtrl.text,
+    );
+    if (mounted) Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final esParto = widget.evento.tipo == TipoEventoAnimal.parto;
+    return AlertDialog(
+      title: Text('Corregir ${TipoEventoAnimal.etiqueta(widget.evento.tipo)}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            key: const ValueKey('hojaVida.corregirEvento.fecha'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Fecha'),
+            subtitle: Text('${_fecha.day}/${_fecha.month}/${_fecha.year}'),
+            trailing: const Icon(Icons.calendar_today),
+            onTap: _elegirFecha,
+          ),
+          if (esParto)
+            Text(
+              'Mover la fecha del último parto le cambia los días de '
+              'lactancia a la vaca en el reporte.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const ValueKey('hojaVida.corregirEvento.nota'),
+            controller: _detalleCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Nota',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Lo demás de este evento no se corrige acá: si está mal, se '
+            'elimina y se vuelve a registrar.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const ValueKey('hojaVida.corregirEvento.guardar'),
+          onPressed: _guardando ? null : _guardar,
+          child: const Text('Guardar'),
+        ),
+      ],
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/formato.dart';
 import '../app/theme.dart';
+import '../app/widgets/acciones_fila.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../data/domain/semana.dart';
 import '../data/local/database.dart';
@@ -59,28 +60,63 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     _abrirSemana(actual.fechaInicio.add(Duration(days: 7 * semanas)));
   }
 
-  Future<void> _agregarIngreso() async {
+  /// Abre la hoja de ingresos, vacía para anotar uno nuevo o cargada con
+  /// [existente] para corregirlo. Es el mismo formulario: se digita igual la
+  /// primera vez que la segunda.
+  Future<void> _abrirIngreso([IngresoSemanaRow? existente]) async {
     final semana = _semana;
     if (semana == null) return;
     final guardado = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      builder: (_) =>
-          _IngresoSheet(lecheriaId: widget.lecheriaId, semanaId: semana.id),
+      builder: (_) => _IngresoSheet(
+        lecheriaId: widget.lecheriaId,
+        semanaId: semana.id,
+        existente: existente,
+      ),
     );
     if (guardado == true) sincronizarSiSePuede();
   }
 
-  Future<void> _agregarGasto() async {
+  Future<void> _abrirGasto([GastoSemanaRow? existente]) async {
     final semana = _semana;
     if (semana == null) return;
     final guardado = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      builder: (_) =>
-          _GastoSheet(lecheriaId: widget.lecheriaId, semanaId: semana.id),
+      builder: (_) => _GastoSheet(
+        lecheriaId: widget.lecheriaId,
+        semanaId: semana.id,
+        existente: existente,
+      ),
     );
     if (guardado == true) sincronizarSiSePuede();
+  }
+
+  Future<void> _eliminarIngreso(IngresoSemanaRow ingreso) async {
+    final confirmado = await confirmarEliminar(
+      context,
+      titulo: 'Eliminar el ingreso',
+      queSeVa:
+          '${TipoIngreso.etiqueta(ingreso.tipo)} por ${colones(ingreso.monto)}'
+          '${ingreso.detalle == null ? '' : ' (${ingreso.detalle})'}.',
+    );
+    if (!confirmado) return;
+    await finanzasRepo.eliminarIngreso(ingreso.id);
+    sincronizarSiSePuede();
+  }
+
+  Future<void> _eliminarGasto(GastoSemanaRow gasto) async {
+    final confirmado = await confirmarEliminar(
+      context,
+      titulo: 'Eliminar el gasto',
+      queSeVa:
+          '${gasto.categoria} por ${colones(gasto.monto)}'
+          '${gasto.detalle == null ? '' : ' (${gasto.detalle})'}.',
+    );
+    if (!confirmado) return;
+    await finanzasRepo.eliminarGasto(gasto.id);
+    sincronizarSiSePuede();
   }
 
   @override
@@ -121,12 +157,16 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                       const SizedBox(height: 16),
                       _SeccionIngresos(
                         resumen: resumen,
-                        onAgregar: _agregarIngreso,
+                        onAgregar: _abrirIngreso,
+                        onEditar: _abrirIngreso,
+                        onEliminar: _eliminarIngreso,
                       ),
                       const SizedBox(height: 16),
                       _SeccionGastos(
                         resumen: resumen,
-                        onAgregar: _agregarGasto,
+                        onAgregar: _abrirGasto,
+                        onEditar: _abrirGasto,
+                        onEliminar: _eliminarGasto,
                       ),
                       const SizedBox(height: 32),
                     ],
@@ -337,10 +377,17 @@ class _Seccion extends StatelessWidget {
 }
 
 class _SeccionIngresos extends StatelessWidget {
-  const _SeccionIngresos({required this.resumen, required this.onAgregar});
+  const _SeccionIngresos({
+    required this.resumen,
+    required this.onAgregar,
+    required this.onEditar,
+    required this.onEliminar,
+  });
 
   final ResumenSemana resumen;
   final VoidCallback onAgregar;
+  final void Function(IngresoSemanaRow) onEditar;
+  final Future<void> Function(IngresoSemanaRow) onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -360,12 +407,18 @@ class _SeccionIngresos extends StatelessWidget {
                   Dismissible(
                     key: ValueKey(i.id),
                     direction: DismissDirection.endToStart,
-                    background: const _FondoBorrar(),
-                    onDismissed: (_) async {
-                      await finanzasRepo.eliminarIngreso(i.id);
-                      sincronizarSiSePuede();
+                    background: const FondoDeslizarBorrar(),
+                    // El deslizar es el atajo del teléfono, pero pregunta
+                    // igual que el menú: era plata anotada.
+                    confirmDismiss: (_) async {
+                      await onEliminar(i);
+                      // La fila la quita el stream cuando el borrado entra en
+                      // la base, no la animación: así, si se cancela, la fila
+                      // se queda donde estaba.
+                      return false;
                     },
                     child: ListTile(
+                      key: ValueKey('finanzas.ingreso.${i.id}'),
                       contentPadding: EdgeInsets.zero,
                       dense: true,
                       title: Text(TipoIngreso.etiqueta(i.tipo)),
@@ -376,12 +429,23 @@ class _SeccionIngresos extends StatelessWidget {
                           if (i.detalle != null) i.detalle!,
                         ].join(' · '),
                       ),
-                      trailing: Text(
-                        colones(i.monto),
-                        style: TextStyle(
-                          color: kVerdeLeche,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      onTap: () => onEditar(i),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            colones(i.monto),
+                            style: TextStyle(
+                              color: kVerdeLeche,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          MenuFila(
+                            key: ValueKey('finanzas.ingreso.menu.${i.id}'),
+                            onEditar: () => onEditar(i),
+                            onEliminar: () => onEliminar(i),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -392,10 +456,17 @@ class _SeccionIngresos extends StatelessWidget {
 }
 
 class _SeccionGastos extends StatelessWidget {
-  const _SeccionGastos({required this.resumen, required this.onAgregar});
+  const _SeccionGastos({
+    required this.resumen,
+    required this.onAgregar,
+    required this.onEditar,
+    required this.onEliminar,
+  });
 
   final ResumenSemana resumen;
   final VoidCallback onAgregar;
+  final void Function(GastoSemanaRow) onEditar;
+  final Future<void> Function(GastoSemanaRow) onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -415,22 +486,34 @@ class _SeccionGastos extends StatelessWidget {
                   Dismissible(
                     key: ValueKey(g.id),
                     direction: DismissDirection.endToStart,
-                    background: const _FondoBorrar(),
-                    onDismissed: (_) async {
-                      await finanzasRepo.eliminarGasto(g.id);
-                      sincronizarSiSePuede();
+                    background: const FondoDeslizarBorrar(),
+                    confirmDismiss: (_) async {
+                      await onEliminar(g);
+                      return false;
                     },
                     child: ListTile(
+                      key: ValueKey('finanzas.gasto.${g.id}'),
                       contentPadding: EdgeInsets.zero,
                       dense: true,
                       title: Text(g.categoria),
                       subtitle: g.detalle == null ? null : Text(g.detalle!),
-                      trailing: Text(
-                        colones(g.monto),
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      onTap: () => onEditar(g),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            colones(g.monto),
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          MenuFila(
+                            key: ValueKey('finanzas.gasto.menu.${g.id}'),
+                            onEditar: () => onEditar(g),
+                            onEliminar: () => onEliminar(g),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -456,27 +539,24 @@ class _SeccionGastos extends StatelessWidget {
   }
 }
 
-class _FondoBorrar extends StatelessWidget {
-  const _FondoBorrar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.red.shade700,
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 16),
-      child: const Icon(Icons.delete, color: Colors.white),
-    );
-  }
-}
+// El fondo rojo del deslizar vive en `app/widgets/acciones_fila.dart`: lo
+// comparten todas las listas que se pueden corregir.
 
 // ------------------------------------------------------------------ sheets
 
+/// El formulario de un ingreso. Con [existente] en null anota uno nuevo; con
+/// un ingreso adentro, corrige ese mismo. Es a propósito el mismo formulario:
+/// corregir tiene que sentirse igual que anotar, no como otra pantalla.
 class _IngresoSheet extends StatefulWidget {
-  const _IngresoSheet({required this.lecheriaId, required this.semanaId});
+  const _IngresoSheet({
+    required this.lecheriaId,
+    required this.semanaId,
+    this.existente,
+  });
 
   final String lecheriaId;
   final String semanaId;
+  final IngresoSemanaRow? existente;
 
   @override
   State<_IngresoSheet> createState() => _IngresoSheetState();
@@ -488,6 +568,23 @@ class _IngresoSheetState extends State<_IngresoSheet> {
   final _litrosCtrl = TextEditingController();
   final _detalleCtrl = TextEditingController();
   String? _error;
+
+  bool get _corrigiendo => widget.existente != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final previo = widget.existente;
+    if (previo == null) return;
+    _tipo = previo.tipo;
+    _montoCtrl.text = _numero(previo.monto);
+    if (previo.litros != null) _litrosCtrl.text = _numero(previo.litros!);
+    _detalleCtrl.text = previo.detalle ?? '';
+  }
+
+  /// Sin ceros de relleno: lo que se ve en el campo es lo que se digitó.
+  static String _numero(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
   @override
   void dispose() {
@@ -507,14 +604,25 @@ class _IngresoSheetState extends State<_IngresoSheet> {
 
     if (!await _confirmarSiPasaElTope(kg)) return;
 
-    await finanzasRepo.agregarIngreso(
-      lecheriaId: widget.lecheriaId,
-      semanaId: widget.semanaId,
-      tipo: _tipo,
-      monto: monto,
-      litros: kg,
-      detalle: _detalleCtrl.text,
-    );
+    final previo = widget.existente;
+    if (previo == null) {
+      await finanzasRepo.agregarIngreso(
+        lecheriaId: widget.lecheriaId,
+        semanaId: widget.semanaId,
+        tipo: _tipo,
+        monto: monto,
+        litros: kg,
+        detalle: _detalleCtrl.text,
+      );
+    } else {
+      await finanzasRepo.editarIngreso(
+        id: previo.id,
+        tipo: _tipo,
+        monto: monto,
+        litros: kg,
+        detalle: _detalleCtrl.text,
+      );
+    }
     if (mounted) Navigator.pop(context, true);
   }
 
@@ -532,7 +640,11 @@ class _IngresoSheetState extends State<_IngresoSheet> {
     final tope = await curvaRepo.topeKgLecheDe(widget.lecheriaId);
     if (tope == null || tope <= 0) return true;
 
-    final yaAnotados = await finanzasRepo.kgLecheDeSemana(widget.semanaId);
+    // Corrigiendo, los kilos que ya tenía este mismo ingreso no cuentan dos
+    // veces: lo que se compara con el tope es la semana como va a quedar.
+    final yaAnotados =
+        await finanzasRepo.kgLecheDeSemana(widget.semanaId) -
+        (widget.existente?.litros ?? 0);
     final total = yaAnotados + kgNuevos;
     if (total <= tope) return true;
 
@@ -591,7 +703,7 @@ class _IngresoSheetState extends State<_IngresoSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Anotar un ingreso',
+              _corrigiendo ? 'Corregir el ingreso' : 'Anotar un ingreso',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -663,11 +775,18 @@ class _IngresoSheetState extends State<_IngresoSheet> {
   }
 }
 
+/// El formulario de un gasto, para anotarlo o para corregirlo. Ver
+/// [_IngresoSheet]: es el mismo trato.
 class _GastoSheet extends StatefulWidget {
-  const _GastoSheet({required this.lecheriaId, required this.semanaId});
+  const _GastoSheet({
+    required this.lecheriaId,
+    required this.semanaId,
+    this.existente,
+  });
 
   final String lecheriaId;
   final String semanaId;
+  final GastoSemanaRow? existente;
 
   @override
   State<_GastoSheet> createState() => _GastoSheetState();
@@ -678,6 +797,20 @@ class _GastoSheetState extends State<_GastoSheet> {
   final _montoCtrl = TextEditingController();
   final _detalleCtrl = TextEditingController();
   String? _error;
+
+  bool get _corrigiendo => widget.existente != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final previo = widget.existente;
+    if (previo == null) return;
+    _categoriaCtrl.text = previo.categoria;
+    _montoCtrl.text = previo.monto == previo.monto.roundToDouble()
+        ? previo.monto.toStringAsFixed(0)
+        : previo.monto.toString();
+    _detalleCtrl.text = previo.detalle ?? '';
+  }
 
   @override
   void dispose() {
@@ -698,14 +831,46 @@ class _GastoSheetState extends State<_GastoSheet> {
       setState(() => _error = 'Poné cuánto se gastó.');
       return;
     }
-    await finanzasRepo.agregarGasto(
+    final previo = widget.existente;
+    if (previo == null) {
+      await finanzasRepo.agregarGasto(
+        lecheriaId: widget.lecheriaId,
+        semanaId: widget.semanaId,
+        categoria: categoria,
+        monto: monto,
+        detalle: _detalleCtrl.text,
+      );
+    } else {
+      await finanzasRepo.editarGasto(
+        id: previo.id,
+        categoria: categoria,
+        monto: monto,
+        detalle: _detalleCtrl.text,
+      );
+    }
+    // Lo que se escribió a mano queda de botón para la próxima semana.
+    await finanzasRepo.recordarCategoria(
       lecheriaId: widget.lecheriaId,
-      semanaId: widget.semanaId,
-      categoria: categoria,
-      monto: monto,
-      detalle: _detalleCtrl.text,
+      nombre: categoria,
     );
     if (mounted) Navigator.pop(context, true);
+  }
+
+  /// Saca de la lista de sugerencias una categoría que quedó mal escrita.
+  Future<void> _olvidarCategoria(CategoriaGastoRow categoria) async {
+    final confirmado = await confirmarEliminar(
+      context,
+      titulo: 'Quitar de la lista',
+      queSeVa: 'El botón «${categoria.nombre}».',
+      advertencia:
+          'Los gastos que ya anotaste con ese nombre no cambian: esa plata '
+          'salió de verdad. Si el nombre quedó mal escrito, corregilo en el '
+          'gasto que lo tenga.',
+      textoBoton: 'Quitar',
+    );
+    if (!confirmado) return;
+    await finanzasRepo.olvidarCategoria(categoria.id);
+    sincronizarSiSePuede();
   }
 
   @override
@@ -723,13 +888,13 @@ class _GastoSheetState extends State<_GastoSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Anotar un gasto',
+              _corrigiendo ? 'Corregir el gasto' : 'Anotar un gasto',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            // Los cinco gastos de todas las semanas, para tocar y seguir. La
-            // compra de ganado no está: esa la anota sola la app cuando se
-            // registra un animal comprado.
+            // Los gastos de todas las semanas, para tocar y seguir. La compra
+            // de ganado no está: esa la anota sola la app cuando se registra
+            // un animal comprado.
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -742,6 +907,42 @@ class _GastoSheetState extends State<_GastoSheet> {
                     onSelected: (_) => setState(() => _categoriaCtrl.text = c),
                   ),
               ],
+            ),
+            // Y las que el ganadero escribió alguna vez. Con la equis para
+            // quitarlas: la lista se ensucia sola con un nombre mal escrito, y
+            // sin dónde sacarlo queda de botón para siempre.
+            StreamBuilder<List<CategoriaGastoRow>>(
+              stream: finanzasRepo.observarCategorias(widget.lecheriaId),
+              builder: (context, snap) {
+                // Las que se llaman igual que un botón fijo no se repiten. Hay
+                // fincas con esas filas guardadas de antes, y salían dos veces
+                // el mismo «Concentrado».
+                final propias = (snap.data ?? const <CategoriaGastoRow>[])
+                    .where((c) => !CategoriaGasto.todos.contains(c.nombre))
+                    .where((c) => c.nombre != CategoriaGasto.compraGanado)
+                    .toList();
+                if (propias.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final c in propias)
+                        InputChip(
+                          key: ValueKey('finanzas.gasto.catPropia.${c.id}'),
+                          label: Text(c.nombre),
+                          selected: _categoriaCtrl.text == c.nombre,
+                          onSelected: (_) =>
+                              setState(() => _categoriaCtrl.text = c.nombre),
+                          onDeleted: () => _olvidarCategoria(c),
+                          deleteIcon: const Icon(Icons.close, size: 18),
+                          tooltip: 'Quitar «${c.nombre}» de la lista',
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 12),
             // Escape para lo que no cae en ninguno de los cinco (una cerca,
