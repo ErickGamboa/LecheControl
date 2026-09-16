@@ -89,13 +89,14 @@ class PartosRepository {
       // Un servicio anterior al último parto ya cumplió: no proyecta nada.
       final servicioVigente =
           servicio != null &&
-          (a.fechaUltimoParto == null ||
-              servicio.fecha.isAfter(a.fechaUltimoParto!))
+              (a.fechaUltimoParto == null ||
+                  servicio.fecha.isAfter(a.fechaUltimoParto!))
           ? servicio
           : null;
 
       final confirmada = a.fechaProbableParto;
-      final DateTime? fechaProbable = confirmada ??
+      final DateTime? fechaProbable =
+          confirmada ??
           (servicioVigente == null
               ? null
               : partoProbableDesdeServicio(servicioVigente.fecha));

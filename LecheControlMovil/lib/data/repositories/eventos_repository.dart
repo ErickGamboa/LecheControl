@@ -391,16 +391,12 @@ class EventosRepository {
     // La cría se va con el parto que la trajo, salvo que ya tenga vida
     // propia: si le anotaron algo o ya se pesó, borrarla sería tirar datos de
     // verdad. En ese caso queda en el inventario, suelta de su madre.
-    final tieneEventos =
-        await (db.select(db.eventosAnimal)..where(
-              (t) => t.animalId.equals(criaId) & t.deletedAt.isNull(),
-            ))
-            .get();
-    final tienePesas =
-        await (db.select(db.pesasLeche)..where(
-              (t) => t.animalId.equals(criaId) & t.deletedAt.isNull(),
-            ))
-            .get();
+    final tieneEventos = await (db.select(
+      db.eventosAnimal,
+    )..where((t) => t.animalId.equals(criaId) & t.deletedAt.isNull())).get();
+    final tienePesas = await (db.select(
+      db.pesasLeche,
+    )..where((t) => t.animalId.equals(criaId) & t.deletedAt.isNull())).get();
     if (tieneEventos.isNotEmpty || tienePesas.isNotEmpty) {
       await (db.update(db.animales)..where((t) => t.id.equals(criaId))).write(
         AnimalesCompanion(

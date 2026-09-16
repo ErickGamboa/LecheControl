@@ -191,9 +191,7 @@ class _EsperandoCuentaState extends State<_EsperandoCuenta> {
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: _seTardo
-                    ? _loQueNoAnda(theme)
-                    : _esperando(theme),
+                children: _seTardo ? _loQueNoAnda(theme) : _esperando(theme),
               ),
             ),
           ),
@@ -209,11 +207,7 @@ class _EsperandoCuentaState extends State<_EsperandoCuenta> {
   ];
 
   List<Widget> _loQueNoAnda(ThemeData theme) => [
-    Icon(
-      Icons.cloud_off_outlined,
-      size: 64,
-      color: theme.colorScheme.outline,
-    ),
+    Icon(Icons.cloud_off_outlined, size: 64, color: theme.colorScheme.outline),
     const SizedBox(height: 20),
     Text(
       'No pudimos preparar tu cuenta',
@@ -347,9 +341,9 @@ class _CrearLecheriaScreenState extends State<_CrearLecheriaScreen> {
       }
     } on LimiteLecheriasException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.mensaje)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.mensaje)));
       }
     } finally {
       if (mounted) setState(() => _creando = false);

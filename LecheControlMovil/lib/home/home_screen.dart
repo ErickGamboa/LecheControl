@@ -49,6 +49,9 @@ class HomeScreen extends StatelessWidget {
   void _mostrarEstadoSync(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      // Sin esto la hoja se desborda en cuanto el diagnóstico trae un error
+      // largo —un fallo de red lo hace— y sale la franja amarilla y negra.
+      isScrollControlled: true,
       builder: (_) => _SyncStatusSheet(lecheriaId: lecheria.id),
     );
   }
@@ -270,6 +273,60 @@ class _ModuloCard extends StatelessWidget {
   }
 }
 
+/// Lo que la hoja de la nube necesita saber para decir la verdad completa:
+/// qué falta subir, qué está trabado, y **cuándo fue la última vez que bajó
+/// algo** —que es lo que faltaba—.
+class _EstadoSync {
+  const _EstadoSync({
+    required this.pendientes,
+    required this.trabadas,
+    required this.ultimaBajada,
+    required this.diagnostico,
+  });
+
+  final int pendientes;
+  final int trabadas;
+  final DateTime? ultimaBajada;
+  final String diagnostico;
+}
+
+/// Una línea de la explicación: el nombre del botón en negrita y qué hace.
+class _QueHace extends StatelessWidget {
+  const _QueHace(this.boton, this.queHace);
+
+  final String boton;
+  final String queHace;
+
+  @override
+  Widget build(BuildContext context) {
+    final estilo = Theme.of(context).textTheme.bodySmall?.copyWith(
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$boton: ',
+            style: estilo?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          TextSpan(text: queHace),
+        ],
+      ),
+      style: estilo,
+    );
+  }
+}
+
+String _haceCuanto(DateTime cuando) {
+  final d = DateTime.now().difference(cuando);
+  if (d.inMinutes < 1) return 'hace un momento';
+  if (d.inMinutes < 60) return 'hace ${d.inMinutes} min';
+  if (d.inHours < 24) {
+    return d.inHours == 1 ? 'hace 1 hora' : 'hace ${d.inHours} horas';
+  }
+  return d.inDays == 1 ? 'hace 1 día' : 'hace ${d.inDays} días';
+}
+
 class _SyncStatusSheet extends StatefulWidget {
   const _SyncStatusSheet({required this.lecheriaId});
 
@@ -280,72 +337,196 @@ class _SyncStatusSheet extends StatefulWidget {
 }
 
 class _SyncStatusSheetState extends State<_SyncStatusSheet> {
-  late Future<Map<String, int>> _pendientesFuture;
+  late Future<_EstadoSync> _estadoFuture;
+  bool _rebajando = false;
 
   @override
   void initState() {
     super.initState();
-    _pendientesFuture = syncService.pendientesPorTabla();
+    // Abrir esta hoja **sincroniza**. Antes solo mostraba números: tocar la
+    // nube no disparaba nada, así que el único gesto que el ganadero asocia
+    // con "actualizame esto" no actualizaba nada.
+    //
+    // Pero se muestra primero y se sincroniza después, **en ese orden**. Al
+    // revés, sin señal la hoja se quedaba en «Revisando…» casi un minuto —los
+    // reintentos y el tiempo límite de cada petición—, y justo ahí es cuando
+    // uno la abre para entender qué pasa. Lo que ya se sabe se enseña de una;
+    // cuando la sincronización termina, se refresca.
+    _estadoFuture = _leer();
+    _sincronizarYRefrescar();
+  }
+
+  Future<void> _sincronizarYRefrescar() async {
+    await sincronizarSiSePuede();
+    if (mounted) setState(() => _estadoFuture = _leer());
+  }
+
+  Future<_EstadoSync> _leer() async {
+    return _EstadoSync(
+      pendientes: (await syncService.pendientesPorTabla()).values.fold<int>(
+        0,
+        (a, b) => a + b,
+      ),
+      trabadas: (await syncService.fallos()).length,
+      ultimaBajada: (await syncService.estadoPorTabla())
+          .map((e) => e.ultimaSincronizacionOk)
+          .whereType<DateTime>()
+          .fold<DateTime?>(
+            null,
+            (mayor, f) => mayor == null || f.isAfter(mayor) ? f : mayor,
+          ),
+      diagnostico: await diagnosticoDeSync(),
+    );
+  }
+
+  Future<void> _volverABajarTodo() async {
+    setState(() => _rebajando = true);
+    try {
+      await volverABajarTodo();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _rebajando = false;
+          _estadoFuture = _leer();
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Sincronización',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            // Con el total, "sincronizando" deja de ser un giro sin fin y
-            // pasa a decir cuánto falta.
-            ValueListenableBuilder<SyncProgreso>(
-              valueListenable: syncService.progreso,
-              builder: (context, avance, _) => ValueListenableBuilder<bool>(
-                valueListenable: syncService.sincronizando,
-                builder: (context, sincronizando, _) =>
-                    Text(switch ((sincronizando, avance.activo)) {
+      // Scroll y tope de alto: el diagnóstico puede traer el mensaje entero de
+      // un error de red, y nada de esta hoja puede quedar fuera de la pantalla
+      // —menos que nada los botones, que son lo único accionable—.
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Sincronización',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                // Con el total, "sincronizando" deja de ser un giro sin fin y
+                // pasa a decir cuánto falta.
+                ValueListenableBuilder<SyncProgreso>(
+                  valueListenable: syncService.progreso,
+                  builder: (context, avance, _) => ValueListenableBuilder<bool>(
+                    valueListenable: syncService.sincronizando,
+                    builder: (context, sincronizando, _) => Text(switch ((
+                      sincronizando,
+                      avance.activo,
+                    )) {
                       (true, true) =>
                         'Subiendo ${avance.hechas} de ${avance.total}…',
                       (true, false) => 'Sincronizando…',
-                      _ => 'Todo al día.',
+                      // Antes decía "Todo al día", y podía decirlo llevando
+                      // días de atraso: solo miraba las subidas. Lo que está
+                      // al día y lo que no se detalla abajo.
+                      _ => 'No hay nada subiendo en este momento.',
                     }),
-              ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FutureBuilder<_EstadoSync>(
+                  future: _estadoFuture,
+                  builder: (context, snapshot) {
+                    final e = snapshot.data;
+                    if (e == null) return const Text('Revisando…');
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('Cambios pendientes por subir: ${e.pendientes}'),
+                        const SizedBox(height: 4),
+                        // Lo de abajo es lo que faltaba: "Todo al día" solo miraba
+                        // las SUBIDAS, así que podía decirlo llevando días de
+                        // atraso en lo que tenía que bajar.
+                        Text(
+                          e.ultimaBajada == null
+                              ? 'Todavía no ha bajado nada del servidor.'
+                              : 'Última bajada: ${_haceCuanto(e.ultimaBajada!)}',
+                        ),
+                        if (e.trabadas > 0) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            e.trabadas == 1
+                                ? 'Hay 1 cambio que no logra subir.'
+                                : 'Hay ${e.trabadas} cambios que no logran subir.',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Text(
+                          e.diagnostico,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  estadoConexion.hayConexion.value
+                      ? 'Hay conexión a internet.'
+                      : 'Sin conexión a internet.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: LecheSpacing.lg),
+                // El botón vuelve. Se había quitado con el argumento de que "la
+                // app sincroniza sola", y para las bajadas eso no era cierto.
+                FilledButton.icon(
+                  key: const ValueKey('sync.ahora'),
+                  onPressed: _rebajando ? null : _sincronizarYRefrescar,
+                  icon: const Icon(Icons.sync),
+                  label: const Text('Sincronizar ahora'),
+                ),
+                const SizedBox(height: 4),
+                // La salida que antes solo daba desinstalar la app.
+                TextButton.icon(
+                  key: const ValueKey('sync.volverABajarTodo'),
+                  onPressed: _rebajando ? null : _volverABajarTodo,
+                  icon: _rebajando
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.cloud_download_outlined),
+                  label: Text(
+                    _rebajando ? 'Bajando todo…' : 'Volver a bajar todo',
+                  ),
+                ),
+                const SizedBox(height: LecheSpacing.md),
+                // Los dos botones juntos y la explicación debajo: los nombres se
+                // parecen y hacen cosas distintas, así que la diferencia tiene que
+                // poder leerse de corrido, no salteando entre botones.
+                const _QueHace(
+                  'Sincronizar ahora',
+                  'envía los cambios de este '
+                      'teléfono y trae los de los demás. Es lo que la app hace sola '
+                      'cada tanto.',
+                ),
+                const SizedBox(height: 6),
+                const _QueHace(
+                  'Volver a bajar todo',
+                  'pide la información '
+                      'completa al servidor, aunque este teléfono ya la tenga. Úselo '
+                      'si un dato sigue viéndose mal después de sincronizar: tarda '
+                      'más y no descarta nada pendiente.',
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            FutureBuilder<Map<String, int>>(
-              future: _pendientesFuture,
-              builder: (context, snapshot) {
-                final total = (snapshot.data ?? const {}).values.fold<int>(
-                  0,
-                  (a, b) => a + b,
-                );
-                return Text('Cambios pendientes por subir: $total');
-              },
-            ),
-            const SizedBox(height: 8),
-            Text(
-              estadoConexion.hayConexion.value
-                  ? 'Hay conexión a internet.'
-                  : 'Sin conexión a internet.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: LecheSpacing.lg),
-            // Sin botón de "sincronizar ahora" a propósito: la app sube todo
-            // sola —al guardar, al recuperar la señal y cada rato si quedó
-            // algo—, así que el botón solo servía para dudar de si hacía
-            // falta apretarlo. Esta hoja es para ver qué está pasando.
-            Text(
-              'La app sincroniza sola: no hay que apretar nada. Si quedó algo '
-              'pendiente, lo vuelve a intentar cuando haya señal.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+          ),
         ),
       ),
     );

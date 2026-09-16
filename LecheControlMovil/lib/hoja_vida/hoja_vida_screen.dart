@@ -137,7 +137,10 @@ class _EncabezadoAnimal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final pronta = esPronta(animal.fechaProbableParto);
+    final pronta = esPronta(
+      animal.fechaProbableParto,
+      estadoReproductivo: animal.estadoReproductivo,
+    );
     final dlac = diasLactancia(animal.fechaUltimoParto);
     final esVacaDeOrdeno =
         animal.sexo == Sexo.hembra && animal.grupo == GrupoAnimal.enOrdeno;

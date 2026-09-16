@@ -241,7 +241,10 @@ class _FichaAnimalSheetState extends State<_FichaAnimalSheet> {
               key: const ValueKey('animal.ficha.origen'),
               segments: [
                 for (final o in OrigenAnimal.todos)
-                  ButtonSegment(value: o, label: Text(OrigenAnimal.etiqueta(o))),
+                  ButtonSegment(
+                    value: o,
+                    label: Text(OrigenAnimal.etiqueta(o)),
+                  ),
               ],
               selected: {_origen},
               onSelectionChanged: (s) => setState(() => _origen = s.first),

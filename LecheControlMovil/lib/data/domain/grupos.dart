@@ -49,10 +49,37 @@ int? diasParaParto(DateTime? fechaProbableParto, {DateTime? hoy}) {
 /// No es un grupo del hato sino un estado que se deduce de la fecha probable
 /// de parto, justamente para que la vaca **no salga de Secas** cuando entra en
 /// él. Una vaca que ya se pasó de la fecha sigue pronta: todavía no parió.
-bool esPronta(DateTime? fechaProbableParto, {DateTime? hoy}) {
+///
+/// [estadoReproductivo] no es opcional por gusto. Antes esto miraba **solo**
+/// la fecha, así que una vaca marcada Vacía que conservara una fecha vieja
+/// salía en pantalla como "Vacía · Pronta": dos estados que se contradicen,
+/// uno al lado del otro, sin que nada lo notara. Pronta es *estar por parir*,
+/// y una vaca que no está preñada no está por parir por más fecha que tenga
+/// guardada.
+bool esPronta(
+  DateTime? fechaProbableParto, {
+  String? estadoReproductivo,
+  DateTime? hoy,
+}) {
+  if (estadoReproductivo != null &&
+      estadoReproductivo != EstadoReproductivo.preniada) {
+    return false;
+  }
   final dias = diasParaParto(fechaProbableParto, hoy: hoy);
   return dias != null && dias <= diasParaPronta;
 }
+
+/// Si la ficha se contradice: hay fecha probable de parto pero la vaca no
+/// figura preñada, o figura preñada y no hay fecha.
+///
+/// No se arregla sola a propósito —nadie puede adivinar cuál de los dos datos
+/// es el bueno—, pero **se avisa**: es lo que hay que ir a palpar.
+bool fichaReproductivaContradictoria(
+  String estadoReproductivo,
+  DateTime? fechaProbableParto,
+) =>
+    (estadoReproductivo == EstadoReproductivo.preniada) !=
+    (fechaProbableParto != null);
 
 /// Cómo se lee el estado de pronta en pantalla, p. ej. "Pronta · faltan 9
 /// días" o "Pronta · pasada de fecha".

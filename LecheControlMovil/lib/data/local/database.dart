@@ -502,6 +502,39 @@ class SyncEstados extends Table {
   Set<Column> get primaryKey => {tabla};
 }
 
+/// Qué filas **no lograron subir**, cuántas veces y por qué.
+///
+/// **Por qué hace falta.** Hasta ahora un fallo de subida solo iba a
+/// `debugPrint`, que en una app instalada de la tienda no se ve. Peor: la fila
+/// quedaba `pendiente` para siempre y el guard de la bajada la saltaba
+/// *justamente por estar pendiente*, así que el dato local equivocado se
+/// congelaba y el bueno del servidor no podía entrar nunca. La única salida
+/// era desinstalar la app.
+///
+/// Con esto pasan dos cosas: el fallo se puede **ver** (ver
+/// `diagnosticoDeSync`) y, pasados [kIntentosAntesDeCederAlServidor] intentos,
+/// la fila **deja de bloquear su propia actualización**: el servidor gana y se
+/// sigue. Perder un cambio que lleva decenas de intentos sin poder subir es
+/// mejor que quedarse con un dato falso para siempre y sin aviso.
+@DataClassName('SyncFalloRow')
+class SyncFallos extends Table {
+  TextColumn get tabla => text()();
+  TextColumn get filaId => text()();
+  IntColumn get intentos => integer().withDefault(const Constant(0))();
+  TextColumn get ultimoError => text().nullable()();
+  DateTimeColumn get ultimoErrorEn => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {tabla, filaId};
+}
+
+/// Cuántas subidas fallidas seguidas tiene que acumular una fila antes de que
+/// la bajada deje de protegerla y el servidor gane.
+///
+/// Con el reintento cada 2 minutos son cerca de 20 minutos insistiendo: de
+/// sobra para una señal mala, muy poco para quedarse con un dato falso.
+const kIntentosAntesDeCederAlServidor = 10;
+
 /// De quién son los datos que hay guardados en este dispositivo.
 ///
 /// **Por qué hace falta.** La base local es una sola y no estaba marcada, así
@@ -562,6 +595,7 @@ class SesionesLocales extends Table {
     SyncEstados,
     SesionesLocales,
     DuenoDatosLocales,
+    SyncFallos,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -572,7 +606,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -681,6 +715,12 @@ class AppDatabase extends _$AppDatabase {
       // el primero que entre se adueña de lo que ya estaba sin borrar nada.
       if (from < 10) {
         await m.createTable(duenoDatosLocales);
+      }
+      // v10 -> v11: las subidas que fallan dejan rastro (ver `SyncFallos`).
+      // Arranca vacía: lo que esté pendiente hoy simplemente empieza a contar
+      // desde el próximo intento.
+      if (from < 11) {
+        await m.createTable(syncFallos);
       }
     },
   );

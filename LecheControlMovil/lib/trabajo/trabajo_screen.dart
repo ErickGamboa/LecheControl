@@ -241,7 +241,10 @@ class _TarjetaAnimal extends StatelessWidget {
   final VoidCallback onLimpiar;
   final VoidCallback onCambio;
 
-  bool get _pronta => esPronta(animal.fechaProbableParto);
+  bool get _pronta => esPronta(
+    animal.fechaProbableParto,
+    estadoReproductivo: animal.estadoReproductivo,
+  );
 
   /// Anota un evento y **avisa en pantalla si quedó o no**.
   ///
@@ -846,7 +849,8 @@ class _TarjetaAnimal extends StatelessWidget {
     if (!context.mounted) return;
     final quedo = await _anotar(
       context,
-      queQuedo: 'Anotado: baja por ${MotivoBaja.etiqueta(motivo).toLowerCase()}',
+      queQuedo:
+          'Anotado: baja por ${MotivoBaja.etiqueta(motivo).toLowerCase()}',
       registrar: () => animalesRepo.registrarBaja(
         animalId: animal.id,
         lecheriaId: lecheriaId,

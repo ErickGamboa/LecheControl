@@ -134,10 +134,7 @@ class FondoDeslizarBorrar extends StatelessWidget {
       color: Theme.of(context).colorScheme.error,
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.only(right: 16),
-      child: Icon(
-        Icons.delete,
-        color: Theme.of(context).colorScheme.onError,
-      ),
+      child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
     );
   }
 }

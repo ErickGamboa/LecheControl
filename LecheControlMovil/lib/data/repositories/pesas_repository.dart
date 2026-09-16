@@ -414,15 +414,15 @@ class PesasRepository {
   Future<void> eliminarSesion(String sesionId) async {
     final ahora = DateTime.now();
     await db.transaction(() async {
-      await (db.update(
-        db.pesasLeche,
-      )..where((t) => t.sesionId.equals(sesionId) & t.deletedAt.isNull())).write(
-        PesasLecheCompanion(
-          deletedAt: Value(ahora),
-          updatedAt: Value(ahora),
-          pendiente: const Value(true),
-        ),
-      );
+      await (db.update(db.pesasLeche)
+            ..where((t) => t.sesionId.equals(sesionId) & t.deletedAt.isNull()))
+          .write(
+            PesasLecheCompanion(
+              deletedAt: Value(ahora),
+              updatedAt: Value(ahora),
+              pendiente: const Value(true),
+            ),
+          );
       await (db.update(
         db.pesasSesiones,
       )..where((t) => t.id.equals(sesionId))).write(

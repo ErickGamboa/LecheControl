@@ -228,7 +228,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                   itemCount: animales.length,
                   itemBuilder: (context, i) {
                     final a = animales[i];
-                    final pronta = esPronta(a.fechaProbableParto);
+                    final pronta = esPronta(
+                      a.fechaProbableParto,
+                      estadoReproductivo: a.estadoReproductivo,
+                    );
                     return Card(
                       child: ListTile(
                         leading: CircleAvatar(
@@ -246,8 +249,16 @@ class _InventarioScreenState extends State<InventarioScreen> {
                             else ...[
                               GrupoAnimal.etiqueta(a.grupo),
                               EstadoReproductivo.etiqueta(a.estadoReproductivo),
-                              if (pronta)
-                                etiquetaPronta(a.fechaProbableParto),
+                              if (pronta) etiquetaPronta(a.fechaProbableParto),
+                              // La ficha que no cuadra se dice, no se esconde:
+                              // callarla dejaría a la vaca fuera de Prontas y
+                              // de los partos proyectados sin que nadie sepa
+                              // por qué. Se arregla palpándola.
+                              if (fichaReproductivaContradictoria(
+                                a.estadoReproductivo,
+                                a.fechaProbableParto,
+                              ))
+                                'revisar preñez',
                             ],
                           ].join(' · '),
                         ),

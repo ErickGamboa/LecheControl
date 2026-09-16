@@ -81,7 +81,14 @@ class AnimalesRepository {
     return consulta.watch().map((animales) {
       var lista = animales;
       if (soloProntas) {
-        lista = lista.where((a) => esPronta(a.fechaProbableParto)).toList();
+        lista = lista
+            .where(
+              (a) => esPronta(
+                a.fechaProbableParto,
+                estadoReproductivo: a.estadoReproductivo,
+              ),
+            )
+            .toList();
       }
       if (busqueda == null || busqueda.trim().isEmpty) return lista;
       final termino = busqueda.trim().toLowerCase();
@@ -101,7 +108,16 @@ class AnimalesRepository {
               t.fechaProbableParto.isNotNull(),
         ))
         .watch()
-        .map((as) => as.where((a) => esPronta(a.fechaProbableParto)).length);
+        .map(
+          (as) => as
+              .where(
+                (a) => esPronta(
+                  a.fechaProbableParto,
+                  estadoReproductivo: a.estadoReproductivo,
+                ),
+              )
+              .length,
+        );
   }
 
   /// Stream con animales dados de baja (historial, Módulo 2).
@@ -500,18 +516,15 @@ class AnimalesRepository {
   Future<({int eventos, int pesas, int crias})> historiaDe(
     String animalId,
   ) async {
-    final eventos = await (db.select(db.eventosAnimal)..where(
-          (t) => t.animalId.equals(animalId) & t.deletedAt.isNull(),
-        ))
-        .get();
-    final pesas = await (db.select(db.pesasLeche)..where(
-          (t) => t.animalId.equals(animalId) & t.deletedAt.isNull(),
-        ))
-        .get();
-    final crias = await (db.select(db.animales)..where(
-          (t) => t.madreId.equals(animalId) & t.deletedAt.isNull(),
-        ))
-        .get();
+    final eventos = await (db.select(
+      db.eventosAnimal,
+    )..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())).get();
+    final pesas = await (db.select(
+      db.pesasLeche,
+    )..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())).get();
+    final crias = await (db.select(
+      db.animales,
+    )..where((t) => t.madreId.equals(animalId) & t.deletedAt.isNull())).get();
     return (eventos: eventos.length, pesas: pesas.length, crias: crias.length);
   }
 

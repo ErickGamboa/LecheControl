@@ -464,9 +464,7 @@ class _DiaDelParto extends StatelessWidget {
       ),
       child: Text(
         '$dia',
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(color: color),
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
       ),
     );
   }
@@ -493,11 +491,7 @@ class _SinFecha extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.help_outline,
-                  size: 18,
-                  color: kAmbarLeche,
-                ),
+                const Icon(Icons.help_outline, size: 18, color: kAmbarLeche),
                 const SizedBox(width: LecheSpacing.sm),
                 Expanded(
                   child: Text(

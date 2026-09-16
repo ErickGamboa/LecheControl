@@ -12417,6 +12417,383 @@ class DuenoDatosLocalesCompanion extends UpdateCompanion<DuenoLocalRow> {
   }
 }
 
+class $SyncFallosTable extends SyncFallos
+    with TableInfo<$SyncFallosTable, SyncFalloRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncFallosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tablaMeta = const VerificationMeta('tabla');
+  @override
+  late final GeneratedColumn<String> tabla = GeneratedColumn<String>(
+    'tabla',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _filaIdMeta = const VerificationMeta('filaId');
+  @override
+  late final GeneratedColumn<String> filaId = GeneratedColumn<String>(
+    'fila_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _intentosMeta = const VerificationMeta(
+    'intentos',
+  );
+  @override
+  late final GeneratedColumn<int> intentos = GeneratedColumn<int>(
+    'intentos',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _ultimoErrorMeta = const VerificationMeta(
+    'ultimoError',
+  );
+  @override
+  late final GeneratedColumn<String> ultimoError = GeneratedColumn<String>(
+    'ultimo_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ultimoErrorEnMeta = const VerificationMeta(
+    'ultimoErrorEn',
+  );
+  @override
+  late final GeneratedColumn<DateTime> ultimoErrorEn =
+      GeneratedColumn<DateTime>(
+        'ultimo_error_en',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    tabla,
+    filaId,
+    intentos,
+    ultimoError,
+    ultimoErrorEn,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_fallos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncFalloRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('tabla')) {
+      context.handle(
+        _tablaMeta,
+        tabla.isAcceptableOrUnknown(data['tabla']!, _tablaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tablaMeta);
+    }
+    if (data.containsKey('fila_id')) {
+      context.handle(
+        _filaIdMeta,
+        filaId.isAcceptableOrUnknown(data['fila_id']!, _filaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_filaIdMeta);
+    }
+    if (data.containsKey('intentos')) {
+      context.handle(
+        _intentosMeta,
+        intentos.isAcceptableOrUnknown(data['intentos']!, _intentosMeta),
+      );
+    }
+    if (data.containsKey('ultimo_error')) {
+      context.handle(
+        _ultimoErrorMeta,
+        ultimoError.isAcceptableOrUnknown(
+          data['ultimo_error']!,
+          _ultimoErrorMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ultimo_error_en')) {
+      context.handle(
+        _ultimoErrorEnMeta,
+        ultimoErrorEn.isAcceptableOrUnknown(
+          data['ultimo_error_en']!,
+          _ultimoErrorEnMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {tabla, filaId};
+  @override
+  SyncFalloRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncFalloRow(
+      tabla: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tabla'],
+      )!,
+      filaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fila_id'],
+      )!,
+      intentos: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}intentos'],
+      )!,
+      ultimoError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ultimo_error'],
+      ),
+      ultimoErrorEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ultimo_error_en'],
+      ),
+    );
+  }
+
+  @override
+  $SyncFallosTable createAlias(String alias) {
+    return $SyncFallosTable(attachedDatabase, alias);
+  }
+}
+
+class SyncFalloRow extends DataClass implements Insertable<SyncFalloRow> {
+  final String tabla;
+  final String filaId;
+  final int intentos;
+  final String? ultimoError;
+  final DateTime? ultimoErrorEn;
+  const SyncFalloRow({
+    required this.tabla,
+    required this.filaId,
+    required this.intentos,
+    this.ultimoError,
+    this.ultimoErrorEn,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['tabla'] = Variable<String>(tabla);
+    map['fila_id'] = Variable<String>(filaId);
+    map['intentos'] = Variable<int>(intentos);
+    if (!nullToAbsent || ultimoError != null) {
+      map['ultimo_error'] = Variable<String>(ultimoError);
+    }
+    if (!nullToAbsent || ultimoErrorEn != null) {
+      map['ultimo_error_en'] = Variable<DateTime>(ultimoErrorEn);
+    }
+    return map;
+  }
+
+  SyncFallosCompanion toCompanion(bool nullToAbsent) {
+    return SyncFallosCompanion(
+      tabla: Value(tabla),
+      filaId: Value(filaId),
+      intentos: Value(intentos),
+      ultimoError: ultimoError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ultimoError),
+      ultimoErrorEn: ultimoErrorEn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ultimoErrorEn),
+    );
+  }
+
+  factory SyncFalloRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncFalloRow(
+      tabla: serializer.fromJson<String>(json['tabla']),
+      filaId: serializer.fromJson<String>(json['filaId']),
+      intentos: serializer.fromJson<int>(json['intentos']),
+      ultimoError: serializer.fromJson<String?>(json['ultimoError']),
+      ultimoErrorEn: serializer.fromJson<DateTime?>(json['ultimoErrorEn']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tabla': serializer.toJson<String>(tabla),
+      'filaId': serializer.toJson<String>(filaId),
+      'intentos': serializer.toJson<int>(intentos),
+      'ultimoError': serializer.toJson<String?>(ultimoError),
+      'ultimoErrorEn': serializer.toJson<DateTime?>(ultimoErrorEn),
+    };
+  }
+
+  SyncFalloRow copyWith({
+    String? tabla,
+    String? filaId,
+    int? intentos,
+    Value<String?> ultimoError = const Value.absent(),
+    Value<DateTime?> ultimoErrorEn = const Value.absent(),
+  }) => SyncFalloRow(
+    tabla: tabla ?? this.tabla,
+    filaId: filaId ?? this.filaId,
+    intentos: intentos ?? this.intentos,
+    ultimoError: ultimoError.present ? ultimoError.value : this.ultimoError,
+    ultimoErrorEn: ultimoErrorEn.present
+        ? ultimoErrorEn.value
+        : this.ultimoErrorEn,
+  );
+  SyncFalloRow copyWithCompanion(SyncFallosCompanion data) {
+    return SyncFalloRow(
+      tabla: data.tabla.present ? data.tabla.value : this.tabla,
+      filaId: data.filaId.present ? data.filaId.value : this.filaId,
+      intentos: data.intentos.present ? data.intentos.value : this.intentos,
+      ultimoError: data.ultimoError.present
+          ? data.ultimoError.value
+          : this.ultimoError,
+      ultimoErrorEn: data.ultimoErrorEn.present
+          ? data.ultimoErrorEn.value
+          : this.ultimoErrorEn,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncFalloRow(')
+          ..write('tabla: $tabla, ')
+          ..write('filaId: $filaId, ')
+          ..write('intentos: $intentos, ')
+          ..write('ultimoError: $ultimoError, ')
+          ..write('ultimoErrorEn: $ultimoErrorEn')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(tabla, filaId, intentos, ultimoError, ultimoErrorEn);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncFalloRow &&
+          other.tabla == this.tabla &&
+          other.filaId == this.filaId &&
+          other.intentos == this.intentos &&
+          other.ultimoError == this.ultimoError &&
+          other.ultimoErrorEn == this.ultimoErrorEn);
+}
+
+class SyncFallosCompanion extends UpdateCompanion<SyncFalloRow> {
+  final Value<String> tabla;
+  final Value<String> filaId;
+  final Value<int> intentos;
+  final Value<String?> ultimoError;
+  final Value<DateTime?> ultimoErrorEn;
+  final Value<int> rowid;
+  const SyncFallosCompanion({
+    this.tabla = const Value.absent(),
+    this.filaId = const Value.absent(),
+    this.intentos = const Value.absent(),
+    this.ultimoError = const Value.absent(),
+    this.ultimoErrorEn = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncFallosCompanion.insert({
+    required String tabla,
+    required String filaId,
+    this.intentos = const Value.absent(),
+    this.ultimoError = const Value.absent(),
+    this.ultimoErrorEn = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : tabla = Value(tabla),
+       filaId = Value(filaId);
+  static Insertable<SyncFalloRow> custom({
+    Expression<String>? tabla,
+    Expression<String>? filaId,
+    Expression<int>? intentos,
+    Expression<String>? ultimoError,
+    Expression<DateTime>? ultimoErrorEn,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tabla != null) 'tabla': tabla,
+      if (filaId != null) 'fila_id': filaId,
+      if (intentos != null) 'intentos': intentos,
+      if (ultimoError != null) 'ultimo_error': ultimoError,
+      if (ultimoErrorEn != null) 'ultimo_error_en': ultimoErrorEn,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncFallosCompanion copyWith({
+    Value<String>? tabla,
+    Value<String>? filaId,
+    Value<int>? intentos,
+    Value<String?>? ultimoError,
+    Value<DateTime?>? ultimoErrorEn,
+    Value<int>? rowid,
+  }) {
+    return SyncFallosCompanion(
+      tabla: tabla ?? this.tabla,
+      filaId: filaId ?? this.filaId,
+      intentos: intentos ?? this.intentos,
+      ultimoError: ultimoError ?? this.ultimoError,
+      ultimoErrorEn: ultimoErrorEn ?? this.ultimoErrorEn,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tabla.present) {
+      map['tabla'] = Variable<String>(tabla.value);
+    }
+    if (filaId.present) {
+      map['fila_id'] = Variable<String>(filaId.value);
+    }
+    if (intentos.present) {
+      map['intentos'] = Variable<int>(intentos.value);
+    }
+    if (ultimoError.present) {
+      map['ultimo_error'] = Variable<String>(ultimoError.value);
+    }
+    if (ultimoErrorEn.present) {
+      map['ultimo_error_en'] = Variable<DateTime>(ultimoErrorEn.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncFallosCompanion(')
+          ..write('tabla: $tabla, ')
+          ..write('filaId: $filaId, ')
+          ..write('intentos: $intentos, ')
+          ..write('ultimoError: $ultimoError, ')
+          ..write('ultimoErrorEn: $ultimoErrorEn, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -12450,6 +12827,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $DuenoDatosLocalesTable duenoDatosLocales =
       $DuenoDatosLocalesTable(this);
+  late final $SyncFallosTable syncFallos = $SyncFallosTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12476,6 +12854,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     syncEstados,
     sesionesLocales,
     duenoDatosLocales,
+    syncFallos,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -18539,6 +18918,210 @@ typedef $$DuenoDatosLocalesTableProcessedTableManager =
       DuenoLocalRow,
       PrefetchHooks Function()
     >;
+typedef $$SyncFallosTableCreateCompanionBuilder =
+    SyncFallosCompanion Function({
+      required String tabla,
+      required String filaId,
+      Value<int> intentos,
+      Value<String?> ultimoError,
+      Value<DateTime?> ultimoErrorEn,
+      Value<int> rowid,
+    });
+typedef $$SyncFallosTableUpdateCompanionBuilder =
+    SyncFallosCompanion Function({
+      Value<String> tabla,
+      Value<String> filaId,
+      Value<int> intentos,
+      Value<String?> ultimoError,
+      Value<DateTime?> ultimoErrorEn,
+      Value<int> rowid,
+    });
+
+class $$SyncFallosTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncFallosTable> {
+  $$SyncFallosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get tabla => $composableBuilder(
+    column: $table.tabla,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get filaId => $composableBuilder(
+    column: $table.filaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get intentos => $composableBuilder(
+    column: $table.intentos,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ultimoError => $composableBuilder(
+    column: $table.ultimoError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get ultimoErrorEn => $composableBuilder(
+    column: $table.ultimoErrorEn,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyncFallosTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncFallosTable> {
+  $$SyncFallosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get tabla => $composableBuilder(
+    column: $table.tabla,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get filaId => $composableBuilder(
+    column: $table.filaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get intentos => $composableBuilder(
+    column: $table.intentos,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ultimoError => $composableBuilder(
+    column: $table.ultimoError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get ultimoErrorEn => $composableBuilder(
+    column: $table.ultimoErrorEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncFallosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncFallosTable> {
+  $$SyncFallosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get tabla =>
+      $composableBuilder(column: $table.tabla, builder: (column) => column);
+
+  GeneratedColumn<String> get filaId =>
+      $composableBuilder(column: $table.filaId, builder: (column) => column);
+
+  GeneratedColumn<int> get intentos =>
+      $composableBuilder(column: $table.intentos, builder: (column) => column);
+
+  GeneratedColumn<String> get ultimoError => $composableBuilder(
+    column: $table.ultimoError,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get ultimoErrorEn => $composableBuilder(
+    column: $table.ultimoErrorEn,
+    builder: (column) => column,
+  );
+}
+
+class $$SyncFallosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyncFallosTable,
+          SyncFalloRow,
+          $$SyncFallosTableFilterComposer,
+          $$SyncFallosTableOrderingComposer,
+          $$SyncFallosTableAnnotationComposer,
+          $$SyncFallosTableCreateCompanionBuilder,
+          $$SyncFallosTableUpdateCompanionBuilder,
+          (
+            SyncFalloRow,
+            BaseReferences<_$AppDatabase, $SyncFallosTable, SyncFalloRow>,
+          ),
+          SyncFalloRow,
+          PrefetchHooks Function()
+        > {
+  $$SyncFallosTableTableManager(_$AppDatabase db, $SyncFallosTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncFallosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncFallosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncFallosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> tabla = const Value.absent(),
+                Value<String> filaId = const Value.absent(),
+                Value<int> intentos = const Value.absent(),
+                Value<String?> ultimoError = const Value.absent(),
+                Value<DateTime?> ultimoErrorEn = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncFallosCompanion(
+                tabla: tabla,
+                filaId: filaId,
+                intentos: intentos,
+                ultimoError: ultimoError,
+                ultimoErrorEn: ultimoErrorEn,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String tabla,
+                required String filaId,
+                Value<int> intentos = const Value.absent(),
+                Value<String?> ultimoError = const Value.absent(),
+                Value<DateTime?> ultimoErrorEn = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncFallosCompanion.insert(
+                tabla: tabla,
+                filaId: filaId,
+                intentos: intentos,
+                ultimoError: ultimoError,
+                ultimoErrorEn: ultimoErrorEn,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyncFallosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyncFallosTable,
+      SyncFalloRow,
+      $$SyncFallosTableFilterComposer,
+      $$SyncFallosTableOrderingComposer,
+      $$SyncFallosTableAnnotationComposer,
+      $$SyncFallosTableCreateCompanionBuilder,
+      $$SyncFallosTableUpdateCompanionBuilder,
+      (
+        SyncFalloRow,
+        BaseReferences<_$AppDatabase, $SyncFallosTable, SyncFalloRow>,
+      ),
+      SyncFalloRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -18585,4 +19168,6 @@ class $AppDatabaseManager {
       $$SesionesLocalesTableTableManager(_db, _db.sesionesLocales);
   $$DuenoDatosLocalesTableTableManager get duenoDatosLocales =>
       $$DuenoDatosLocalesTableTableManager(_db, _db.duenoDatosLocales);
+  $$SyncFallosTableTableManager get syncFallos =>
+      $$SyncFallosTableTableManager(_db, _db.syncFallos);
 }

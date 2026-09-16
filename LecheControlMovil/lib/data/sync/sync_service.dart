@@ -247,9 +247,16 @@ class SyncService {
         try {
           await _remote.insertarOActualizar(spec.tabla, id, datos);
           await subida.marcarSubida(id);
+          await _olvidarFallo(spec.tabla, id);
           subidas++;
         } catch (e) {
           pendientes++;
+          // El fallo queda **anotado**, no solo impreso: `debugPrint` no se ve
+          // en una app instalada, y era por eso que una fila trabada durante
+          // horas no dejaba ni un rastro que soporte pudiera mirar. Además es
+          // lo que permite que la bajada deje de protegerla si no hay caso
+          // (ver `_tieneCambioLocalQueProteger`).
+          await _anotarFallo(spec.tabla, id, e);
           debugPrint(
             'Sync: no se pudo subir ${spec.tabla} $id; queda pendiente '
             'para reintentar ($e)',
@@ -298,15 +305,28 @@ class SyncService {
       );
       for (final r in filas) {
         final id = spec.bajada.idDe(r);
-        final guard = spec.bajada.tieneCambioLocalPendiente;
         // Las descargas nunca deben pisar cambios locales sin subir: si una
         // subida falló y luego baja una versión vieja del servidor, se
-        // perdería el cambio local.
-        if (guard != null && await guard(id)) {
+        // perdería el cambio local. Pero esa protección **no puede ser para
+        // siempre** (ver `_tieneCambioLocalQueProteger`).
+        if (await _tieneCambioLocalQueProteger(spec, id)) {
           retuvoCambioLocal = true;
           continue;
         }
-        await spec.bajada.aplicar(r);
+        // Resiliencia POR FILA, igual que en la subida. Antes una sola fila
+        // que reventara —por ejemplo un choque con un índice único local,
+        // cuando el servidor manda una fila con otro `id` pero el mismo arete
+        // o el mismo lunes— cortaba la bajada de **toda la tabla**, y como el
+        // cursor no avanzaba, volvía a chocar en la misma fila en cada
+        // sincronización. La tabla quedaba muerta para siempre.
+        try {
+          await spec.bajada.aplicar(r);
+        } catch (e) {
+          retuvoCambioLocal = true; // que el cursor no pase por encima
+          await _anotarFallo(spec.tabla, id, e);
+          debugPrint('Sync: no se pudo aplicar ${spec.tabla} $id ($e)');
+          continue;
+        }
         cursorNuevo = SyncCursor(
           updatedAt: DateTime.parse(r['updated_at'] as String),
           id: id,
@@ -367,6 +387,72 @@ class SyncService {
         );
   }
 
+  /// Si la fila local tiene un cambio sin subir que la bajada debe respetar.
+  ///
+  /// Es el guard de siempre, con un límite. **Por qué el límite.** El guard
+  /// protege un cambio local mirando el flag `pendiente`, y ese flag solo lo
+  /// limpia una subida exitosa. Si la subida falla siempre —un choque con un
+  /// índice único del servidor, una fila que la RLS no acepta— la fila queda
+  /// pendiente para siempre, la bajada la salta para siempre, y el dato local
+  /// equivocado se congela sin que nadie pueda verlo ni arreglarlo: la única
+  /// salida era desinstalar la app.
+  ///
+  /// Pasados [kIntentosAntesDeCederAlServidor] intentos fallidos, el servidor
+  /// gana: se aplica lo que bajó y se olvida el fallo. Se pierde un cambio que
+  /// llevaba decenas de intentos sin poder subir, y eso es menos malo que
+  /// quedarse con un dato falso para siempre. Queda anotado en `SyncFallos`
+  /// hasta que se resuelve, así que no pasa callado.
+  Future<bool> _tieneCambioLocalQueProteger(
+    TableSyncSpec spec,
+    String id,
+  ) async {
+    final guard = spec.bajada.tieneCambioLocalPendiente;
+    if (guard == null || !await guard(id)) return false;
+    final fallo =
+        await (db.select(db.syncFallos)
+              ..where((t) => t.tabla.equals(spec.tabla) & t.filaId.equals(id)))
+            .getSingleOrNull();
+    if ((fallo?.intentos ?? 0) < kIntentosAntesDeCederAlServidor) return true;
+    debugPrint(
+      'Sync: ${spec.tabla} $id lleva ${fallo!.intentos} intentos sin subir; '
+      'gana el servidor para no quedarse con un dato falso',
+    );
+    await _olvidarFallo(spec.tabla, id);
+    return false;
+  }
+
+  Future<void> _anotarFallo(String tabla, String id, Object error) async {
+    final previo =
+        await (db.select(db.syncFallos)
+              ..where((t) => t.tabla.equals(tabla) & t.filaId.equals(id)))
+            .getSingleOrNull();
+    await db
+        .into(db.syncFallos)
+        .insertOnConflictUpdate(
+          SyncFalloRow(
+            tabla: tabla,
+            filaId: id,
+            intentos: (previo?.intentos ?? 0) + 1,
+            ultimoError: error.toString(),
+            ultimoErrorEn: DateTime.now(),
+          ),
+        );
+  }
+
+  Future<void> _olvidarFallo(String tabla, String id) => (db.delete(
+    db.syncFallos,
+  )..where((t) => t.tabla.equals(tabla) & t.filaId.equals(id))).go();
+
+  /// Filas que hoy no logran sincronizar, para mostrarlas en pantalla.
+  Future<List<SyncFalloRow>> fallos() => (db.select(
+    db.syncFallos,
+  )..orderBy([(t) => OrderingTerm.desc(t.intentos)])).get();
+
+  /// Borra los marcadores de bajada para que la próxima sincronización se
+  /// traiga **todo** de nuevo. Es lo que antes solo se conseguía
+  /// desinstalando la app (ver `volverABajarTodo` en `services.dart`).
+  Future<void> olvidarCursores() => db.delete(db.syncCursores).go();
+
   Future<void> _registrarError(String tabla, Object error) async {
     await db
         .into(db.syncEstados)
@@ -396,8 +482,7 @@ class SyncService {
     final row =
         await (db.select(db.syncCursores)..where(
               (t) =>
-                  t.tabla.equals(tabla) &
-                  t.usuarioId.equals(_duenoDelCursor),
+                  t.tabla.equals(tabla) & t.usuarioId.equals(_duenoDelCursor),
             ))
             .getSingleOrNull();
     if (row == null || row.ultimaBajada == null) return SyncCursor.vacio;
@@ -542,8 +627,8 @@ class SyncService {
                 'nombre': f.nombre,
                 'creada_por': f.creadaPor,
                 'cuenta_id': f.cuentaId,
-                'created_at': f.createdAt.toIso8601String(),
-                'deleted_at': f.deletedAt?.toIso8601String(),
+                'created_at': f.createdAt.toUtc().toIso8601String(),
+                'deleted_at': f.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -593,8 +678,8 @@ class SyncService {
                 'lecheria_id': m.lecheriaId,
                 'usuario_id': m.usuarioId,
                 'rol': m.rol,
-                'created_at': m.createdAt.toIso8601String(),
-                'deleted_at': m.deletedAt?.toIso8601String(),
+                'created_at': m.createdAt.toUtc().toIso8601String(),
+                'deleted_at': m.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -649,13 +734,19 @@ class SyncService {
                 'estado_reproductivo': a.estadoReproductivo,
                 'origen': a.origen,
                 'precio_compra': a.precioCompra,
-                'fecha_compra': a.fechaCompra?.toIso8601String(),
+                'fecha_compra': a.fechaCompra?.toUtc().toIso8601String(),
                 'madre_id': a.madreId,
-                'fecha_probable_parto': a.fechaProbableParto?.toIso8601String(),
-                'retiro_leche_hasta': a.retiroLecheHasta?.toIso8601String(),
-                'fecha_ultimo_parto': a.fechaUltimoParto?.toIso8601String(),
-                'created_at': a.createdAt.toIso8601String(),
-                'deleted_at': a.deletedAt?.toIso8601String(),
+                'fecha_probable_parto': a.fechaProbableParto
+                    ?.toUtc()
+                    .toIso8601String(),
+                'retiro_leche_hasta': a.retiroLecheHasta
+                    ?.toUtc()
+                    .toIso8601String(),
+                'fecha_ultimo_parto': a.fechaUltimoParto
+                    ?.toUtc()
+                    .toIso8601String(),
+                'created_at': a.createdAt.toUtc().toIso8601String(),
+                'deleted_at': a.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -716,7 +807,7 @@ class SyncService {
                 'animal_id': e.animalId,
                 'lecheria_id': e.lecheriaId,
                 'tipo': e.tipo,
-                'fecha': e.fecha.toIso8601String(),
+                'fecha': e.fecha.toUtc().toIso8601String(),
                 'detalle': e.detalle,
                 'medicamento_id': e.medicamentoId,
                 'dosis': e.dosis,
@@ -731,8 +822,8 @@ class SyncService {
                 'precio_venta': e.precioVenta,
                 'cria_animal_id': e.criaAnimalId,
                 'registrado_por': e.registradoPor,
-                'created_at': e.createdAt.toIso8601String(),
-                'deleted_at': e.deletedAt?.toIso8601String(),
+                'created_at': e.createdAt.toUtc().toIso8601String(),
+                'deleted_at': e.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -795,10 +886,10 @@ class SyncService {
               {
                 'id': s.id,
                 'lecheria_id': s.lecheriaId,
-                'fecha': s.fecha.toIso8601String(),
+                'fecha': s.fecha.toUtc().toIso8601String(),
                 'cerrada': s.cerrada,
-                'created_at': s.createdAt.toIso8601String(),
-                'deleted_at': s.deletedAt?.toIso8601String(),
+                'created_at': s.createdAt.toUtc().toIso8601String(),
+                'deleted_at': s.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -852,8 +943,8 @@ class SyncService {
                 'litros_manana': p.litrosManana,
                 'litros_tarde': p.litrosTarde,
                 'concentrado_kg': p.concentradoKg,
-                'created_at': p.createdAt.toIso8601String(),
-                'deleted_at': p.deletedAt?.toIso8601String(),
+                'created_at': p.createdAt.toUtc().toIso8601String(),
+                'deleted_at': p.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -909,8 +1000,8 @@ class SyncService {
                 'dia_desde': c.diaDesde,
                 'dia_hasta': c.diaHasta,
                 'litros_esperados': c.litrosEsperados,
-                'created_at': c.createdAt.toIso8601String(),
-                'deleted_at': c.deletedAt?.toIso8601String(),
+                'created_at': c.createdAt.toUtc().toIso8601String(),
+                'deleted_at': c.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -967,8 +1058,8 @@ class SyncService {
                 'umbral_secado_litros': c.umbralSecadoLitros,
                 'tope_kg_leche': c.topeKgLeche,
                 'kg_leche_por_kg_concentrado': c.kgLechePorKgConcentrado,
-                'created_at': c.createdAt.toIso8601String(),
-                'deleted_at': c.deletedAt?.toIso8601String(),
+                'created_at': c.createdAt.toUtc().toIso8601String(),
+                'deleted_at': c.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -1027,8 +1118,8 @@ class SyncService {
                 'fecha_inicio': _soloFecha(s.fechaInicio),
                 'fecha_fin': _soloFecha(s.fechaFin),
                 'cerrada': s.cerrada,
-                'created_at': s.createdAt.toIso8601String(),
-                'deleted_at': s.deletedAt?.toIso8601String(),
+                'created_at': s.createdAt.toUtc().toIso8601String(),
+                'deleted_at': s.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -1083,8 +1174,8 @@ class SyncService {
                 'litros': i.litros,
                 'animal_id': i.animalId,
                 'detalle': i.detalle,
-                'created_at': i.createdAt.toIso8601String(),
-                'deleted_at': i.deletedAt?.toIso8601String(),
+                'created_at': i.createdAt.toUtc().toIso8601String(),
+                'deleted_at': i.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -1140,8 +1231,8 @@ class SyncService {
                 'categoria': g.categoria,
                 'monto': g.monto,
                 'detalle': g.detalle,
-                'created_at': g.createdAt.toIso8601String(),
-                'deleted_at': g.deletedAt?.toIso8601String(),
+                'created_at': g.createdAt.toUtc().toIso8601String(),
+                'deleted_at': g.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -1195,8 +1286,8 @@ class SyncService {
                 'solidos_totales_pct': c.solidosTotalesPct,
                 'celulas_somaticas': c.celulasSomaticas,
                 'conteo_bacterial': c.conteoBacterial,
-                'created_at': c.createdAt.toIso8601String(),
-                'deleted_at': c.deletedAt?.toIso8601String(),
+                'created_at': c.createdAt.toUtc().toIso8601String(),
+                'deleted_at': c.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -1248,8 +1339,8 @@ class SyncService {
                 'lecheria_id': c.lecheriaId,
                 'nombre': c.nombre,
                 'orden': c.orden,
-                'created_at': c.createdAt.toIso8601String(),
-                'deleted_at': c.deletedAt?.toIso8601String(),
+                'created_at': c.createdAt.toUtc().toIso8601String(),
+                'deleted_at': c.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];
@@ -1299,8 +1390,8 @@ class SyncService {
                 'nombre': m.nombre,
                 'dosis_aplicacion': m.dosisAplicacion,
                 'ml_envase': m.mlEnvase,
-                'created_at': m.createdAt.toIso8601String(),
-                'deleted_at': m.deletedAt?.toIso8601String(),
+                'created_at': m.createdAt.toUtc().toIso8601String(),
+                'deleted_at': m.deletedAt?.toUtc().toIso8601String(),
               },
             ),
         ];

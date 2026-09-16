@@ -147,7 +147,7 @@ pw.Widget _encabezado({
           ' · ${proyeccion.totalEnCalendario} en los próximos '
           '${proyeccion.meses.length} meses'
           '${pico == null ? '' : ' · más partos en ${pico.etiqueta} '
-              '(${pico.cantidad})'}',
+                    '(${pico.cantidad})'}',
           style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
         ),
       ),
@@ -232,9 +232,8 @@ pw.TableRow _bandaDeMes(MesDePartos mes) {
 
 /// El fondo de la banda: los meses con partos se marcan más que los vacíos,
 /// para que la hoja se recorra buscando los cargados.
-pw.BoxDecoration _fondoDeMes(MesDePartos mes) => pw.BoxDecoration(
-  color: mes.vacio ? PdfColors.grey100 : PdfColors.grey200,
-);
+pw.BoxDecoration _fondoDeMes(MesDePartos mes) =>
+    pw.BoxDecoration(color: mes.vacio ? PdfColors.grey100 : PdfColors.grey200);
 
 pw.TableRow _filaVaca(VacaPorParir v, DateTime hoy) {
   final dias = v.dias(hoy: hoy);

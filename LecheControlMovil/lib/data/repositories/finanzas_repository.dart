@@ -161,7 +161,20 @@ class FinanzasRepository {
     if (existente != null) return existente;
 
     final ahora = DateTime.now();
-    final id = _uuid.v4();
+    // El id de la semana es **determinista**: sale de la lechería y del lunes,
+    // así que dos teléfonos que abran la misma semana generan exactamente el
+    // mismo id y la fila converge sola.
+    //
+    // Con `v4()` cada uno inventaba un id distinto para el mismo lunes. El
+    // servidor tiene un índice único por (lechería, fecha_inicio), así que la
+    // segunda semana **no podía subir nunca** —el "subiendo 1 de 1" eterno— y
+    // además, al bajar la del otro teléfono, chocaba contra el mismo índice en
+    // la base local y mataba la bajada de `semanas` por completo.
+    final lunes =
+        '${inicio.year.toString().padLeft(4, '0')}-'
+        '${inicio.month.toString().padLeft(2, '0')}-'
+        '${inicio.day.toString().padLeft(2, '0')}';
+    final id = _uuid.v5(Namespace.url.value, 'semana/$lecheriaId/$lunes');
     await db
         .into(db.semanas)
         .insert(

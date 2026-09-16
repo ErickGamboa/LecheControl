@@ -122,15 +122,14 @@ class _AvisoState extends State<_Aviso> with SingleTickerProviderStateMixin {
             ),
             child: Semantics(
               liveRegion: true,
-              label: '${widget.bien ? 'Registrado' : 'No se registró'}. '
+              label:
+                  '${widget.bien ? 'Registrado' : 'No se registró'}. '
                   '${widget.detalle}',
               child: Container(
                 key: ValueKey(
                   widget.bien ? 'avisoRapido.exito' : 'avisoRapido.fallo',
                 ),
-                margin: const EdgeInsets.symmetric(
-                  horizontal: LecheSpacing.xl,
-                ),
+                margin: const EdgeInsets.symmetric(horizontal: LecheSpacing.xl),
                 padding: const EdgeInsets.symmetric(
                   horizontal: LecheSpacing.xl,
                   vertical: LecheSpacing.xl,

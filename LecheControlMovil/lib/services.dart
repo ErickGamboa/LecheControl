@@ -95,6 +95,23 @@ Future<void> sincronizarSiSePuede() async {
   await syncService.sincronizar();
 }
 
+/// Vuelve a bajar **todo** del servidor, sin desinstalar la app.
+///
+/// **Por qué existe.** Cuando una fila local se quedaba con un dato falso que
+/// el servidor ya había corregido, no había ninguna forma de forzar la
+/// descarga: los marcadores de bajada solo se borraban al entrar con otra
+/// cuenta. La única salida real era desinstalar y volver a instalar, y eso no
+/// se le pide a un ganadero en el campo.
+///
+/// Primero intenta subir lo que haya pendiente —no se descarta trabajo por
+/// refrescar— y después borra los marcadores para que la próxima
+/// sincronización se traiga el hato completo otra vez.
+Future<void> volverABajarTodo() async {
+  await sincronizarSiSePuede();
+  await syncService.olvidarCursores();
+  await sincronizarSiSePuede();
+}
+
 /// Deja la base local lista para [usuarioId], borrándola si era de otro.
 ///
 /// **El problema que resuelve.** La base local es un solo archivo y nadie la
@@ -171,6 +188,7 @@ Future<void> _borrarDatosLocales() async {
       db.cuentas,
       db.syncCursores,
       db.syncEstados,
+      db.syncFallos,
     ]) {
       await db.delete(tabla).go();
     }
@@ -207,8 +225,34 @@ Future<String> diagnosticoDeSync({AppDatabase? base}) async {
   }
 }
 
+/// El error, en una línea que quepa en pantalla.
+///
+/// Los errores de red traen la URL entera de la petición, con el id de la fila
+/// y los parámetros. Eso llena la hoja, tapa los botones y no le dice nada a
+/// nadie: lo que importa es **qué falló**, y eso va al principio.
+String _resumirError(String? error) {
+  if (error == null || error.trim().isEmpty) return '';
+  final limpio = error.replaceAll(RegExp(r'\s+'), ' ').trim();
+  // Se corta antes de la URL, que es donde empieza el ruido.
+  final sinUri = limpio.split(RegExp(r',?\s*uri=')).first;
+  return sinUri.length <= 140 ? sinUri : '${sinUri.substring(0, 139)}…';
+}
+
 Future<String> _diagnosticoDeSync({AppDatabase? base}) async {
   final d = base ?? db;
+
+  // Lo que no logra SUBIR va primero: es lo que deja al teléfono con un dato
+  // que el servidor ya corrigió, y hasta ahora no se veía en ninguna parte
+  // (solo iba a `debugPrint`, invisible en una app instalada).
+  final trabadas = await d.select(d.syncFallos).get();
+  if (trabadas.isNotEmpty) {
+    final peor = trabadas.reduce((a, b) => a.intentos >= b.intentos ? a : b);
+    final resto = trabadas.length > 1 ? ' (y ${trabadas.length - 1} más)' : '';
+    return 'No logra subir ${peor.tabla}$resto: ${peor.intentos} intentos. '
+            '${_resumirError(peor.ultimoError)}'
+        .trim();
+  }
+
   final filas = await d.select(d.syncEstados).get();
   if (filas.isEmpty) {
     // Ni éxito ni error en ninguna tabla: la sincronización no llegó a
