@@ -4,11 +4,14 @@
 /// cuáles revisa. Son dos motivos distintos y ninguno se anota a mano: los dos
 /// salen de lo que ya está en la hoja de vida del animal.
 ///
-/// 1. **Recién paridas** — parieron hace [diasRevisionPosparto] días o menos.
-///    Es la revisión de posparto. La vaca entra y sale sola de la lista.
-/// 2. **Servidas sin confirmar** — se les registró celo, monta o inseminación
-///    y todavía no están preñadas. Es el diagnóstico de gestación: se palpa
-///    para saber si la vaca **aumentó** o hay que volver a servirla.
+/// 1. **Servidas sin confirmar** — se les registró monta o inseminación y
+///    todavía no están preñadas. Es el diagnóstico de gestación: se palpa para
+///    saber si la vaca **aumentó** o hay que volver a servirla. El celo no
+///    entra: es una observación de que la vaca está en calor, no un servicio,
+///    y no hay nada que confirmar después de él.
+/// 2. **Paridas sin diagnóstico** — parieron hace más de
+///    [diasSinDiagnostico] días y nadie les ha registrado preñez ni vacío.
+///    Estas **no salen solas**: salen cuando se les registra el diagnóstico.
 ///
 /// Nada de esto depende de la base de datos a propósito: es la regla de
 /// negocio y se prueba sola.
@@ -16,26 +19,34 @@ library;
 
 import 'grupos.dart';
 
-/// Hasta cuántos días después del parto la vaca sale en la lista de posparto.
-const diasRevisionPosparto = 15;
+/// A partir de cuántos días del parto una vaca sin diagnóstico entra a la
+/// lista.
+///
+/// **Cambió de sentido.** Antes marcaba una ventana —la vaca entraba los
+/// primeros 15 días y salía sola al día 16, hubiera pasado el veterinario o
+/// no—. Ahora es un piso: se le da ese margen a la vaca recién parida y, si
+/// pasado eso **nadie le ha dicho si quedó preñada o vacía**, entra a la lista
+/// y no sale hasta que se le registre. Una vaca sin diagnosticar no deja de
+/// necesitar palpación porque pase el tiempo; al revés.
+const diasSinDiagnostico = 15;
 
 /// Por qué la vaca está en la lista.
 enum MotivoPalpacion {
-  /// Parió hace poco: toca la revisión de posparto.
-  posparto,
-
   /// Ya se sirvió y no se ha confirmado la preñez.
-  servidaSinConfirmar;
+  servidaSinConfirmar,
+
+  /// Parió hace rato y nadie le ha registrado preñez ni vacío.
+  paridaSinDiagnostico;
 
   String get etiqueta => switch (this) {
-    MotivoPalpacion.posparto => 'Recién parida',
     MotivoPalpacion.servidaSinConfirmar => 'Servida sin confirmar',
+    MotivoPalpacion.paridaSinDiagnostico => 'Parida sin diagnóstico',
   };
 
   /// Cómo se escribe en la tabla del PDF, donde la columna es angosta.
   String get etiquetaCorta => switch (this) {
-    MotivoPalpacion.posparto => 'Recién parida',
     MotivoPalpacion.servidaSinConfirmar => 'Servida',
+    MotivoPalpacion.paridaSinDiagnostico => 'Sin diagnóstico',
   };
 }
 
@@ -53,21 +64,23 @@ typedef RazonPalpacion = ({MotivoPalpacion motivo, DateTime fecha});
 
 /// Decide si hay que palpar una vaca, mirando solo su historia reproductiva.
 ///
-/// [fechaUltimoServicio] y [fechaUltimaPalpacion] son las del **último** evento
-/// de cada tipo; [estadoReproductivo] es el de la ficha del animal.
+/// [fechaUltimoServicio] es la del último servicio **de verdad** —monta o
+/// inseminación—; el celo no cuenta, es solo una observación de que la vaca
+/// está en calor y no hay nada que confirmar después de él.
+/// [fechaUltimaPalpacion] es la del último diagnóstico y [estadoReproductivo]
+/// el de la ficha.
 ///
 /// Las reglas, en orden:
 ///
-/// - **Posparto manda.** Si parió hace [diasRevisionPosparto] días o menos,
-///   entra por eso aunque además tenga un servicio viejo colgando: lo que toca
-///   ahora es la revisión de posparto.
 /// - **Preñada confirmada no se palpa.** Ya se sabe la respuesta.
-/// - **Un servicio anterior al último parto no cuenta.** Ese servicio ya
-///   terminó en parto; volver a listarlo dejaría a la vaca clavada en la lista
-///   para siempre.
-/// - **Si ya se palpó después del servicio, el trabajo está hecho.** Aunque
-///   haya salido vacía: para volver a palparla hace falta un servicio nuevo.
-///   Sin esta regla la lista nunca se vaciaría.
+/// - **Servida y sin confirmar manda.** Es el dato más útil para el
+///   veterinario: sabe con qué se sirvió y hace cuánto. Un servicio anterior
+///   al último parto no cuenta —ese ya terminó en parto— y si ya se palpó
+///   después del servicio el trabajo está hecho, aunque haya salido vacía:
+///   para volver a listarla hace falta un servicio nuevo.
+/// - **Parida y sin diagnóstico.** Pasados [diasSinDiagnostico] días del
+///   parto, si nadie le registró preñez ni vacío, entra. Y **no sale sola**:
+///   sale cuando se le registra el diagnóstico.
 RazonPalpacion? razonDePalpacion({
   required DateTime? fechaUltimoParto,
   required DateTime? fechaUltimoServicio,
@@ -75,25 +88,25 @@ RazonPalpacion? razonDePalpacion({
   required String estadoReproductivo,
   DateTime? hoy,
 }) {
-  if (fechaUltimoParto != null &&
-      diasDesde(fechaUltimoParto, hoy: hoy) <= diasRevisionPosparto &&
-      diasDesde(fechaUltimoParto, hoy: hoy) >= 0) {
-    return (motivo: MotivoPalpacion.posparto, fecha: fechaUltimoParto);
-  }
-
   if (estadoReproductivo == EstadoReproductivo.preniada) return null;
 
   final servicio = fechaUltimoServicio;
-  if (servicio == null) return null;
-  if (fechaUltimoParto != null && !servicio.isAfter(fechaUltimoParto)) {
-    return null;
-  }
-  if (fechaUltimaPalpacion != null &&
-      !fechaUltimaPalpacion.isBefore(servicio)) {
-    return null;
+  final servicioVigente =
+      servicio != null &&
+      (fechaUltimoParto == null || servicio.isAfter(fechaUltimoParto)) &&
+      (fechaUltimaPalpacion == null || fechaUltimaPalpacion.isBefore(servicio));
+  if (servicioVigente) {
+    return (motivo: MotivoPalpacion.servidaSinConfirmar, fecha: servicio);
   }
 
-  return (motivo: MotivoPalpacion.servidaSinConfirmar, fecha: servicio);
+  final parto = fechaUltimoParto;
+  if (parto != null &&
+      diasDesde(parto, hoy: hoy) > diasSinDiagnostico &&
+      (fechaUltimaPalpacion == null || !fechaUltimaPalpacion.isAfter(parto))) {
+    return (motivo: MotivoPalpacion.paridaSinDiagnostico, fecha: parto);
+  }
+
+  return null;
 }
 
 /// Una vaca de la lista, ya lista para pintar en pantalla o en el PDF.
@@ -130,7 +143,7 @@ class VacaPorPalpar {
   final String? toroPajilla;
 
   /// Cómo se lee el servicio en una línea, p. ej. "Inseminación · Pajilla 44".
-  /// Vacío cuando la vaca entró por posparto.
+  /// Vacío cuando la vaca entró por no tener diagnóstico.
   String get detalleServicio {
     final tipo = tipoServicio;
     if (tipo == null) return '';
@@ -140,9 +153,9 @@ class VacaPorPalpar {
   }
 }
 
-/// Ordena la lista como la va a leer el veterinario: primero las recién
-/// paridas —que tienen fecha de vencimiento— y después las servidas, las más
-/// atrasadas arriba.
+/// Ordena la lista como la va a leer el veterinario: primero las servidas sin
+/// confirmar —que es lo que vino a hacer— y después las paridas sin
+/// diagnóstico, las más atrasadas arriba.
 ///
 /// Dentro de cada motivo manda el número de días, de mayor a menor: la vaca
 /// que lleva 60 días servida sin confirmar es más urgente que la de 30.

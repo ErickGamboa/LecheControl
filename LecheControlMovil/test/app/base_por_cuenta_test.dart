@@ -44,9 +44,11 @@ Future<void> prepararPara(AppDatabase db, String usuarioId) async {
     });
   }
 
-  await db.into(db.duenoDatosLocales).insertOnConflictUpdate(
-    DuenoLocalRow(id: fila, usuarioId: usuarioId, desde: DateTime.now()),
-  );
+  await db
+      .into(db.duenoDatosLocales)
+      .insertOnConflictUpdate(
+        DuenoLocalRow(id: fila, usuarioId: usuarioId, desde: DateTime.now()),
+      );
 }
 
 void main() {
@@ -99,8 +101,10 @@ void main() {
     await prepararPara(db, 'apple');
 
     // Apple ve lo suyo.
-    expect((await lecherias.obtenerActiva('apple'))?.nombre,
-        'Lechería de prueba');
+    expect(
+      (await lecherias.obtenerActiva('apple'))?.nombre,
+      'Lechería de prueba',
+    );
 
     // Entra otra cuenta en el mismo teléfono.
     await prepararPara(db, 'erick');
@@ -165,20 +169,24 @@ void main() {
       nombreLecheria: 'Lechería de prueba',
       animal: '777',
     );
-    await db.into(db.syncCursores).insert(
-      SyncCursorRow(
-        tabla: 'usuarios',
-        usuarioId: 'apple',
-        ultimaBajada: DateTime.utc(2026, 9, 7),
-        ultimaBajadaId: 'apple',
-      ),
-    );
-    await db.into(db.syncEstados).insert(
-      SyncEstadosCompanion.insert(
-        tabla: 'usuarios',
-        ultimoError: const Value('algo falló'),
-      ),
-    );
+    await db
+        .into(db.syncCursores)
+        .insert(
+          SyncCursorRow(
+            tabla: 'usuarios',
+            usuarioId: 'apple',
+            ultimaBajada: DateTime.utc(2026, 9, 7),
+            ultimaBajadaId: 'apple',
+          ),
+        );
+    await db
+        .into(db.syncEstados)
+        .insert(
+          SyncEstadosCompanion.insert(
+            tabla: 'usuarios',
+            ultimoError: const Value('algo falló'),
+          ),
+        );
     await prepararPara(db, 'apple');
 
     await prepararPara(db, 'erick');

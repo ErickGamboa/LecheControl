@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../domain/grupos.dart';
 import '../domain/palpacion.dart';
+import '../domain/servir.dart';
 import '../local/database.dart';
 
 /// Arma la lista de vacas por palpar (Módulo 6 — Análisis).
@@ -16,11 +17,13 @@ class PalpacionRepository {
 
   /// Tipos de evento que cuentan como "la vaca fue servida".
   ///
-  /// El celo entra junto a la monta y la inseminación porque en la finca se
-  /// anota como parte del mismo momento; lo que importa para la regla es la
-  /// **fecha del último**, sea cual sea de los tres.
-  static const _tiposServicio = [
-    TipoEventoAnimal.celo,
+  /// **El celo no está, y es a propósito.** Antes entraba junto a la monta y
+  /// la inseminación porque en la finca se anotan en el mismo momento, pero
+  /// son cosas distintas: el celo es que la vaca está en calor, un dato para
+  /// decidir cuándo servirla. Contarlo como servicio metía en la lista de
+  /// palpación vacas a las que nadie había echado toro ni pajilla, y no hay
+  /// preñez que confirmar donde no hubo servicio.
+  static const tiposServicio = [
     TipoEventoAnimal.monta,
     TipoEventoAnimal.inseminacion,
   ];
@@ -46,7 +49,7 @@ class PalpacionRepository {
             .get();
     if (animales.isEmpty) return const [];
 
-    final tiposDeInteres = [..._tiposServicio, TipoEventoAnimal.palpacion];
+    final tiposDeInteres = [...tiposServicio, TipoEventoAnimal.palpacion];
     final eventos =
         await (db.select(db.eventosAnimal)
               ..where(
@@ -94,7 +97,8 @@ class PalpacionRepository {
           fecha: razon.fecha,
           dias: diasDesde(razon.fecha, hoy: hoy),
           // El servicio solo se muestra cuando es la razón de estar en la
-          // lista: en una recién parida sería el de la preñez que ya terminó.
+          // lista: en una parida sin diagnóstico sería el de la preñez que ya
+          // terminó en ese parto.
           tipoServicio: esPorServicio ? servicio?.tipo : null,
           toroPajilla: esPorServicio ? servicio?.toroPajilla : null,
         ),
@@ -102,6 +106,71 @@ class PalpacionRepository {
     }
 
     lista.sort(compararPorPalpar);
+    return lista;
+  }
+
+  /// Las vacas que hay que servir: parieron hace [diasParaServir] días o más y
+  /// siguen sin preñarse (ver `domain/servir.dart`).
+  ///
+  /// Mismo patrón que [porPalpar]: dos consultas y el cruce en memoria. Acá
+  /// además hay que **contar** los servicios posteriores al parto, no solo
+  /// quedarse con el último, porque el número de intentos es justo lo que dice
+  /// si la vaca no se está sirviendo o si se sirve y no agarra —dos problemas
+  /// distintos, con soluciones distintas—.
+  Future<List<VacaPorServir>> porServir(
+    String lecheriaId, {
+    DateTime? hoy,
+  }) async {
+    final animales =
+        await (db.select(db.animales)..where(
+              (t) =>
+                  t.lecheriaId.equals(lecheriaId) &
+                  t.deletedAt.isNull() &
+                  t.estado.equals(EstadoAnimal.activo) &
+                  t.sexo.equals(Sexo.hembra),
+            ))
+            .get();
+    if (animales.isEmpty) return const [];
+
+    final candidatas = animales
+        .where(
+          (a) => hayQueServir(
+            sexo: a.sexo,
+            fechaUltimoParto: a.fechaUltimoParto,
+            estadoReproductivo: a.estadoReproductivo,
+            hoy: hoy,
+          ),
+        )
+        .toList();
+    if (candidatas.isEmpty) return const [];
+
+    final servicios =
+        await (db.select(db.eventosAnimal)..where(
+              (t) =>
+                  t.lecheriaId.equals(lecheriaId) &
+                  t.deletedAt.isNull() &
+                  t.tipo.isIn(tiposServicio),
+            ))
+            .get();
+
+    final porAnimal = <String, List<DateTime>>{};
+    for (final e in servicios) {
+      (porAnimal[e.animalId] ??= []).add(e.fecha);
+    }
+
+    final lista = [
+      for (final a in candidatas)
+        VacaPorServir(
+          animalId: a.id,
+          identificador: a.identificador,
+          grupo: a.grupo,
+          estadoReproductivo: a.estadoReproductivo,
+          diasLactancia: diasDesde(a.fechaUltimoParto!, hoy: hoy),
+          servicios: (porAnimal[a.id] ?? const [])
+              .where((f) => f.isAfter(a.fechaUltimoParto!))
+              .length,
+        ),
+    ]..sort(compararPorServir);
     return lista;
   }
 }

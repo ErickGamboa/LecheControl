@@ -17,7 +17,7 @@ class ResumenHato extends StatelessWidget {
 
   final String lecheriaId;
 
-  /// Los cuatro grupos del hato, cada uno con su color.
+  /// Los grupos del hato, cada uno con su color.
   ///
   /// "En tratamiento" queda afuera a propósito: no es un grupo del hato sino
   /// una situación pasajera, y su lugar es Sanidad.
@@ -26,6 +26,7 @@ class ResumenHato extends StatelessWidget {
     (GrupoAnimal.secas, 'Secas', kAzulLeche),
     (GrupoAnimal.novillas, 'Novillas', kVerdeLeche),
     (GrupoAnimal.terneros, 'Terneros', kAmbarLeche),
+    (GrupoAnimal.toros, 'Toros', kAzulLeche),
   ];
 
   @override
@@ -38,9 +39,9 @@ class ResumenHato extends StatelessWidget {
           // Sin relleno arriba ni abajo a propósito: el hueco lo pone quien lo
           // usa (ver `HomeScreen.build`).
           padding: const EdgeInsets.symmetric(horizontal: LecheSpacing.lg),
-          // `IntrinsicHeight` para que los cuatro cuadritos queden del mismo
-          // alto: sin esto, `stretch` no tiene contra qué estirarse (la fila
-          // no tiene altura acotada) y revienta el layout.
+          // `IntrinsicHeight` para que los cuadritos queden del mismo alto:
+          // sin esto, `stretch` no tiene contra qué estirarse (la fila no
+          // tiene altura acotada) y revienta el layout.
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -87,19 +88,26 @@ class _ContadorGrupo extends StatelessWidget {
       key: ValueKey(valueKey),
       margin: const EdgeInsets.symmetric(horizontal: LecheSpacing.xs),
       child: Padding(
+        // Con cinco grupos el ancho por cuadro se achica, así que el relleno
+        // lateral se reduce: es espacio que le hace más falta al nombre.
         padding: const EdgeInsets.symmetric(
-          horizontal: LecheSpacing.sm,
+          horizontal: LecheSpacing.xs,
           vertical: LecheSpacing.md,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              cantidad == null ? '—' : '$cantidad',
-              style: textos.headlineSmall?.copyWith(color: color),
+            // El número también se encoge si hace falta: con tres cifras y
+            // cinco columnas, si no, se sale.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                cantidad == null ? '—' : '$cantidad',
+                style: textos.headlineSmall?.copyWith(color: color),
+              ),
             ),
             const SizedBox(height: 2),
-            // Los nombres largos ("En ordeño") no caben en cuatro columnas a
+            // Los nombres largos ("En ordeño") no caben en cinco columnas a
             // tamaño normal, así que se encogen en vez de cortarse con "…":
             // un número sin saber de qué grupo es no sirve de nada.
             FittedBox(

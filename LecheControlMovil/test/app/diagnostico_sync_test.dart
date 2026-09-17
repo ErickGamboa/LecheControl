@@ -27,13 +27,15 @@ void main() {
   });
 
   test('con un error muestra la tabla y el mensaje', () async {
-    await db.into(db.syncEstados).insert(
-      SyncEstadosCompanion.insert(
-        tabla: 'cuentas',
-        ultimoError: const Value('SocketException: Failed host lookup'),
-        ultimoErrorEn: Value(DateTime(2026, 9, 8, 10)),
-      ),
-    );
+    await db
+        .into(db.syncEstados)
+        .insert(
+          SyncEstadosCompanion.insert(
+            tabla: 'cuentas',
+            ultimoError: const Value('SocketException: Failed host lookup'),
+            ultimoErrorEn: Value(DateTime(2026, 9, 8, 10)),
+          ),
+        );
 
     final texto = await diagnosticoDeSync(base: db);
     expect(texto, contains('cuentas'));
@@ -41,38 +43,47 @@ void main() {
   });
 
   test('con varios errores muestra el más reciente', () async {
-    await db.into(db.syncEstados).insert(
-      SyncEstadosCompanion.insert(
-        tabla: 'animales',
-        ultimoError: const Value('error viejo'),
-        ultimoErrorEn: Value(DateTime(2026, 9, 8, 9)),
-      ),
-    );
-    await db.into(db.syncEstados).insert(
-      SyncEstadosCompanion.insert(
-        tabla: 'cuentas',
-        ultimoError: const Value('error nuevo'),
-        ultimoErrorEn: Value(DateTime(2026, 9, 8, 11)),
-      ),
-    );
+    await db
+        .into(db.syncEstados)
+        .insert(
+          SyncEstadosCompanion.insert(
+            tabla: 'animales',
+            ultimoError: const Value('error viejo'),
+            ultimoErrorEn: Value(DateTime(2026, 9, 8, 9)),
+          ),
+        );
+    await db
+        .into(db.syncEstados)
+        .insert(
+          SyncEstadosCompanion.insert(
+            tabla: 'cuentas',
+            ultimoError: const Value('error nuevo'),
+            ultimoErrorEn: Value(DateTime(2026, 9, 8, 11)),
+          ),
+        );
 
     expect(await diagnosticoDeSync(base: db), contains('error nuevo'));
   });
 
-  test('si todo bajó bien lo dice, en vez de dejar el recuadro vacío', () async {
-    // Que no haya errores y aun así la app no entre es un dato en sí: apunta
-    // a que lo que falta no es red sino la fila de la cuenta.
-    await db.into(db.syncEstados).insert(
-      SyncEstadosCompanion.insert(
-        tabla: 'cuentas',
-        ultimaSincronizacionOk: Value(DateTime(2026, 9, 8, 10)),
-      ),
-    );
+  test(
+    'si todo bajó bien lo dice, en vez de dejar el recuadro vacío',
+    () async {
+      // Que no haya errores y aun así la app no entre es un dato en sí: apunta
+      // a que lo que falta no es red sino la fila de la cuenta.
+      await db
+          .into(db.syncEstados)
+          .insert(
+            SyncEstadosCompanion.insert(
+              tabla: 'cuentas',
+              ultimaSincronizacionOk: Value(DateTime(2026, 9, 8, 10)),
+            ),
+          );
 
-    final texto = await diagnosticoDeSync(base: db);
-    expect(texto, contains('sin errores'));
-    expect(texto, isNotEmpty);
-  });
+      final texto = await diagnosticoDeSync(base: db);
+      expect(texto, contains('sin errores'));
+      expect(texto, isNotEmpty);
+    },
+  );
 
   test('nunca lanza, pase lo que pase con la base', () async {
     // Un diagnóstico que revienta tapa el problema con otro problema. Sobre

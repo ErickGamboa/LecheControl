@@ -124,6 +124,16 @@ class Animales extends Table {
   RealColumn get precioCompra => real().nullable()();
   DateTimeColumn get fechaCompra => dateTime().nullable()();
   TextColumn get madreId => text().nullable()();
+
+  /// De qué toro del hato es hija. Lo pone solo el evento de parto, leyendo el
+  /// último servicio de la madre; null si fue por inseminación o si no se
+  /// anotó con qué se sirvió.
+  TextColumn get padreId => text().nullable()();
+
+  /// La pajilla con la que se inseminó a la madre, cuando el padre no es un
+  /// toro del hato. Va como texto porque es lo que trae la etiqueta.
+  TextColumn get padrePajilla => text().nullable()();
+
   DateTimeColumn get fechaProbableParto => dateTime().nullable()();
   DateTimeColumn get retiroLecheHasta => dateTime().nullable()();
 
@@ -142,7 +152,7 @@ class Animales extends Table {
   @override
   List<String> get customConstraints => [
     "CHECK (sexo IN ('hembra','macho'))",
-    "CHECK (grupo IN ('en_ordeno','secas','novillas','terneros'))",
+    "CHECK (grupo IN ('en_ordeno','secas','novillas','terneros','toros'))",
     "CHECK (estado IN ('activo','vendido','muerto','descartado'))",
     "CHECK (estado_reproductivo IN ('vacia','preñada','desconocido'))",
     "CHECK (origen IN ('comprado','nacido'))",
@@ -164,7 +174,18 @@ class EventosAnimal extends Table {
   IntColumn get diasRetiro => integer().nullable()();
   RealColumn get costo => real().nullable()();
   TextColumn get resultado => text().nullable()(); // 'preñada' | 'vacia'
+
+  /// La pajilla de la inseminación, tal como dice la etiqueta.
   TextColumn get toroPajilla => text().nullable()();
+
+  /// El toro del hato con el que se montó. Es un `animales.id`, no texto: así
+  /// la cría queda ligada al padre de verdad y no a un nombre escrito a mano.
+  TextColumn get toroId => text().nullable()();
+
+  /// Qué se le aplicó a la vaca cuando la palpación salió vacía. Texto libre:
+  /// es una nota para la hoja de vida, no una aplicación de Sanidad, así que
+  /// **no** mueve el retiro de leche.
+  TextColumn get tratamiento => text().nullable()();
   TextColumn get sexoCria => text().nullable()();
   TextColumn get grupoAnterior => text().nullable()();
   TextColumn get grupoNuevo => text().nullable()();
@@ -606,7 +627,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -651,7 +672,16 @@ class AppDatabase extends _$AppDatabase {
       // animal. La columna también se eliminó en Supabase, así que dejarla
       // acá haría fallar la subida de cada animal.
       if (from < 4) {
-        await m.alterTable(TableMigration(animales));
+        // `newColumns`: al recrear la tabla, Drift copia usando el esquema de
+        // HOY. Las columnas que se agregaron después de este paso no existen
+        // en la tabla vieja, así que hay que decirlo o la copia revienta con
+        // «no such column» en el teléfono de quien venga de una versión vieja.
+        await m.alterTable(
+          TableMigration(
+            animales,
+            newColumns: [animales.padreId, animales.padrePajilla],
+          ),
+        );
       }
       // v4 -> v5: el medicamento se registra con nombre, dosis (texto, como
       // dice la etiqueta) y ml del envase; se van el costo por envase, el
@@ -682,7 +712,12 @@ class AppDatabase extends _$AppDatabase {
         // El tipo de evento vive en un CHECK, y SQLite no sabe cambiar uno:
         // Drift recrea la tabla copiando las filas. Sin esto, guardar una
         // observación falla.
-        await m.alterTable(TableMigration(eventosAnimal));
+        await m.alterTable(
+          TableMigration(
+            eventosAnimal,
+            newColumns: [eventosAnimal.toroId, eventosAnimal.tratamiento],
+          ),
+        );
       }
       // v6 -> v7: la dieta de concentrado. Cuántos kilos de leche pagan un
       // kilo de concentrado; arranca en 3 para las lecherías que ya existen.
@@ -722,6 +757,39 @@ class AppDatabase extends _$AppDatabase {
       if (from < 11) {
         await m.createTable(syncFallos);
       }
+      // v11 -> v12: los toros. La cría queda ligada a su padre —el toro del
+      // hato o la pajilla—, la monta guarda con cuál toro fue, y la palpación
+      // vacía puede llevar el tratamiento que se aplicó.
+      if (from < 12) {
+        // Las dos tablas se **recrean** en vez de agregarles columnas, y por
+        // motivos distintos:
+        //
+        // - `animales` porque el grupo vive en un CHECK y SQLite no sabe
+        //   cambiar uno; sin recrearla, guardar un toro falla con «CHECK
+        //   constraint».
+        // - `eventos_animal` por consistencia con el paso de arriba: si el
+        //   ganadero viene de antes de la v6, esa tabla ya se recreó con las
+        //   columnas nuevas y un `addColumn` acá reventaría por duplicada.
+        //
+        // `newColumns` le dice a Drift cuáles no existen en la tabla vieja,
+        // para que no intente copiarlas.
+        await m.alterTable(
+          TableMigration(
+            animales,
+            newColumns: [animales.padreId, animales.padrePajilla],
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            eventosAnimal,
+            newColumns: [eventosAnimal.toroId, eventosAnimal.tratamiento],
+          ),
+        );
+        // Recrear una tabla se lleva sus índices. Solo se rehace el de
+        // `animales`, que es el que se acaba de perder: tocar los de las
+        // demás tablas acá sería trabajo de otro paso.
+        await _crearIndiceAretesUnicos();
+      }
     },
   );
 
@@ -738,6 +806,19 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Un arete no se repite entre los animales vivos de una lechería.
+  ///
+  /// Va aparte porque recrear `animales` se lleva sus índices y hay que
+  /// rehacer **este** sin tocar los de las otras tablas.
+  Future<void> _crearIndiceAretesUnicos() async {
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS '
+      'idx_animales_lecheria_identificador_activos '
+      'ON animales (lecheria_id, identificador) '
+      'WHERE deleted_at IS NULL',
+    );
+  }
+
   Future<void> _crearIndicesUnicosLocales() async {
     await customStatement(
       'CREATE UNIQUE INDEX IF NOT EXISTS '
@@ -745,12 +826,7 @@ class AppDatabase extends _$AppDatabase {
       'ON lecheria_miembros (lecheria_id, usuario_id) '
       'WHERE deleted_at IS NULL',
     );
-    await customStatement(
-      'CREATE UNIQUE INDEX IF NOT EXISTS '
-      'idx_animales_lecheria_identificador_activos '
-      'ON animales (lecheria_id, identificador) '
-      'WHERE deleted_at IS NULL',
-    );
+    await _crearIndiceAretesUnicos();
     await customStatement(
       'CREATE UNIQUE INDEX IF NOT EXISTS '
       'idx_curva_referencia_lecheria_tramo '

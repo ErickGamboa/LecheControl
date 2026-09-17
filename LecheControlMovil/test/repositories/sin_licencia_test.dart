@@ -114,8 +114,14 @@ void main() {
     });
 
     test('el mensaje concuerda con el número', () {
-      expect(const LimiteLecheriasException(1).mensaje, contains('tu lechería'));
-      expect(const LimiteLecheriasException(3).mensaje, contains('3 lecherías'));
+      expect(
+        const LimiteLecheriasException(1).mensaje,
+        contains('tu lechería'),
+      );
+      expect(
+        const LimiteLecheriasException(3).mensaje,
+        contains('3 lecherías'),
+      );
     });
   });
 }

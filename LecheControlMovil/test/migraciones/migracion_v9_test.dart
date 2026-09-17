@@ -2,6 +2,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/local/database.dart';
 
+import 'tablas_que_se_recrean.dart';
+
 /// v8 -> v9: el cursor de bajada pasa a ser por usuario.
 ///
 /// Es la migración que corre en el teléfono de cada ganadero al actualizar, y
@@ -16,9 +18,12 @@ void main() {
   test('recrea los cursores sin tocar los datos del ganadero', () async {
     final executor = NativeDatabase.memory(
       setup: (raw) {
+        for (final sql in tablasQueSeRecrean) {
+          raw.execute(sql);
+        }
         // Esquema v8 de `sync_cursores`: la clave era solo la tabla.
         raw.execute('''
-      CREATE TABLE sync_cursores (
+      CREATE TABLE IF NOT EXISTS sync_cursores (
         tabla TEXT NOT NULL PRIMARY KEY,
         ultima_bajada TEXT,
         ultima_bajada_id TEXT
@@ -30,7 +35,7 @@ void main() {
 
         // Y datos de verdad del ganadero, que tienen que sobrevivir.
         raw.execute('''
-      CREATE TABLE animales (
+      CREATE TABLE IF NOT EXISTS animales (
         id TEXT NOT NULL PRIMARY KEY,
         lecheria_id TEXT NOT NULL,
         identificador TEXT NOT NULL,
@@ -68,22 +73,26 @@ void main() {
 
     // Y la tabla nueva acepta el mismo nombre de tabla para dos usuarios,
     // que es justo lo que antes no se podía.
-    await db.into(db.syncCursores).insert(
-      SyncCursorRow(
-        tabla: 'usuarios',
-        usuarioId: 'user-a',
-        ultimaBajada: DateTime.utc(2026, 9, 7, 20, 44, 37),
-        ultimaBajadaId: 'user-a',
-      ),
-    );
-    await db.into(db.syncCursores).insert(
-      SyncCursorRow(
-        tabla: 'usuarios',
-        usuarioId: 'user-b',
-        ultimaBajada: DateTime.utc(2026, 9, 7, 20, 36, 39),
-        ultimaBajadaId: 'user-b',
-      ),
-    );
+    await db
+        .into(db.syncCursores)
+        .insert(
+          SyncCursorRow(
+            tabla: 'usuarios',
+            usuarioId: 'user-a',
+            ultimaBajada: DateTime.utc(2026, 9, 7, 20, 44, 37),
+            ultimaBajadaId: 'user-a',
+          ),
+        );
+    await db
+        .into(db.syncCursores)
+        .insert(
+          SyncCursorRow(
+            tabla: 'usuarios',
+            usuarioId: 'user-b',
+            ultimaBajada: DateTime.utc(2026, 9, 7, 20, 36, 39),
+            ultimaBajadaId: 'user-b',
+          ),
+        );
     expect(await db.select(db.syncCursores).get(), hasLength(2));
 
     // Lo del ganadero sigue intacto.

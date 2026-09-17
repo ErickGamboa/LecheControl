@@ -9,6 +9,7 @@ import '../data/repositories/animales_repository.dart';
 import '../hoja_vida/hoja_vida_screen.dart';
 import '../sanidad/sanidad_aplicar_sheet.dart';
 import '../services.dart';
+import 'palpacion_dialog.dart';
 
 /// Pantalla de Trabajo (Módulo 1) — la pantalla principal: identificar un
 /// animal (RFID o manual) y registrarle eventos con botones grandes, o darlo
@@ -506,98 +507,79 @@ class _TarjetaAnimal extends StatelessWidget {
     );
     if (tipo == null || !context.mounted) return;
 
-    final toroCtrl = TextEditingController();
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (contextoDialogo) => AlertDialog(
-        title: Text(TipoEventoAnimal.etiqueta(tipo)),
-        content: TextField(
-          controller: toroCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Toro / pajilla (opcional)',
-            border: OutlineInputBorder(),
-          ),
+    // El celo se anota y ya: no hay toro ni pajilla que preguntar, porque no
+    // hubo servicio. Preguntarlo era lo que hacía que el celo se sintiera un
+    // servicio más, que es justo lo que no es.
+    if (tipo == TipoEventoAnimal.celo) {
+      await _anotar(
+        context,
+        queQuedo: 'Anotado: ${TipoEventoAnimal.etiqueta(tipo)}',
+        registrar: () => eventosRepo.registrarServicio(
+          animalId: animal.id,
+          lecheriaId: lecheriaId,
+          tipo: tipo,
+          registradoPor: usuarioId,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(contextoDialogo, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(contextoDialogo, true),
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-    if (confirmado != true) return;
-    if (!context.mounted) return;
-    await _anotar(
-      context,
-      queQuedo: 'Anotado: ${TipoEventoAnimal.etiqueta(tipo)}',
-      registrar: () => eventosRepo.registrarServicio(
-        animalId: animal.id,
-        lecheriaId: lecheriaId,
-        tipo: tipo,
-        toroPajilla: toroCtrl.text.trim().isEmpty ? null : toroCtrl.text.trim(),
-        registradoPor: usuarioId,
-      ),
-    );
-  }
+      );
+      return;
+    }
 
-  Future<void> _palpacionDialog(BuildContext context) async {
-    String resultado = ResultadoPalpacion.preniada;
-    DateTime fechaProbableParto = DateTime.now().add(const Duration(days: 283));
+    final esMonta = tipo == TipoEventoAnimal.monta;
+    // En la monta el toro se escoge de los que hay en la finca; en la
+    // inseminación se escribe la pajilla, que viene en la etiqueta.
+    final disponibles = esMonta
+        ? await animalesRepo.toros(lecheriaId)
+        : const <AnimalRow>[];
+    if (!context.mounted) return;
+
+    final pajillaCtrl = TextEditingController();
+    String? toroId;
     final confirmado = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setState) => AlertDialog(
-          title: const Text('Palpación / diagnóstico'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SegmentedButton<String>(
-                segments: [
-                  for (final r in ResultadoPalpacion.todos)
-                    ButtonSegment(
-                      value: r,
-                      label: Text(ResultadoPalpacion.etiqueta(r)),
-                    ),
-                ],
-                selected: {resultado},
-                onSelectionChanged: (s) => setState(() => resultado = s.first),
-              ),
-              if (resultado == ResultadoPalpacion.preniada) ...[
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Fecha probable de parto'),
-                  subtitle: Text(
-                    '${fechaProbableParto.day}/${fechaProbableParto.month}/${fechaProbableParto.year}',
+      builder: (contextoDialogo) => StatefulBuilder(
+        builder: (contextoDialogo, setState) => AlertDialog(
+          title: Text(TipoEventoAnimal.etiqueta(tipo)),
+          content: esMonta
+              ? (disponibles.isEmpty
+                    // Sin toros cargados la monta igual se anota: es peor
+                    // perder el evento que perder con cuál fue.
+                    ? const Text(
+                        'Todavía no hay toros en el hato. La monta se anota '
+                        'igual; para poder escoger el toro, primero hay que '
+                        'darlo de alta en el grupo Toros.',
+                      )
+                    : DropdownButtonFormField<String>(
+                        key: const ValueKey('trabajo.servicio.toro'),
+                        initialValue: toroId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Toro (opcional)',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          for (final t in disponibles)
+                            DropdownMenuItem(
+                              value: t.id,
+                              child: Text(t.identificador),
+                            ),
+                        ],
+                        onChanged: (v) => setState(() => toroId = v),
+                      ))
+              : TextField(
+                  key: const ValueKey('trabajo.servicio.pajilla'),
+                  controller: pajillaCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Pajilla (opcional)',
+                    border: OutlineInputBorder(),
                   ),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final elegida = await showDatePicker(
-                      context: dialogContext,
-                      initialDate: fechaProbableParto,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 400)),
-                    );
-                    if (elegida != null) {
-                      setState(() => fechaProbableParto = elegida);
-                    }
-                  },
                 ),
-              ],
-            ],
-          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
+              onPressed: () => Navigator.pop(contextoDialogo, false),
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
+              onPressed: () => Navigator.pop(contextoDialogo, true),
               child: const Text('Guardar'),
             ),
           ],
@@ -606,21 +588,39 @@ class _TarjetaAnimal extends StatelessWidget {
     );
     if (confirmado != true) return;
     if (!context.mounted) return;
+    final pajilla = pajillaCtrl.text.trim();
     await _anotar(
       context,
-      // El resultado y no "Palpación": lo que el ganadero quiere confirmar de
-      // un vistazo es que quedó preñada, no que se hizo la palpación.
-      queQuedo: 'Anotado: ${ResultadoPalpacion.etiqueta(resultado)}',
-      registrar: () => eventosRepo.registrarPalpacion(
+      queQuedo: 'Anotado: ${TipoEventoAnimal.etiqueta(tipo)}',
+      registrar: () => eventosRepo.registrarServicio(
         animalId: animal.id,
         lecheriaId: lecheriaId,
-        resultado: resultado,
-        fechaProbableParto: resultado == ResultadoPalpacion.preniada
-            ? fechaProbableParto
-            : null,
+        tipo: tipo,
+        toroId: esMonta ? toroId : null,
+        // El nombre del toro se guarda también como texto: así la hoja de
+        // vida y el PDF siguen leyéndose aunque el toro se dé de baja.
+        toroPajilla: esMonta
+            ? disponibles
+                  .where((t) => t.id == toroId)
+                  .map((t) => t.identificador)
+                  .firstOrNull
+            : (pajilla.isEmpty ? null : pajilla),
         registradoPor: usuarioId,
       ),
     );
+  }
+
+  Future<void> _palpacionDialog(BuildContext context) async {
+    final quedo = await mostrarPalpacionDialog(
+      context,
+      animalId: animal.id,
+      lecheriaId: lecheriaId,
+      identificador: animal.identificador,
+      usuarioId: usuarioId,
+    );
+    // La ficha tiene que reflejar el estado nuevo: la palpación cambia la
+    // preñez y con ella qué botones tienen sentido.
+    if (quedo) onCambio();
   }
 
   Future<void> _secadoDialog(BuildContext context) async {
@@ -709,6 +709,13 @@ class _TarjetaAnimal extends StatelessWidget {
   Future<void> _partoDialog(BuildContext context) async {
     String sexoCria = Sexo.hembra;
     final identificadorCtrl = TextEditingController();
+    // De quién es la cría: sale del último servicio de la madre. Se muestra
+    // antes de guardar porque es el único momento en que alguien puede decir
+    // "ese no es"; después nadie lo reconstruye de memoria.
+    final padre = await eventosRepo.ultimoServicioDe(animal.id);
+    if (!context.mounted) return;
+    final nombrePadre = padre.pajilla;
+
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -716,7 +723,13 @@ class _TarjetaAnimal extends StatelessWidget {
           title: const Text('Parto'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                'Fecha: hoy',
+                style: Theme.of(dialogContext).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
               SegmentedButton<String>(
                 segments: [
                   for (final s in Sexo.todos)
@@ -732,6 +745,15 @@ class _TarjetaAnimal extends StatelessWidget {
                   labelText: 'Identificador de la cría (opcional)',
                   border: OutlineInputBorder(),
                 ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                nombrePadre == null || nombrePadre.isEmpty
+                    ? 'No hay un servicio anotado antes de este parto, así '
+                          'que la cría queda sin padre registrado.'
+                    : 'Padre: $nombrePadre, del último servicio de la madre.',
+                key: const ValueKey('trabajo.parto.padre'),
+                style: Theme.of(dialogContext).textTheme.bodySmall,
               ),
             ],
           ),
@@ -1050,7 +1072,10 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
                   ),
               ],
               selected: {_sexo},
-              onSelectionChanged: (s) => setState(() => _sexo = s.first),
+              // En un grupo de solo machos el sexo no se elige: ya está dicho.
+              onSelectionChanged: GrupoAnimal.soloMachos.contains(_grupo)
+                  ? null
+                  : (s) => setState(() => _sexo = s.first),
             ),
             const SizedBox(height: 16),
             Text('Grupo', style: Theme.of(context).textTheme.labelLarge),
@@ -1065,7 +1090,16 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
                     key: ValueKey('trabajo.alta.grupo.$g'),
                     label: Text(GrupoAnimal.etiqueta(g)),
                     selected: _grupo == g,
-                    onSelected: (_) => setState(() => _grupo = g),
+                    onSelected: (_) => setState(() {
+                      _grupo = g;
+                      // Un toro es macho y no hay caso en que no lo sea. Se
+                      // fija solo en vez de dejar que alguien guarde un toro
+                      // hembra y después haya que explicar por qué no aparece
+                      // al anotar una monta.
+                      if (GrupoAnimal.soloMachos.contains(g)) {
+                        _sexo = Sexo.macho;
+                      }
+                    }),
                   ),
               ],
             ),

@@ -65,10 +65,7 @@ void main() {
   group('fichaReproductivaContradictoria', () {
     test('vacía con fecha de parto se contradice', () {
       expect(
-        fichaReproductivaContradictoria(
-          EstadoReproductivo.vacia,
-          haceDoceDias,
-        ),
+        fichaReproductivaContradictoria(EstadoReproductivo.vacia, haceDoceDias),
         isTrue,
       );
     });

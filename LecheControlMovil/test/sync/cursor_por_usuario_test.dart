@@ -63,24 +63,27 @@ void main() {
     ).sincronizar();
   }
 
-  test('la cuenta que entra después baja su perfil aunque sea más vieja', () async {
-    // 1. Entra A: baja su perfil y el cursor queda en la fecha de A.
-    await sincronizarComo(usuarioA, perfilDe(usuarioA, filaA));
-    final trasA = await db.select(db.usuarios).get();
-    expect(trasA.map((u) => u.id), [usuarioA]);
+  test(
+    'la cuenta que entra después baja su perfil aunque sea más vieja',
+    () async {
+      // 1. Entra A: baja su perfil y el cursor queda en la fecha de A.
+      await sincronizarComo(usuarioA, perfilDe(usuarioA, filaA));
+      final trasA = await db.select(db.usuarios).get();
+      expect(trasA.map((u) => u.id), [usuarioA]);
 
-    // 2. Entra B en el mismo teléfono. Su fila es más vieja que la de A.
-    await sincronizarComo(usuarioB, perfilDe(usuarioB, filaB));
+      // 2. Entra B en el mismo teléfono. Su fila es más vieja que la de A.
+      await sincronizarComo(usuarioB, perfilDe(usuarioB, filaB));
 
-    final trasB = await db.select(db.usuarios).get();
-    expect(
-      trasB.map((u) => u.id),
-      containsAll([usuarioA, usuarioB]),
-      reason:
-          'el perfil de la segunda cuenta no bajó: quedó detrás del cursor '
-          'de la primera, que es justo el bug que este cambio arregla',
-    );
-  });
+      final trasB = await db.select(db.usuarios).get();
+      expect(
+        trasB.map((u) => u.id),
+        containsAll([usuarioA, usuarioB]),
+        reason:
+            'el perfil de la segunda cuenta no bajó: quedó detrás del cursor '
+            'de la primera, que es justo el bug que este cambio arregla',
+      );
+    },
+  );
 
   test('cada usuario lleva su propio cursor', () async {
     await sincronizarComo(usuarioA, perfilDe(usuarioA, filaA));
@@ -89,7 +92,10 @@ void main() {
     final cursores = await db.select(db.syncCursores).get();
     final deUsuarios = cursores.where((c) => c.tabla == 'usuarios');
 
-    expect(deUsuarios.map((c) => c.usuarioId), containsAll([usuarioA, usuarioB]));
+    expect(
+      deUsuarios.map((c) => c.usuarioId),
+      containsAll([usuarioA, usuarioB]),
+    );
     expect(
       deUsuarios.firstWhere((c) => c.usuarioId == usuarioA).ultimaBajada,
       filaA,
@@ -101,14 +107,18 @@ void main() {
     );
   });
 
-  test('volver a entrar con la misma cuenta no rebaja lo que ya tiene', () async {
-    // El cursor sigue sirviendo para lo que es —no repetir trabajo—; solo
-    // dejó de ser compartido entre cuentas.
-    await sincronizarComo(usuarioA, perfilDe(usuarioA, filaA));
+  test(
+    'volver a entrar con la misma cuenta no rebaja lo que ya tiene',
+    () async {
+      // El cursor sigue sirviendo para lo que es —no repetir trabajo—; solo
+      // dejó de ser compartido entre cuentas.
+      await sincronizarComo(usuarioA, perfilDe(usuarioA, filaA));
 
-    final cursor = (await db.select(db.syncCursores).get())
-        .firstWhere((c) => c.tabla == 'usuarios' && c.usuarioId == usuarioA);
-    expect(cursor.ultimaBajada, filaA);
-    expect(cursor.ultimaBajadaId, usuarioA);
-  });
+      final cursor = (await db.select(db.syncCursores).get()).firstWhere(
+        (c) => c.tabla == 'usuarios' && c.usuarioId == usuarioA,
+      );
+      expect(cursor.ultimaBajada, filaA);
+      expect(cursor.ultimaBajadaId, usuarioA);
+    },
+  );
 }

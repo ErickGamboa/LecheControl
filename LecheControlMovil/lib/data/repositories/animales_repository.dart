@@ -121,6 +121,23 @@ class AnimalesRepository {
   }
 
   /// Stream con animales dados de baja (historial, Módulo 2).
+  /// Los toros activos de la finca, para escogerlos al anotar una monta.
+  ///
+  /// Se piden de una y no como stream: es una lista corta que se lee en el
+  /// momento de abrir el diálogo y se cierra enseguida.
+  Future<List<AnimalRow>> toros(String lecheriaId) {
+    return (db.select(db.animales)
+          ..where(
+            (t) =>
+                t.lecheriaId.equals(lecheriaId) &
+                t.deletedAt.isNull() &
+                t.estado.equals(EstadoAnimal.activo) &
+                t.grupo.equals(GrupoAnimal.toros),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.identificador)]))
+        .get();
+  }
+
   Stream<List<AnimalRow>> observarHistorialBajas(String lecheriaId) {
     return (db.select(db.animales)
           ..where(

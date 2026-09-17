@@ -57,7 +57,8 @@ void main() {
   testWidgets('el fallo muestra la equis y dice qué hacer', (tester) async {
     await montar(
       tester,
-      alTocar: (c) => AvisoRapido.fallo(c, 'No quedó anotado. Volvé a intentar.'),
+      alTocar: (c) =>
+          AvisoRapido.fallo(c, 'No quedó anotado. Volvé a intentar.'),
     );
     await disparar(tester);
 
@@ -81,10 +82,7 @@ void main() {
   testWidgets('la equis se queda más que el check: hay que alcanzar a leerla', (
     tester,
   ) async {
-    expect(
-      AvisoRapido.duracionFallo,
-      greaterThan(AvisoRapido.duracionExito),
-    );
+    expect(AvisoRapido.duracionFallo, greaterThan(AvisoRapido.duracionExito));
 
     await montar(tester, alTocar: (c) => AvisoRapido.fallo(c, 'No quedó'));
     await disparar(tester);

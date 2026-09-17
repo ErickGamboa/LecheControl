@@ -4,14 +4,16 @@ import '../app/theme.dart';
 import '../data/domain/grupos.dart';
 import '../data/domain/palpacion.dart';
 import '../services.dart';
+import '../hoja_vida/hoja_vida_screen.dart';
+import '../trabajo/palpacion_dialog.dart';
 import 'palpacion_previa_pdf_screen.dart';
 
 /// Vacas por palpar (Módulo 6 — Análisis): la hoja que se le pasa al
 /// veterinario cuando viene a la finca.
 ///
 /// Nadie marca a mano qué vaca hay que revisar: la lista sale sola de la hoja
-/// de vida. Entran las **recién paridas** —revisión de posparto— y las que ya
-/// se **sirvieron y no confirman preñez** —diagnóstico de gestación—. La regla
+/// de vida. Entran las que se **sirvieron y no confirman preñez** —diagnóstico
+/// de gestación— y las que **parieron y siguen sin diagnóstico**. La regla
 /// completa está en `domain/palpacion.dart`.
 ///
 /// Las más atrasadas van arriba: la vaca que lleva 60 días servida sin
@@ -39,7 +41,63 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
   @override
   void initState() {
     super.initState();
+    _cargar();
+  }
+
+  void _cargar() {
     _futuro = palpacionRepo.porPalpar(widget.lecheriaId);
+  }
+
+  /// Al tocar una vaca hay dos cosas razonables que querer: ver qué se le ha
+  /// hecho, o palparla ya. Se preguntan en vez de adivinar, porque el que va
+  /// bajando la hoja con el veterinario quiere lo segundo y el que está
+  /// revisando quiere lo primero.
+  ///
+  /// Vuelva de donde vuelva, **se regresa a esta lista** y se recarga: si la
+  /// vaca ya se palpó, tiene que desaparecer sin que nadie tenga que salir y
+  /// entrar de nuevo.
+  Future<void> _tocarVaca(VacaPorPalpar vaca) async {
+    final accion = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text('Vaca ${vaca.identificador}'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'hoja'),
+            child: const ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.description_outlined),
+              title: Text('Ver la hoja de vida'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'palpar'),
+            child: const ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.fact_check_outlined),
+              title: Text('Registrar palpación'),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || accion == null) return;
+
+    if (accion == 'hoja') {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => HojaVidaScreen(animalId: vaca.animalId),
+        ),
+      );
+    } else {
+      await mostrarPalpacionDialog(
+        context,
+        animalId: vaca.animalId,
+        lecheriaId: widget.lecheriaId,
+        identificador: vaca.identificador,
+      );
+    }
+    if (mounted) setState(_cargar);
   }
 
   /// Abre la hoja en PDF para verla. Desde ahí se comparte, o se le toma una
@@ -107,7 +165,8 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
               children: [
                 _Resumen(vacas: vacas),
                 const SizedBox(height: LecheSpacing.lg),
-                for (final v in vacas) _FilaVaca(vaca: v),
+                for (final v in vacas)
+                  _FilaVaca(vaca: v, onTap: () => _tocarVaca(v)),
                 const SizedBox(height: LecheSpacing.lg),
                 const _Criterio(),
                 const SizedBox(height: LecheSpacing.xl),
@@ -120,10 +179,11 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
   }
 }
 
-/// Color de cada motivo. El posparto va en ámbar porque tiene fecha de
-/// vencimiento: en dos semanas la vaca sale sola de la lista.
+/// Color de cada motivo. La parida sin diagnóstico va en ámbar porque es la
+/// que nadie pidió: entró a la lista por olvido, no porque se haya hecho algo
+/// con ella.
 Color _colorMotivo(MotivoPalpacion motivo) => switch (motivo) {
-  MotivoPalpacion.posparto => kAmbarLeche,
+  MotivoPalpacion.paridaSinDiagnostico => kAmbarLeche,
   MotivoPalpacion.servidaSinConfirmar => kAzulLeche,
 };
 
@@ -135,10 +195,10 @@ class _Resumen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
-    final posparto = vacas
-        .where((v) => v.motivo == MotivoPalpacion.posparto)
+    final sinDiagnostico = vacas
+        .where((v) => v.motivo == MotivoPalpacion.paridaSinDiagnostico)
         .length;
-    final servidas = vacas.length - posparto;
+    final servidas = vacas.length - sinDiagnostico;
 
     return Card(
       key: const ValueKey('palpacion.resumen'),
@@ -157,9 +217,9 @@ class _Resumen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _Conteo(
-                  cantidad: posparto,
-                  etiqueta: posparto == 1 ? 'Recién parida' : 'Recién paridas',
-                  color: _colorMotivo(MotivoPalpacion.posparto),
+                  cantidad: sinDiagnostico,
+                  etiqueta: 'Paridas sin diagnóstico',
+                  color: _colorMotivo(MotivoPalpacion.paridaSinDiagnostico),
                 ),
                 _Conteo(
                   cantidad: servidas,
@@ -206,71 +266,78 @@ class _Conteo extends StatelessWidget {
 }
 
 class _FilaVaca extends StatelessWidget {
-  const _FilaVaca({required this.vaca});
+  const _FilaVaca({required this.vaca, required this.onTap});
 
   final VacaPorPalpar vaca;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
     final color = _colorMotivo(vaca.motivo);
-    final esPosparto = vaca.motivo == MotivoPalpacion.posparto;
+    final esSinDiagnostico =
+        vaca.motivo == MotivoPalpacion.paridaSinDiagnostico;
 
     // Los días son lo que decide el orden de la fila, así que se dicen con
     // todas las letras en vez de dejar un número suelto que hay que
     // interpretar.
-    final desde = esPosparto
-        ? 'Parió hace ${_dias(vaca.dias)}'
+    final desde = esSinDiagnostico
+        ? 'Parió hace ${_dias(vaca.dias)}, sin diagnóstico'
         : 'Servida hace ${_dias(vaca.dias)}';
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(LecheSpacing.lg),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(vaca.identificador, style: textos.titleMedium),
-                      const SizedBox(width: LecheSpacing.sm),
-                      Text(
-                        GrupoAnimal.etiqueta(vaca.grupo),
-                        style: textos.bodySmall,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(desde, style: textos.bodyMedium),
-                  if (vaca.detalleServicio.isNotEmpty) ...[
+      key: ValueKey('palpacion.vaca.${vaca.animalId}'),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(LecheSpacing.lg),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(vaca.identificador, style: textos.titleMedium),
+                        const SizedBox(width: LecheSpacing.sm),
+                        Text(
+                          GrupoAnimal.etiqueta(vaca.grupo),
+                          style: textos.bodySmall,
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 2),
-                    Text(vaca.detalleServicio, style: textos.bodySmall),
+                    Text(desde, style: textos.bodyMedium),
+                    if (vaca.detalleServicio.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(vaca.detalleServicio, style: textos.bodySmall),
+                    ],
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(width: LecheSpacing.sm),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: LecheSpacing.sm,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(LecheRadius.sm),
-              ),
-              child: Text(
-                vaca.motivo.etiquetaCorta,
-                style: textos.bodySmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: LecheSpacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: LecheSpacing.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(LecheRadius.sm),
+                ),
+                child: Text(
+                  vaca.motivo.etiquetaCorta,
+                  style: textos.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -300,13 +367,13 @@ class _Criterio extends StatelessWidget {
             Text('CÓMO SE ARMA ESTA LISTA', style: textos.titleSmall),
             const SizedBox(height: LecheSpacing.sm),
             Text(
-              '· Recién paridas: parieron hace $diasRevisionPosparto días o '
-              'menos.\n'
-              '· Servidas: se les anotó celo, monta o inseminación y todavía '
-              'no están preñadas.\n\n'
-              'Una vaca sale de la lista cuando se le registra la palpación, y '
-              'las recién paridas salen solas al pasar los '
-              '$diasRevisionPosparto días.',
+              '· Servidas: se les anotó monta o inseminación y todavía no '
+              'están preñadas. El celo no cuenta: es que la vaca está en '
+              'calor, no que se sirvió.\n'
+              '· Sin diagnóstico: parieron hace más de $diasSinDiagnostico '
+              'días y nadie les ha registrado preñez ni vacío.\n\n'
+              'En los dos casos la vaca sale de la lista cuando se le registra '
+              'la palpación. Ninguna sale sola por el paso del tiempo.',
               style: textos.bodySmall,
             ),
           ],
@@ -340,7 +407,7 @@ class _SinVacas extends StatelessWidget {
             ),
             const SizedBox(height: LecheSpacing.sm),
             Text(
-              'Ninguna parió en los últimos $diasRevisionPosparto días y '
+              'Ninguna parió en los últimos $diasSinDiagnostico días y '
               'todas las que se sirvieron ya tienen su palpación registrada.',
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,

@@ -2,6 +2,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/local/database.dart';
 
+import 'tablas_que_se_recrean.dart';
+
 /// v6 -> v7: entra la regla de la dieta de concentrado.
 ///
 /// Lo que importa acá es que las lecherías que ya existen queden con una regla
@@ -11,10 +13,13 @@ void main() {
   test('la regla de concentrado arranca en 3 al migrar', () async {
     final executor = NativeDatabase.memory(
       setup: (raw) {
+        for (final sql in tablasQueSeRecrean) {
+          raw.execute(sql);
+        }
         // Esquema v6 de config_reporte: ya tiene el tope de kilos, todavía no
         // la regla de concentrado.
         raw.execute('''
-      CREATE TABLE config_reporte (
+      CREATE TABLE IF NOT EXISTS config_reporte (
         id TEXT NOT NULL PRIMARY KEY,
         lecheria_id TEXT NOT NULL,
         pct_excelente REAL NOT NULL DEFAULT 100,

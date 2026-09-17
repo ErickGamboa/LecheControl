@@ -39,13 +39,21 @@ class EventosRepository {
         .getSingleOrNull();
   }
 
-  /// Celo, monta o inseminación: guarda la fecha del servicio y, si aplica,
-  /// el toro/pajilla usado.
+  /// Celo, monta o inseminación: guarda la fecha del servicio y con qué fue.
+  ///
+  /// [toroId] es el toro del hato con el que se montó, y [toroPajilla] la
+  /// pajilla con la que se inseminó. Son excluyentes por naturaleza: una monta
+  /// tiene toro, una inseminación tiene pajilla.
+  ///
+  /// Los dos son opcionales. Una finca que todavía no tiene sus toros cargados
+  /// en la app igual tiene que poder anotar la monta: es peor perder el evento
+  /// que perder el dato de con cuál fue.
   Future<void> registrarServicio({
     required String animalId,
     required String lecheriaId,
     required String tipo, // celo | monta | inseminacion
     String? toroPajilla,
+    String? toroId,
     DateTime? fecha,
     String? registradoPor,
   }) async {
@@ -60,12 +68,43 @@ class EventosRepository {
             tipo: tipo,
             fecha: ahora,
             toroPajilla: Value(toroPajilla),
+            toroId: Value(toroId),
             registradoPor: Value(registradoPor),
             createdAt: ahora,
             updatedAt: ahora,
             pendiente: const Value(true),
           ),
         );
+  }
+
+  /// Con qué se sirvió a la vaca la última vez, para saber de quién es la cría
+  /// cuando pare.
+  ///
+  /// Se resuelve mirando la hoja de vida en vez de guardarlo en la ficha al
+  /// confirmar la preñez: así, si alguien corrige el servicio después, el
+  /// padre se corrige con él. El celo no cuenta —de un celo no nace nada—.
+  Future<({String? toroId, String? pajilla})> ultimoServicioDe(
+    String animalId, {
+    DateTime? antesDe,
+  }) async {
+    final servicios =
+        await (db.select(db.eventosAnimal)
+              ..where(
+                (t) =>
+                    t.animalId.equals(animalId) &
+                    t.deletedAt.isNull() &
+                    t.tipo.isIn([
+                      TipoEventoAnimal.monta,
+                      TipoEventoAnimal.inseminacion,
+                    ]),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.fecha)]))
+            .get();
+    for (final e in servicios) {
+      if (antesDe != null && e.fecha.isAfter(antesDe)) continue;
+      return (toroId: e.toroId, pajilla: e.toroPajilla);
+    }
+    return (toroId: null, pajilla: null);
   }
 
   /// Nota libre sobre la vaca: lo que el ganadero quiera dejar apuntado.
@@ -103,16 +142,27 @@ class EventosRepository {
 
   /// Palpación / diagnóstico: resultado preñada o vacía. Si está preñada,
   /// guarda la fecha probable de parto y actualiza el estado reproductivo.
+  /// [observaciones] y [tratamiento] son para la vaca que salió **vacía**: qué
+  /// le encontró el veterinario y qué le aplicó. Los dos son opcionales y
+  /// texto libre; el tratamiento queda en la hoja de vida y **no** registra
+  /// una aplicación de Sanidad, así que no mueve el retiro de leche.
   Future<void> registrarPalpacion({
     required String animalId,
     required String lecheriaId,
     required String resultado, // preñada | vacia
     DateTime? fechaProbableParto,
+    String? observaciones,
+    String? tratamiento,
     DateTime? fecha,
     String? registradoPor,
   }) async {
     final ahora = fecha ?? DateTime.now();
     final preniada = resultado == ResultadoPalpacion.preniada;
+    String? limpio(String? t) {
+      final s = t?.trim();
+      return s == null || s.isEmpty ? null : s;
+    }
+
     await db.transaction(() async {
       await db
           .into(db.eventosAnimal)
@@ -124,6 +174,10 @@ class EventosRepository {
               tipo: TipoEventoAnimal.palpacion,
               fecha: ahora,
               resultado: Value(resultado),
+              // Solo tienen sentido en la vacía: en una preñada lo que
+              // importa es la fecha probable de parto.
+              detalle: Value(preniada ? null : limpio(observaciones)),
+              tratamiento: Value(preniada ? null : limpio(tratamiento)),
               registradoPor: Value(registradoPor),
               createdAt: ahora,
               updatedAt: ahora,
@@ -201,6 +255,10 @@ class EventosRepository {
     final identificador = identificadorCria?.trim().isNotEmpty == true
         ? identificadorCria!.trim()
         : 'CRIA-${ahora.millisecondsSinceEpoch}';
+    // De quién es la cría: el toro que montó a la madre o la pajilla con la
+    // que se inseminó, tomados del último servicio anterior al parto. Es el
+    // dato que después nadie puede reconstruir de memoria.
+    final padre = await ultimoServicioDe(animalId, antesDe: ahora);
 
     await db.transaction(() async {
       await db
@@ -214,6 +272,8 @@ class EventosRepository {
               grupo: GrupoAnimal.terneros,
               origen: 'nacido',
               madreId: Value(animalId),
+              padreId: Value(padre.toroId),
+              padrePajilla: Value(padre.pajilla),
               createdAt: ahora,
               updatedAt: ahora,
               pendiente: const Value(true),

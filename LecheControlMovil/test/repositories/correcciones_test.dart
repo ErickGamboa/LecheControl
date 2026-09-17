@@ -44,31 +44,34 @@ void main() {
       finanzas.abrirSemana(lecheriaId: lecheriaId, fecha: DateTime(2026, 3, 4));
 
   group('finanzas', () {
-    test('corregir un ingreso cambia lo digitado y lo deja pendiente', () async {
-      final s = await semana();
-      await finanzas.agregarIngreso(
-        lecheriaId: lecheriaId,
-        semanaId: s.id,
-        tipo: TipoIngreso.leche,
-        monto: 500000,
-        litros: 1200,
-      );
-      final ingreso = await db.select(db.ingresosSemana).getSingle();
+    test(
+      'corregir un ingreso cambia lo digitado y lo deja pendiente',
+      () async {
+        final s = await semana();
+        await finanzas.agregarIngreso(
+          lecheriaId: lecheriaId,
+          semanaId: s.id,
+          tipo: TipoIngreso.leche,
+          monto: 500000,
+          litros: 1200,
+        );
+        final ingreso = await db.select(db.ingresosSemana).getSingle();
 
-      await finanzas.editarIngreso(
-        id: ingreso.id,
-        tipo: TipoIngreso.leche,
-        monto: 550000,
-        litros: 1250,
-        detalle: 'segunda entrega',
-      );
+        await finanzas.editarIngreso(
+          id: ingreso.id,
+          tipo: TipoIngreso.leche,
+          monto: 550000,
+          litros: 1250,
+          detalle: 'segunda entrega',
+        );
 
-      final corregido = await db.select(db.ingresosSemana).getSingle();
-      expect(corregido.monto, 550000);
-      expect(corregido.litros, 1250);
-      expect(corregido.detalle, 'segunda entrega');
-      expect(corregido.pendiente, isTrue);
-    });
+        final corregido = await db.select(db.ingresosSemana).getSingle();
+        expect(corregido.monto, 550000);
+        expect(corregido.litros, 1250);
+        expect(corregido.detalle, 'segunda entrega');
+        expect(corregido.pendiente, isTrue);
+      },
+    );
 
     test('un ingreso que deja de ser leche pierde los kilos', () async {
       final s = await semana();
@@ -384,79 +387,83 @@ void main() {
       expect(animal.fechaProbableParto, isNull);
     });
 
-    test('el parto devuelve el grupo, el parto anterior y borra la cría',
-        () async {
-      final id = await seedAnimal(
-        db,
-        lecheriaId: lecheriaId,
-        grupo: GrupoAnimal.secas,
-        fechaUltimoParto: DateTime(2025, 1, 5),
-      );
-      // El parto viejo que tiene que volver a mandar en los días de lactancia.
-      await db
-          .into(db.eventosAnimal)
-          .insert(
-            EventosAnimalCompanion.insert(
-              id: 'parto-viejo',
-              animalId: id,
-              lecheriaId: lecheriaId,
-              tipo: TipoEventoAnimal.parto,
-              fecha: DateTime(2025, 1, 5),
-              createdAt: DateTime(2025, 1, 5),
-              updatedAt: DateTime(2025, 1, 5),
-            ),
-          );
+    test(
+      'el parto devuelve el grupo, el parto anterior y borra la cría',
+      () async {
+        final id = await seedAnimal(
+          db,
+          lecheriaId: lecheriaId,
+          grupo: GrupoAnimal.secas,
+          fechaUltimoParto: DateTime(2025, 1, 5),
+        );
+        // El parto viejo que tiene que volver a mandar en los días de lactancia.
+        await db
+            .into(db.eventosAnimal)
+            .insert(
+              EventosAnimalCompanion.insert(
+                id: 'parto-viejo',
+                animalId: id,
+                lecheriaId: lecheriaId,
+                tipo: TipoEventoAnimal.parto,
+                fecha: DateTime(2025, 1, 5),
+                createdAt: DateTime(2025, 1, 5),
+                updatedAt: DateTime(2025, 1, 5),
+              ),
+            );
 
-      final criaId = await eventos.registrarParto(
-        animalId: id,
-        lecheriaId: lecheriaId,
-        sexoCria: Sexo.hembra,
-        identificadorCria: 'C-1',
-        fecha: DateTime(2026, 3, 10),
-      );
-      final partoNuevo = (await eventos.listarHojaVida(id).first).first;
-      expect(partoNuevo.criaAnimalId, criaId);
+        final criaId = await eventos.registrarParto(
+          animalId: id,
+          lecheriaId: lecheriaId,
+          sexoCria: Sexo.hembra,
+          identificadorCria: 'C-1',
+          fecha: DateTime(2026, 3, 10),
+        );
+        final partoNuevo = (await eventos.listarHojaVida(id).first).first;
+        expect(partoNuevo.criaAnimalId, criaId);
 
-      await eventos.eliminarEvento(partoNuevo.id);
+        await eventos.eliminarEvento(partoNuevo.id);
 
-      final madre = await (db.select(
-        db.animales,
-      )..where((t) => t.id.equals(id))).getSingle();
-      expect(madre.grupo, GrupoAnimal.secas);
-      expect(madre.fechaUltimoParto, DateTime(2025, 1, 5));
-      expect(madre.estadoReproductivo, EstadoReproductivo.desconocido);
+        final madre = await (db.select(
+          db.animales,
+        )..where((t) => t.id.equals(id))).getSingle();
+        expect(madre.grupo, GrupoAnimal.secas);
+        expect(madre.fechaUltimoParto, DateTime(2025, 1, 5));
+        expect(madre.estadoReproductivo, EstadoReproductivo.desconocido);
 
-      final cria = await (db.select(
-        db.animales,
-      )..where((t) => t.id.equals(criaId))).getSingle();
-      expect(cria.deletedAt, isNotNull);
-    });
+        final cria = await (db.select(
+          db.animales,
+        )..where((t) => t.id.equals(criaId))).getSingle();
+        expect(cria.deletedAt, isNotNull);
+      },
+    );
 
-    test('la cría que ya tiene pesas no se borra: se suelta de la madre',
-        () async {
-      final id = await seedAnimal(db, lecheriaId: lecheriaId);
-      final criaId = await eventos.registrarParto(
-        animalId: id,
-        lecheriaId: lecheriaId,
-        sexoCria: Sexo.hembra,
-        fecha: DateTime(2026, 3, 10),
-      );
-      final sesion = await pesas.abrirSesion(lecheriaId: lecheriaId);
-      await pesas.registrarPesa(
-        sesionId: sesion.id,
-        animalId: criaId,
-        litrosManana: 5,
-      );
-      final parto = (await eventos.listarHojaVida(id).first).first;
+    test(
+      'la cría que ya tiene pesas no se borra: se suelta de la madre',
+      () async {
+        final id = await seedAnimal(db, lecheriaId: lecheriaId);
+        final criaId = await eventos.registrarParto(
+          animalId: id,
+          lecheriaId: lecheriaId,
+          sexoCria: Sexo.hembra,
+          fecha: DateTime(2026, 3, 10),
+        );
+        final sesion = await pesas.abrirSesion(lecheriaId: lecheriaId);
+        await pesas.registrarPesa(
+          sesionId: sesion.id,
+          animalId: criaId,
+          litrosManana: 5,
+        );
+        final parto = (await eventos.listarHojaVida(id).first).first;
 
-      await eventos.eliminarEvento(parto.id);
+        await eventos.eliminarEvento(parto.id);
 
-      final cria = await (db.select(
-        db.animales,
-      )..where((t) => t.id.equals(criaId))).getSingle();
-      expect(cria.deletedAt, isNull);
-      expect(cria.madreId, isNull);
-    });
+        final cria = await (db.select(
+          db.animales,
+        )..where((t) => t.id.equals(criaId))).getSingle();
+        expect(cria.deletedAt, isNull);
+        expect(cria.madreId, isNull);
+      },
+    );
 
     test('una observación se borra sin tocar nada del animal', () async {
       final id = await seedAnimal(
@@ -483,32 +490,34 @@ void main() {
   });
 
   group('corregir un evento', () {
-    test('mover la fecha del último parto mueve los días de lactancia',
-        () async {
-      final id = await seedAnimal(db, lecheriaId: lecheriaId);
-      await eventos.registrarParto(
-        animalId: id,
-        lecheriaId: lecheriaId,
-        sexoCria: Sexo.macho,
-        fecha: DateTime(2026, 3, 10),
-      );
-      final parto = (await eventos.listarHojaVida(id).first).first;
+    test(
+      'mover la fecha del último parto mueve los días de lactancia',
+      () async {
+        final id = await seedAnimal(db, lecheriaId: lecheriaId);
+        await eventos.registrarParto(
+          animalId: id,
+          lecheriaId: lecheriaId,
+          sexoCria: Sexo.macho,
+          fecha: DateTime(2026, 3, 10),
+        );
+        final parto = (await eventos.listarHojaVida(id).first).first;
 
-      await eventos.editarEvento(
-        eventoId: parto.id,
-        fecha: DateTime(2026, 3, 1),
-        detalle: 'fue el domingo, no el martes',
-      );
+        await eventos.editarEvento(
+          eventoId: parto.id,
+          fecha: DateTime(2026, 3, 1),
+          detalle: 'fue el domingo, no el martes',
+        );
 
-      final animal = await (db.select(
-        db.animales,
-      )..where((t) => t.id.equals(id))).getSingle();
-      expect(animal.fechaUltimoParto, DateTime(2026, 3, 1));
-      final corregido = await (db.select(
-        db.eventosAnimal,
-      )..where((t) => t.id.equals(parto.id))).getSingle();
-      expect(corregido.detalle, 'fue el domingo, no el martes');
-    });
+        final animal = await (db.select(
+          db.animales,
+        )..where((t) => t.id.equals(id))).getSingle();
+        expect(animal.fechaUltimoParto, DateTime(2026, 3, 1));
+        final corregido = await (db.select(
+          db.eventosAnimal,
+        )..where((t) => t.id.equals(parto.id))).getSingle();
+        expect(corregido.detalle, 'fue el domingo, no el martes');
+      },
+    );
   });
 
   group('pesas', () {
@@ -609,4 +618,3 @@ void main() {
     });
   });
 }
-

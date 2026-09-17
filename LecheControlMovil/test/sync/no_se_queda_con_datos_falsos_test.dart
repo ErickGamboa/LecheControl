@@ -160,9 +160,7 @@ void main() {
 
   group('volver a bajar todo', () {
     test('olvidar los cursores hace que baje de nuevo', () async {
-      remoto.descargas['animales'] = [
-        animalRemoto('animal-1', arete: 'una'),
-      ];
+      remoto.descargas['animales'] = [animalRemoto('animal-1', arete: 'una')];
       await sync.sincronizar();
       await db.delete(db.animales).go(); // como si el dato se hubiera perdido
 

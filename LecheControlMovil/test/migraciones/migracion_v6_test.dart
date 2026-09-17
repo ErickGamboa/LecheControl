@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/domain/grupos.dart';
 import 'package:leche_control/data/local/database.dart';
 
+import 'tablas_que_se_recrean.dart';
+
 /// v5 -> v6 sobre una base con datos: entra el tope de kilos y el evento de
 /// observación.
 ///
@@ -16,8 +18,11 @@ void main() {
   /// la base: si no existieran correría onCreate en vez de la migración.
   NativeDatabase baseV5() => NativeDatabase.memory(
     setup: (raw) {
+      for (final sql in tablasQueSeRecrean) {
+        raw.execute(sql);
+      }
       raw.execute('''
-      CREATE TABLE config_reporte (
+      CREATE TABLE IF NOT EXISTS config_reporte (
         id TEXT NOT NULL PRIMARY KEY,
         lecheria_id TEXT NOT NULL,
         pct_excelente REAL NOT NULL DEFAULT 100,
@@ -31,7 +36,7 @@ void main() {
         pendiente INTEGER NOT NULL DEFAULT 0
       )''');
       raw.execute('''
-      CREATE TABLE eventos_animal (
+      CREATE TABLE IF NOT EXISTS eventos_animal (
         id TEXT NOT NULL PRIMARY KEY,
         animal_id TEXT NOT NULL,
         lecheria_id TEXT NOT NULL,

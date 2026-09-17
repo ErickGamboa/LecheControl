@@ -2,6 +2,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/local/database.dart';
 
+import 'tablas_que_se_recrean.dart';
+
 /// v9 -> v10: la base local queda marcada con la cuenta a la que pertenece.
 ///
 /// La tabla nueva arranca **vacía a propósito**. En este punto de la migración
@@ -15,8 +17,11 @@ void main() {
   test('marca la base sin borrarle nada al que ya la usaba', () async {
     final executor = NativeDatabase.memory(
       setup: (raw) {
+        for (final sql in tablasQueSeRecrean) {
+          raw.execute(sql);
+        }
         raw.execute('''
-      CREATE TABLE lecherias (
+      CREATE TABLE IF NOT EXISTS lecherias (
         id TEXT NOT NULL PRIMARY KEY,
         nombre TEXT NOT NULL,
         creada_por TEXT NOT NULL,
@@ -32,7 +37,7 @@ void main() {
           "'2026-07-30T19:55:35.000')",
         );
         raw.execute('''
-      CREATE TABLE animales (
+      CREATE TABLE IF NOT EXISTS animales (
         id TEXT NOT NULL PRIMARY KEY,
         lecheria_id TEXT NOT NULL,
         identificador TEXT NOT NULL,

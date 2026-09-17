@@ -54,8 +54,9 @@ void main() {
   });
 
   /// Todas las vacas del calendario, sin importar en qué mes cayeron.
-  List<VacaPorParir> enCalendario(ProyeccionPartos p) =>
-      [for (final m in p.meses) ...m.vacas];
+  List<VacaPorParir> enCalendario(ProyeccionPartos p) => [
+    for (final m in p.meses) ...m.vacas,
+  ];
 
   test('la fecha anotada por la palpación manda', () async {
     await seedAnimal(
@@ -99,7 +100,10 @@ void main() {
     final vaca = enCalendario(p).single;
 
     // El último servicio, no el primero: 10 de marzo + 283 días.
-    expect(vaca.fechaProbable, partoProbableDesdeServicio(DateTime(2026, 3, 10)));
+    expect(
+      vaca.fechaProbable,
+      partoProbableDesdeServicio(DateTime(2026, 3, 10)),
+    );
     expect(vaca.origen, OrigenFechaParto.estimada);
     expect(vaca.detalleServicio, 'Inseminación · Pajilla 44');
   });

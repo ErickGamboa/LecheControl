@@ -98,8 +98,7 @@ void main() {
     // hace `EditableText` cuando el `TextField` no trae `style` propio.
     final contexto = tester.element(find.byType(TextField));
     final tema = Theme.of(contexto);
-    final letra =
-        tema.textTheme.bodyLarge!.color ?? tema.colorScheme.onSurface;
+    final letra = tema.textTheme.bodyLarge!.color ?? tema.colorScheme.onSurface;
 
     expect(
       _contraste(letra, tema.inputDecorationTheme.fillColor!),

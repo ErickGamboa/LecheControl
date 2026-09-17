@@ -2,6 +2,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/local/database.dart';
 
+import 'tablas_que_se_recrean.dart';
+
 /// v7 -> v8: entra la calidad de la leche.
 ///
 /// El teléfono del ganadero ya tiene semanas cargadas con sus finanzas: al
@@ -11,9 +13,12 @@ void main() {
   test('crea calidad_leche sin tocar las semanas que ya estaban', () async {
     final executor = NativeDatabase.memory(
       setup: (raw) {
+        for (final sql in tablasQueSeRecrean) {
+          raw.execute(sql);
+        }
         // Esquema v7 de `semanas`: la calidad todavía no existe.
         raw.execute('''
-      CREATE TABLE semanas (
+      CREATE TABLE IF NOT EXISTS semanas (
         id TEXT NOT NULL PRIMARY KEY,
         lecheria_id TEXT NOT NULL,
         fecha_inicio TEXT NOT NULL,

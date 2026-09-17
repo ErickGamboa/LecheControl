@@ -58,10 +58,11 @@ Future<Uint8List> construirPdfPalpacion({
         _tabla(vacas),
         pw.SizedBox(height: 10),
         pw.Text(
-          'Recién parida: parió hace $diasRevisionPosparto días o menos. '
-          'Servida: se le anotó celo, monta o inseminación y todavía no se '
-          'confirma la preñez. La columna Fecha es la del parto o la del '
-          'servicio, según el motivo.',
+          'Servida: se le anotó monta o inseminación y todavía no se confirma '
+          'la preñez; el celo no cuenta como servicio. Sin diagnóstico: parió '
+          'hace más de $diasSinDiagnostico días y no se le ha registrado '
+          'preñez ni vacío. La columna Fecha es la del servicio o la del '
+          'parto, según el motivo.',
           style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
         ),
       ],
@@ -76,10 +77,10 @@ pw.Widget _encabezado({
   required List<VacaPorPalpar> vacas,
   required DateTime generadoEl,
 }) {
-  final posparto = vacas
-      .where((v) => v.motivo == MotivoPalpacion.posparto)
+  final sinDiagnostico = vacas
+      .where((v) => v.motivo == MotivoPalpacion.paridaSinDiagnostico)
       .length;
-  final servidas = vacas.length - posparto;
+  final servidas = vacas.length - sinDiagnostico;
 
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -121,7 +122,7 @@ pw.Widget _encabezado({
         ),
         child: pw.Text(
           '${vacas.length} ${vacas.length == 1 ? 'vaca' : 'vacas'} · '
-          '$posparto recién ${posparto == 1 ? 'parida' : 'paridas'} · '
+          '$sinDiagnostico sin diagnóstico · '
           '$servidas ${servidas == 1 ? 'servida' : 'servidas'} sin confirmar',
           style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
         ),
@@ -166,10 +167,10 @@ pw.Widget _tabla(List<VacaPorPalpar> vacas) {
             _celda(
               v.motivo.etiquetaCorta,
               izquierda: true,
-              // El posparto tiene fecha de vencimiento —dos semanas y la vaca
-              // sale sola de la lista—, así que se marca para que salte a la
-              // vista entre las servidas.
-              color: v.motivo == MotivoPalpacion.posparto
+              // La parida sin diagnóstico se marca para que salte a la vista
+              // entre las servidas: es la que se quedó atrás sin que nadie lo
+              // decidiera, y es la que el veterinario no debería dejar pasar.
+              color: v.motivo == MotivoPalpacion.paridaSinDiagnostico
                   ? PdfColors.orange800
                   : null,
             ),

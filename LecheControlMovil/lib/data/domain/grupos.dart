@@ -13,16 +13,25 @@ abstract final class GrupoAnimal {
   static const novillas = 'novillas';
   static const terneros = 'terneros';
 
-  static const todos = [enOrdeno, secas, novillas, terneros];
+  /// Los toros de monta. Es un grupo aparte de Terneros porque cumplen un
+  /// papel distinto: son los que se escogen al anotar una monta, y hay que
+  /// poder verlos de un vistazo sin que se pierdan entre las crías.
+  static const toros = 'toros';
+
+  static const todos = [enOrdeno, secas, novillas, terneros, toros];
 
   /// Grupos donde se puede dar de alta un animal nuevo.
   static const altaDisponibles = todos;
+
+  /// Grupos que solo tienen machos. Al dar de alta acá, el sexo se fija solo.
+  static const soloMachos = [toros];
 
   static String etiqueta(String codigo) => switch (codigo) {
     enOrdeno => 'En ordeño',
     secas => 'Secas',
     novillas => 'Novillas',
     terneros => 'Terneros',
+    toros => 'Toros',
     _ => codigo,
   };
 }

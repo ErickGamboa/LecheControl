@@ -20,7 +20,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: LecheTheme.light,
-        home: const CuentaGate(usuarioId: 'user-sin-cuenta', sinConexion: false),
+        home: const CuentaGate(
+          usuarioId: 'user-sin-cuenta',
+          sinConexion: false,
+        ),
       ),
     );
     await tester.pump(const Duration(milliseconds: 50));

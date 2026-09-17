@@ -2,6 +2,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/local/database.dart';
 
+import 'tablas_que_se_recrean.dart';
+
 /// v4 -> v5 sobre una base con datos viejos: el teléfono del ganadero ya
 /// tiene medicamentos cargados y quizá algún animal "en tratamiento", y al
 /// actualizar la app no puede perder nada ni reventar.
@@ -11,8 +13,11 @@ void main() {
     // que drift abra la base (si no, correría onCreate y no la migración).
     final executor = NativeDatabase.memory(
       setup: (raw) {
+        for (final sql in tablasQueSeRecrean) {
+          raw.execute(sql);
+        }
         raw.execute('''
-      CREATE TABLE medicamentos (
+      CREATE TABLE IF NOT EXISTS medicamentos (
         id TEXT NOT NULL PRIMARY KEY,
         lecheria_id TEXT NOT NULL,
         nombre TEXT NOT NULL,
@@ -28,7 +33,7 @@ void main() {
         pendiente INTEGER NOT NULL DEFAULT 0
       )''');
         raw.execute('''
-      CREATE TABLE animales (
+      CREATE TABLE IF NOT EXISTS animales (
         id TEXT NOT NULL PRIMARY KEY,
         lecheria_id TEXT NOT NULL,
         identificador TEXT NOT NULL,
@@ -63,7 +68,7 @@ void main() {
         // verdad existen: sin ellas la migración revienta antes de llegar a
         // lo que este test mira.
         raw.execute('''
-      CREATE TABLE config_reporte (
+      CREATE TABLE IF NOT EXISTS config_reporte (
         id TEXT NOT NULL PRIMARY KEY,
         lecheria_id TEXT NOT NULL,
         pct_excelente REAL NOT NULL DEFAULT 100,
@@ -77,7 +82,7 @@ void main() {
         pendiente INTEGER NOT NULL DEFAULT 0
       )''');
         raw.execute('''
-      CREATE TABLE eventos_animal (
+      CREATE TABLE IF NOT EXISTS eventos_animal (
         id TEXT NOT NULL PRIMARY KEY,
         animal_id TEXT NOT NULL,
         lecheria_id TEXT NOT NULL,
