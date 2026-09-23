@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
+import '../app/widgets/campo_nacimiento.dart';
 import '../app/widgets/aviso_rapido.dart';
 import '../app/widgets/scan_field.dart';
 import '../data/domain/grupos.dart';
@@ -976,6 +977,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
   String _origen = OrigenAnimal.nacido;
   DateTime _fechaCompra = DateTime.now();
   DateTime? _fechaUltimoParto;
+  DateTime? _fechaNacimiento;
   bool _guardando = false;
   String? _error;
 
@@ -1007,6 +1009,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
             ? double.tryParse(_precioCtrl.text.replaceAll(',', '.'))
             : null,
         fechaCompra: _origen == OrigenAnimal.comprado ? _fechaCompra : null,
+        fechaNacimiento: _fechaNacimiento,
         fechaUltimoParto: _grupo == GrupoAnimal.enOrdeno
             ? _fechaUltimoParto
             : null,
@@ -1198,6 +1201,26 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
                     setState(() => _fechaUltimoParto = elegida);
                   }
                 },
+              ),
+            ],
+            // La fecha de nacimiento se le pide a todo el hato menos a la vaca
+            // en ordeño, donde el dato que manda es el último parto y no
+            // cuándo nació. Al toro y al ternero también: para ellos no abre
+            // Vacas por servir —eso es cosa de la hembra que no ha parido—
+            // pero sí es la única forma de saber qué edad tienen. El propio
+            // campo ajusta el mensaje según el grupo.
+            if (_grupo != GrupoAnimal.enOrdeno) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Fecha de nacimiento',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              CampoNacimiento(
+                valueKey: 'trabajo.alta.nacimiento',
+                sexo: _sexo,
+                grupo: _grupo,
+                fecha: _fechaNacimiento,
+                onElegida: (f) => setState(() => _fechaNacimiento = f),
               ),
             ],
             if (_error != null) ...[

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/teclado/teclado_del_app.dart';
@@ -124,6 +125,16 @@ class LecheControlApp extends StatelessWidget {
       // `ThemeMode.system` y con el teléfono en oscuro no se leía lo que se
       // digitaba en los campos (ver `LecheTheme`).
       themeMode: ThemeMode.light,
+      // La app es en español y punto. Sin esto, lo que pone Material por su
+      // cuenta salía en inglés: el calendario para escoger fechas se abría con
+      // «Select date», «Cancel», los meses y los días de la semana.
+      locale: const Locale('es'),
+      supportedLocales: const [Locale('es')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       // El teclado propio de la app, para cuando el lector de identificadores
       // está conectado y el sistema esconde el suyo. Envuelve todo, incluido
       // el login: el lector se empareja una vez y queda conectado, así que sin

@@ -120,7 +120,6 @@ class AnimalesRepository {
         );
   }
 
-  /// Stream con animales dados de baja (historial, Módulo 2).
   /// Los toros activos de la finca, para escogerlos al anotar una monta.
   ///
   /// Se piden de una y no como stream: es una lista corta que se lee en el
@@ -138,6 +137,7 @@ class AnimalesRepository {
         .get();
   }
 
+  /// Stream con animales dados de baja (historial, Módulo 2).
   Stream<List<AnimalRow>> observarHistorialBajas(String lecheriaId) {
     return (db.select(db.animales)
           ..where(
@@ -216,6 +216,7 @@ class AnimalesRepository {
     DateTime? fechaCompra,
     String? madreId,
     DateTime? fechaUltimoParto,
+    DateTime? fechaNacimiento,
   }) async {
     final existente = await buscarPorIdentificador(lecheriaId, identificador);
     if (existente != null) {
@@ -241,6 +242,7 @@ class AnimalesRepository {
             ),
             madreId: Value(madreId),
             fechaUltimoParto: Value(fechaUltimoParto),
+            fechaNacimiento: Value(fechaNacimiento),
             createdAt: ahora,
             updatedAt: ahora,
             pendiente: const Value(true),
@@ -300,6 +302,7 @@ class AnimalesRepository {
     required String origen,
     double? precioCompra,
     DateTime? fechaCompra,
+    DateTime? fechaNacimiento,
   }) async {
     final animal = await (db.select(
       db.animales,
@@ -326,6 +329,9 @@ class AnimalesRepository {
         identificador: Value(nuevoIdentificador),
         sexo: Value(sexo),
         origen: Value(origen),
+        // Se escribe siempre, incluso en null: borrar una fecha mal puesta
+        // tiene que ser posible.
+        fechaNacimiento: Value(fechaNacimiento),
         precioCompra: Value(precio),
         fechaCompra: Value(fecha),
         updatedAt: Value(ahora),

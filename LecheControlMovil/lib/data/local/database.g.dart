@@ -2528,6 +2528,18 @@ class $AnimalesTable extends Animales
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _fechaNacimientoMeta = const VerificationMeta(
+    'fechaNacimiento',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fechaNacimiento =
+      GeneratedColumn<DateTime>(
+        'fecha_nacimiento',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _madreIdMeta = const VerificationMeta(
     'madreId',
   );
@@ -2656,6 +2668,7 @@ class $AnimalesTable extends Animales
     origen,
     precioCompra,
     fechaCompra,
+    fechaNacimiento,
     madreId,
     padreId,
     padrePajilla,
@@ -2757,6 +2770,15 @@ class $AnimalesTable extends Animales
         fechaCompra.isAcceptableOrUnknown(
           data['fecha_compra']!,
           _fechaCompraMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fecha_nacimiento')) {
+      context.handle(
+        _fechaNacimientoMeta,
+        fechaNacimiento.isAcceptableOrUnknown(
+          data['fecha_nacimiento']!,
+          _fechaNacimientoMeta,
         ),
       );
     }
@@ -2885,6 +2907,10 @@ class $AnimalesTable extends Animales
         DriftSqlType.dateTime,
         data['${effectivePrefix}fecha_compra'],
       ),
+      fechaNacimiento: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha_nacimiento'],
+      ),
       madreId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}madre_id'],
@@ -2945,6 +2971,12 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
   final String origen;
   final double? precioCompra;
   final DateTime? fechaCompra;
+
+  /// Cuándo nació. Es opcional —de las vacas que ya estaban en la finca
+  /// cuando se empezó a usar la app casi nunca se sabe— pero cuando está, es
+  /// lo que hace que una novilla aparezca sola en Vacas por servir al cumplir
+  /// la edad de servirla (ver `domain/servir.dart`).
+  final DateTime? fechaNacimiento;
   final String? madreId;
 
   /// De qué toro del hato es hija. Lo pone solo el evento de parto, leyendo el
@@ -2977,6 +3009,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     required this.origen,
     this.precioCompra,
     this.fechaCompra,
+    this.fechaNacimiento,
     this.madreId,
     this.padreId,
     this.padrePajilla,
@@ -3004,6 +3037,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     }
     if (!nullToAbsent || fechaCompra != null) {
       map['fecha_compra'] = Variable<DateTime>(fechaCompra);
+    }
+    if (!nullToAbsent || fechaNacimiento != null) {
+      map['fecha_nacimiento'] = Variable<DateTime>(fechaNacimiento);
     }
     if (!nullToAbsent || madreId != null) {
       map['madre_id'] = Variable<String>(madreId);
@@ -3048,6 +3084,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       fechaCompra: fechaCompra == null && nullToAbsent
           ? const Value.absent()
           : Value(fechaCompra),
+      fechaNacimiento: fechaNacimiento == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fechaNacimiento),
       madreId: madreId == null && nullToAbsent
           ? const Value.absent()
           : Value(madreId),
@@ -3093,6 +3132,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       origen: serializer.fromJson<String>(json['origen']),
       precioCompra: serializer.fromJson<double?>(json['precioCompra']),
       fechaCompra: serializer.fromJson<DateTime?>(json['fechaCompra']),
+      fechaNacimiento: serializer.fromJson<DateTime?>(json['fechaNacimiento']),
       madreId: serializer.fromJson<String?>(json['madreId']),
       padreId: serializer.fromJson<String?>(json['padreId']),
       padrePajilla: serializer.fromJson<String?>(json['padrePajilla']),
@@ -3125,6 +3165,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       'origen': serializer.toJson<String>(origen),
       'precioCompra': serializer.toJson<double?>(precioCompra),
       'fechaCompra': serializer.toJson<DateTime?>(fechaCompra),
+      'fechaNacimiento': serializer.toJson<DateTime?>(fechaNacimiento),
       'madreId': serializer.toJson<String?>(madreId),
       'padreId': serializer.toJson<String?>(padreId),
       'padrePajilla': serializer.toJson<String?>(padrePajilla),
@@ -3149,6 +3190,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     String? origen,
     Value<double?> precioCompra = const Value.absent(),
     Value<DateTime?> fechaCompra = const Value.absent(),
+    Value<DateTime?> fechaNacimiento = const Value.absent(),
     Value<String?> madreId = const Value.absent(),
     Value<String?> padreId = const Value.absent(),
     Value<String?> padrePajilla = const Value.absent(),
@@ -3170,6 +3212,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     origen: origen ?? this.origen,
     precioCompra: precioCompra.present ? precioCompra.value : this.precioCompra,
     fechaCompra: fechaCompra.present ? fechaCompra.value : this.fechaCompra,
+    fechaNacimiento: fechaNacimiento.present
+        ? fechaNacimiento.value
+        : this.fechaNacimiento,
     madreId: madreId.present ? madreId.value : this.madreId,
     padreId: padreId.present ? padreId.value : this.padreId,
     padrePajilla: padrePajilla.present ? padrePajilla.value : this.padrePajilla,
@@ -3209,6 +3254,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       fechaCompra: data.fechaCompra.present
           ? data.fechaCompra.value
           : this.fechaCompra,
+      fechaNacimiento: data.fechaNacimiento.present
+          ? data.fechaNacimiento.value
+          : this.fechaNacimiento,
       madreId: data.madreId.present ? data.madreId.value : this.madreId,
       padreId: data.padreId.present ? data.padreId.value : this.padreId,
       padrePajilla: data.padrePajilla.present
@@ -3243,6 +3291,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           ..write('origen: $origen, ')
           ..write('precioCompra: $precioCompra, ')
           ..write('fechaCompra: $fechaCompra, ')
+          ..write('fechaNacimiento: $fechaNacimiento, ')
           ..write('madreId: $madreId, ')
           ..write('padreId: $padreId, ')
           ..write('padrePajilla: $padrePajilla, ')
@@ -3258,7 +3307,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     lecheriaId,
     identificador,
@@ -3269,6 +3318,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     origen,
     precioCompra,
     fechaCompra,
+    fechaNacimiento,
     madreId,
     padreId,
     padrePajilla,
@@ -3279,7 +3329,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     updatedAt,
     deletedAt,
     pendiente,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3294,6 +3344,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           other.origen == this.origen &&
           other.precioCompra == this.precioCompra &&
           other.fechaCompra == this.fechaCompra &&
+          other.fechaNacimiento == this.fechaNacimiento &&
           other.madreId == this.madreId &&
           other.padreId == this.padreId &&
           other.padrePajilla == this.padrePajilla &&
@@ -3317,6 +3368,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
   final Value<String> origen;
   final Value<double?> precioCompra;
   final Value<DateTime?> fechaCompra;
+  final Value<DateTime?> fechaNacimiento;
   final Value<String?> madreId;
   final Value<String?> padreId;
   final Value<String?> padrePajilla;
@@ -3339,6 +3391,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     this.origen = const Value.absent(),
     this.precioCompra = const Value.absent(),
     this.fechaCompra = const Value.absent(),
+    this.fechaNacimiento = const Value.absent(),
     this.madreId = const Value.absent(),
     this.padreId = const Value.absent(),
     this.padrePajilla = const Value.absent(),
@@ -3362,6 +3415,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     required String origen,
     this.precioCompra = const Value.absent(),
     this.fechaCompra = const Value.absent(),
+    this.fechaNacimiento = const Value.absent(),
     this.madreId = const Value.absent(),
     this.padreId = const Value.absent(),
     this.padrePajilla = const Value.absent(),
@@ -3392,6 +3446,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Expression<String>? origen,
     Expression<double>? precioCompra,
     Expression<DateTime>? fechaCompra,
+    Expression<DateTime>? fechaNacimiento,
     Expression<String>? madreId,
     Expression<String>? padreId,
     Expression<String>? padrePajilla,
@@ -3415,6 +3470,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       if (origen != null) 'origen': origen,
       if (precioCompra != null) 'precio_compra': precioCompra,
       if (fechaCompra != null) 'fecha_compra': fechaCompra,
+      if (fechaNacimiento != null) 'fecha_nacimiento': fechaNacimiento,
       if (madreId != null) 'madre_id': madreId,
       if (padreId != null) 'padre_id': padreId,
       if (padrePajilla != null) 'padre_pajilla': padrePajilla,
@@ -3441,6 +3497,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Value<String>? origen,
     Value<double?>? precioCompra,
     Value<DateTime?>? fechaCompra,
+    Value<DateTime?>? fechaNacimiento,
     Value<String?>? madreId,
     Value<String?>? padreId,
     Value<String?>? padrePajilla,
@@ -3464,6 +3521,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       origen: origen ?? this.origen,
       precioCompra: precioCompra ?? this.precioCompra,
       fechaCompra: fechaCompra ?? this.fechaCompra,
+      fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
       madreId: madreId ?? this.madreId,
       padreId: padreId ?? this.padreId,
       padrePajilla: padrePajilla ?? this.padrePajilla,
@@ -3510,6 +3568,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     }
     if (fechaCompra.present) {
       map['fecha_compra'] = Variable<DateTime>(fechaCompra.value);
+    }
+    if (fechaNacimiento.present) {
+      map['fecha_nacimiento'] = Variable<DateTime>(fechaNacimiento.value);
     }
     if (madreId.present) {
       map['madre_id'] = Variable<String>(madreId.value);
@@ -3562,6 +3623,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
           ..write('origen: $origen, ')
           ..write('precioCompra: $precioCompra, ')
           ..write('fechaCompra: $fechaCompra, ')
+          ..write('fechaNacimiento: $fechaNacimiento, ')
           ..write('madreId: $madreId, ')
           ..write('padreId: $padreId, ')
           ..write('padrePajilla: $padrePajilla, ')
@@ -14322,6 +14384,7 @@ typedef $$AnimalesTableCreateCompanionBuilder =
       required String origen,
       Value<double?> precioCompra,
       Value<DateTime?> fechaCompra,
+      Value<DateTime?> fechaNacimiento,
       Value<String?> madreId,
       Value<String?> padreId,
       Value<String?> padrePajilla,
@@ -14346,6 +14409,7 @@ typedef $$AnimalesTableUpdateCompanionBuilder =
       Value<String> origen,
       Value<double?> precioCompra,
       Value<DateTime?> fechaCompra,
+      Value<DateTime?> fechaNacimiento,
       Value<String?> madreId,
       Value<String?> padreId,
       Value<String?> padrePajilla,
@@ -14415,6 +14479,11 @@ class $$AnimalesTableFilterComposer
 
   ColumnFilters<DateTime> get fechaCompra => $composableBuilder(
     column: $table.fechaCompra,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fechaNacimiento => $composableBuilder(
+    column: $table.fechaNacimiento,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14528,6 +14597,11 @@ class $$AnimalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get fechaNacimiento => $composableBuilder(
+    column: $table.fechaNacimiento,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get madreId => $composableBuilder(
     column: $table.madreId,
     builder: (column) => ColumnOrderings(column),
@@ -14628,6 +14702,11 @@ class $$AnimalesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<DateTime> get fechaNacimiento => $composableBuilder(
+    column: $table.fechaNacimiento,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get madreId =>
       $composableBuilder(column: $table.madreId, builder: (column) => column);
 
@@ -14705,6 +14784,7 @@ class $$AnimalesTableTableManager
                 Value<String> origen = const Value.absent(),
                 Value<double?> precioCompra = const Value.absent(),
                 Value<DateTime?> fechaCompra = const Value.absent(),
+                Value<DateTime?> fechaNacimiento = const Value.absent(),
                 Value<String?> madreId = const Value.absent(),
                 Value<String?> padreId = const Value.absent(),
                 Value<String?> padrePajilla = const Value.absent(),
@@ -14727,6 +14807,7 @@ class $$AnimalesTableTableManager
                 origen: origen,
                 precioCompra: precioCompra,
                 fechaCompra: fechaCompra,
+                fechaNacimiento: fechaNacimiento,
                 madreId: madreId,
                 padreId: padreId,
                 padrePajilla: padrePajilla,
@@ -14751,6 +14832,7 @@ class $$AnimalesTableTableManager
                 required String origen,
                 Value<double?> precioCompra = const Value.absent(),
                 Value<DateTime?> fechaCompra = const Value.absent(),
+                Value<DateTime?> fechaNacimiento = const Value.absent(),
                 Value<String?> madreId = const Value.absent(),
                 Value<String?> padreId = const Value.absent(),
                 Value<String?> padrePajilla = const Value.absent(),
@@ -14773,6 +14855,7 @@ class $$AnimalesTableTableManager
                 origen: origen,
                 precioCompra: precioCompra,
                 fechaCompra: fechaCompra,
+                fechaNacimiento: fechaNacimiento,
                 madreId: madreId,
                 padreId: padreId,
                 padrePajilla: padrePajilla,

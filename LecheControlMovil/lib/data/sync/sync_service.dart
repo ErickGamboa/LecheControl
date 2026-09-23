@@ -736,6 +736,9 @@ class SyncService {
                 'precio_compra': a.precioCompra,
                 'fecha_compra': a.fechaCompra?.toUtc().toIso8601String(),
                 'madre_id': a.madreId,
+                'fecha_nacimiento': a.fechaNacimiento
+                    ?.toUtc()
+                    .toIso8601String(),
                 'padre_id': a.padreId,
                 'padre_pajilla': a.padrePajilla,
                 'fecha_probable_parto': a.fechaProbableParto
@@ -781,6 +784,7 @@ class SyncService {
               precioCompra: (r['precio_compra'] as num?)?.toDouble(),
               fechaCompra: _fechaOpcional(r['fecha_compra']),
               madreId: r['madre_id'] as String?,
+              fechaNacimiento: _fechaOpcional(r['fecha_nacimiento']),
               padreId: r['padre_id'] as String?,
               padrePajilla: r['padre_pajilla'] as String?,
               fechaProbableParto: _fechaOpcional(r['fecha_probable_parto']),

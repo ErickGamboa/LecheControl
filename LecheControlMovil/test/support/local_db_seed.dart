@@ -111,6 +111,7 @@ Future<String> seedAnimal(
   DateTime? retiroLecheHasta,
   DateTime? fechaUltimoParto,
   DateTime? fechaProbableParto,
+  DateTime? fechaNacimiento,
   DateTime? now,
 }) async {
   final ts = now ?? DateTime(2026, 1, 1);
@@ -128,6 +129,7 @@ Future<String> seedAnimal(
           retiroLecheHasta: Value(retiroLecheHasta),
           fechaUltimoParto: Value(fechaUltimoParto),
           fechaProbableParto: Value(fechaProbableParto),
+          fechaNacimiento: Value(fechaNacimiento),
           createdAt: ts,
           updatedAt: ts,
         ),

@@ -10,6 +10,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../app/formato.dart';
+import '../app/widgets/campo_nacimiento.dart';
 import '../app/widgets/acciones_fila.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
@@ -149,6 +150,7 @@ class _FichaAnimalSheetState extends State<_FichaAnimalSheet> {
   late String _origen = widget.animal.origen;
   late DateTime _fechaCompra =
       widget.animal.fechaCompra ?? widget.animal.createdAt;
+  late DateTime? _fechaNacimiento = widget.animal.fechaNacimiento;
   bool _guardando = false;
   String? _error;
 
@@ -179,6 +181,7 @@ class _FichaAnimalSheetState extends State<_FichaAnimalSheet> {
             ? double.tryParse(_precioCtrl.text.replaceAll(',', '.'))
             : null,
         fechaCompra: _origen == OrigenAnimal.comprado ? _fechaCompra : null,
+        fechaNacimiento: _fechaNacimiento,
       );
       sincronizarSiSePuede();
       if (mounted) Navigator.pop(context, true);
@@ -248,6 +251,23 @@ class _FichaAnimalSheetState extends State<_FichaAnimalSheet> {
               ],
               selected: {_origen},
               onSelectionChanged: (s) => setState(() => _origen = s.first),
+            ),
+            // Acá es donde se carga la fecha de nacimiento del hato que ya
+            // estaba: sin esto, las novillas que hoy tiene la finca nunca
+            // aparecerían en Vacas por servir. Se le puede poner a cualquier
+            // animal, toros y terneros incluidos; el campo mismo explica qué
+            // significa la fecha en cada grupo.
+            const SizedBox(height: 16),
+            Text(
+              'Fecha de nacimiento',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            CampoNacimiento(
+              valueKey: 'animal.ficha.nacimiento',
+              sexo: _sexo,
+              grupo: widget.animal.grupo,
+              fecha: _fechaNacimiento,
+              onElegida: (f) => setState(() => _fechaNacimiento = f),
             ),
             if (_origen == OrigenAnimal.comprado) ...[
               const SizedBox(height: 16),

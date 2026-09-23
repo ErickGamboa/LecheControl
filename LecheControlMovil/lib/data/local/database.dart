@@ -123,6 +123,13 @@ class Animales extends Table {
   TextColumn get origen => text()(); // 'comprado' | 'nacido'
   RealColumn get precioCompra => real().nullable()();
   DateTimeColumn get fechaCompra => dateTime().nullable()();
+
+  /// Cuándo nació. Es opcional —de las vacas que ya estaban en la finca
+  /// cuando se empezó a usar la app casi nunca se sabe— pero cuando está, es
+  /// lo que hace que una novilla aparezca sola en Vacas por servir al cumplir
+  /// la edad de servirla (ver `domain/servir.dart`).
+  DateTimeColumn get fechaNacimiento => dateTime().nullable()();
+
   TextColumn get madreId => text().nullable()();
 
   /// De qué toro del hato es hija. Lo pone solo el evento de parto, leyendo el
@@ -627,7 +634,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -679,7 +686,11 @@ class AppDatabase extends _$AppDatabase {
         await m.alterTable(
           TableMigration(
             animales,
-            newColumns: [animales.padreId, animales.padrePajilla],
+            newColumns: [
+              animales.padreId,
+              animales.padrePajilla,
+              animales.fechaNacimiento,
+            ],
           ),
         );
       }
@@ -776,7 +787,11 @@ class AppDatabase extends _$AppDatabase {
         await m.alterTable(
           TableMigration(
             animales,
-            newColumns: [animales.padreId, animales.padrePajilla],
+            newColumns: [
+              animales.padreId,
+              animales.padrePajilla,
+              animales.fechaNacimiento,
+            ],
           ),
         );
         await m.alterTable(
@@ -789,6 +804,19 @@ class AppDatabase extends _$AppDatabase {
         // `animales`, que es el que se acaba de perder: tocar los de las
         // demás tablas acá sería trabajo de otro paso.
         await _crearIndiceAretesUnicos();
+      }
+      // v12 -> v13: la fecha de nacimiento, que es lo que hace que una novilla
+      // aparezca sola en Vacas por servir al cumplir la edad de servirla.
+      //
+      // **`from >= 12` no es un detalle.** Los pasos `from < 4` y `from < 12`
+      // recrean `animales`, y la columna va declarada en sus `newColumns`
+      // —si no, esas migraciones revientan con «no such column»—. Pero eso
+      // significa que para cualquiera que venga de antes de la v12 la columna
+      // **ya existe** cuando se llega acá, y agregarla otra vez falla con
+      // «duplicate column». Así que solo se agrega en el único caso en que
+      // falta de verdad: el que ya estaba en la v12.
+      if (from >= 12 && from < 13) {
+        await m.addColumn(animales, animales.fechaNacimiento);
       }
     },
   );

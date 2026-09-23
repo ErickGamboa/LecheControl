@@ -120,7 +120,9 @@ class AnalisisScreen extends StatelessWidget {
               titulo: 'Vacas por servir',
               detalle:
                   'Las que llevan $diasParaServir días o más de paridas y '
-                  'siguen sin preñarse. La más atrasada, de primera.',
+                  'siguen sin preñarse, y las novillas que ya cumplieron '
+                  '$mesesParaPrimerServicio meses. La más atrasada, de '
+                  'primera.',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => ServirScreen(lecheriaId: lecheriaId),

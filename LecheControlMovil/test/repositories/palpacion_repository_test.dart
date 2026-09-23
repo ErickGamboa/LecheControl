@@ -8,6 +8,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leche_control/data/domain/grupos.dart';
 import 'package:leche_control/data/domain/palpacion.dart';
+import 'package:leche_control/data/domain/servir.dart';
 import 'package:leche_control/data/local/database.dart';
 import 'package:leche_control/data/repositories/palpacion_repository.dart';
 
@@ -274,16 +275,112 @@ void main() {
       expect(await repo.porServir(lecheriaId, hoy: hoy), isEmpty);
     });
 
-    test('la que nunca ha parido no es de esta lista', () async {
+    test(
+      'la que nunca ha parido y no tiene fecha de nacimiento no entra',
+      () async {
+        // Sin la fecha no hay forma de saber si ya tiene edad, y meterla a
+        // ciegas sería mandar a servir a una ternera.
+        await seedAnimal(
+          db,
+          lecheriaId: lecheriaId,
+          id: 'n1',
+          identificador: 'N-1',
+          grupo: GrupoAnimal.novillas,
+        );
+
+        expect(await repo.porServir(lecheriaId, hoy: hoy), isEmpty);
+      },
+    );
+
+    test('la novilla entra al cumplir los 15 meses', () async {
+      // hoy = 26/8/2026. Cumple los 15 meses justo hoy.
       await seedAnimal(
         db,
         lecheriaId: lecheriaId,
         id: 'n1',
         identificador: 'N-1',
         grupo: GrupoAnimal.novillas,
+        fechaNacimiento: DateTime(2025, 5, 26),
+      );
+      // A esta le falta un día.
+      await seedAnimal(
+        db,
+        lecheriaId: lecheriaId,
+        id: 'n2',
+        identificador: 'N-2',
+        grupo: GrupoAnimal.novillas,
+        fechaNacimiento: DateTime(2025, 5, 27),
+      );
+
+      final lista = await repo.porServir(lecheriaId, hoy: hoy);
+      expect(lista.single.identificador, 'N-1');
+      expect(lista.single.motivo, MotivoServir.novillaPrimeriza);
+      expect(lista.single.mesesEdad, 15);
+      expect(lista.single.resumen, '15 meses de edad · sin servicios');
+    });
+
+    test('la novilla preñada no entra', () async {
+      await seedAnimal(
+        db,
+        lecheriaId: lecheriaId,
+        id: 'n1',
+        identificador: 'N-1',
+        grupo: GrupoAnimal.novillas,
+        fechaNacimiento: DateTime(2024, 1, 1),
+        estadoReproductivo: EstadoReproductivo.preniada,
       );
 
       expect(await repo.porServir(lecheriaId, hoy: hoy), isEmpty);
+    });
+
+    test('a la novilla se le cuentan todos sus servicios', () async {
+      // Nunca ha parido, así que no hay parto contra el cual medir: los
+      // intentos que lleva son todos los que se le hicieron.
+      await seedAnimal(
+        db,
+        lecheriaId: lecheriaId,
+        id: 'n1',
+        identificador: 'N-1',
+        grupo: GrupoAnimal.novillas,
+        fechaNacimiento: DateTime(2024, 6, 1),
+      );
+      await evento(
+        animalId: 'n1',
+        tipo: TipoEventoAnimal.monta,
+        fecha: DateTime(2026, 3, 1),
+      );
+      await evento(
+        animalId: 'n1',
+        tipo: TipoEventoAnimal.inseminacion,
+        fecha: DateTime(2026, 6, 1),
+      );
+
+      final lista = await repo.porServir(lecheriaId, hoy: hoy);
+      expect(lista.single.servicios, 2);
+    });
+
+    test('novillas y vacas se ordenan juntas por atraso', () async {
+      // La vaca lleva 60 días de lactancia: 10 de atraso.
+      await seedAnimal(
+        db,
+        lecheriaId: lecheriaId,
+        id: 'v1',
+        identificador: 'V-1',
+        fechaUltimoParto: DateTime(2026, 6, 27),
+      );
+      // La novilla cumplió los 15 meses hace 100 días.
+      await seedAnimal(
+        db,
+        lecheriaId: lecheriaId,
+        id: 'n1',
+        identificador: 'N-1',
+        grupo: GrupoAnimal.novillas,
+        fechaNacimiento: DateTime(2025, 2, 18),
+      );
+
+      final lista = await repo.porServir(lecheriaId, hoy: hoy);
+      expect(lista.map((v) => v.identificador), ['N-1', 'V-1']);
+      expect(lista.first.diasDeAtraso, greaterThan(lista.last.diasDeAtraso));
     });
 
     test('cuenta los servicios posteriores al parto, sin el celo', () async {

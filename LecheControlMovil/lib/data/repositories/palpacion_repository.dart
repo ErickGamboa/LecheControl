@@ -132,16 +132,17 @@ class PalpacionRepository {
             .get();
     if (animales.isEmpty) return const [];
 
-    final candidatas = animales
-        .where(
-          (a) => hayQueServir(
-            sexo: a.sexo,
-            fechaUltimoParto: a.fechaUltimoParto,
-            estadoReproductivo: a.estadoReproductivo,
-            hoy: hoy,
-          ),
-        )
-        .toList();
+    final candidatas = <(AnimalRow, RazonServir)>[];
+    for (final a in animales) {
+      final razon = razonDeServir(
+        sexo: a.sexo,
+        fechaUltimoParto: a.fechaUltimoParto,
+        fechaNacimiento: a.fechaNacimiento,
+        estadoReproductivo: a.estadoReproductivo,
+        hoy: hoy,
+      );
+      if (razon != null) candidatas.add((a, razon));
+    }
     if (candidatas.isEmpty) return const [];
 
     final servicios =
@@ -159,15 +160,29 @@ class PalpacionRepository {
     }
 
     final lista = [
-      for (final a in candidatas)
+      for (final (a, razon) in candidatas)
         VacaPorServir(
           animalId: a.id,
           identificador: a.identificador,
           grupo: a.grupo,
           estadoReproductivo: a.estadoReproductivo,
-          diasLactancia: diasDesde(a.fechaUltimoParto!, hoy: hoy),
+          motivo: razon.motivo,
+          diasDeAtraso: razon.diasDeAtraso,
+          diasLactancia: a.fechaUltimoParto == null
+              ? null
+              : diasDesde(a.fechaUltimoParto!, hoy: hoy),
+          mesesEdad: a.fechaNacimiento == null
+              ? null
+              : mesesDesde(a.fechaNacimiento!, hoy: hoy),
+          // En una vaca cuentan los intentos desde el parto; en una novilla,
+          // todos: el que la intentó servir a los 15 meses y no agarró es
+          // exactamente el dato que hace falta.
           servicios: (porAnimal[a.id] ?? const [])
-              .where((f) => f.isAfter(a.fechaUltimoParto!))
+              .where(
+                (f) =>
+                    a.fechaUltimoParto == null ||
+                    f.isAfter(a.fechaUltimoParto!),
+              )
               .length,
         ),
     ]..sort(compararPorServir);

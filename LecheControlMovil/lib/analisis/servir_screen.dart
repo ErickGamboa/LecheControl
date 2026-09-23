@@ -6,16 +6,17 @@ import '../data/domain/servir.dart';
 import '../hoja_vida/hoja_vida_screen.dart';
 import '../services.dart';
 
-/// Vacas por servir (Módulo 6 — Análisis): las que llevan
-/// [diasParaServir] días o más de paridas y todavía no están preñadas.
+/// Vacas por servir (Módulo 6 — Análisis): las vacas que parieron hace
+/// [diasParaServir] días o más sin volver a preñarse, y las novillas que ya
+/// cumplieron [mesesParaPrimerServicio] meses sin que nadie las sirviera.
 ///
-/// Es la lista que nadie pide y que más cuesta: una vaca abierta no se queja,
-/// solo produce cada vez menos y estira el intervalo entre partos. Acá salen
-/// ordenadas por lo único que importa —cuánto llevan— y pintadas de rojo según
-/// qué tan atrás vienen, para que la peor salte a la vista sin leer números.
+/// Es la lista que nadie pide y que más cuesta: un animal abierto no se queja,
+/// solo come y estira el intervalo entre partos. Acá salen ordenados por lo
+/// único que importa —cuánto llevan de atraso— y pintados de rojo según qué
+/// tan atrás vienen, para que el peor salte a la vista sin leer números.
 ///
-/// Al tocar una vaca se abre su hoja de vida, que es donde se ve qué se le ha
-/// hecho y qué falta.
+/// Al tocar un animal se abre su hoja de vida, que es donde se ve qué se le
+/// ha hecho y qué falta.
 class ServirScreen extends StatefulWidget {
   const ServirScreen({super.key, required this.lecheriaId});
 
@@ -64,9 +65,11 @@ class _ServirScreenState extends State<ServirScreen> {
             if (vacas.isEmpty) return const _SinVacas();
 
             // Los extremos de esta lista son los que reparten el color. Se
-            // calculan una vez acá y no por fila.
-            final mas = vacas.first.diasLactancia;
-            final menos = vacas.last.diasLactancia;
+            // calculan una vez acá y no por fila, y se miden por el atraso
+            // —no por el DLac— para que una novilla y una vaca se puedan
+            // comparar aunque una se cuente en meses y la otra en días.
+            final mas = vacas.first.diasDeAtraso;
+            final menos = vacas.last.diasDeAtraso;
 
             return ListView(
               padding: const EdgeInsets.all(LecheSpacing.lg),
@@ -76,7 +79,7 @@ class _ServirScreenState extends State<ServirScreen> {
                 for (final v in vacas)
                   _FilaVaca(
                     vaca: v,
-                    urgencia: urgencia(v.diasLactancia, menos: menos, mas: mas),
+                    urgencia: urgencia(v.diasDeAtraso, menos: menos, mas: mas),
                     onTap: () => _abrirHojaDeVida(v),
                   ),
                 const SizedBox(height: LecheSpacing.lg),
@@ -184,9 +187,17 @@ class _FilaVaca extends StatelessWidget {
                       children: [
                         Text(vaca.identificador, style: textos.titleMedium),
                         const SizedBox(width: LecheSpacing.sm),
-                        Text(
-                          GrupoAnimal.etiqueta(vaca.grupo),
-                          style: textos.bodySmall,
+                        // En una novilla pesa más saber que es primeriza que
+                        // en qué grupo está: es lo que cambia qué se hace con
+                        // ella.
+                        Expanded(
+                          child: Text(
+                            vaca.motivo == MotivoServir.novillaPrimeriza
+                                ? vaca.motivo.etiqueta
+                                : GrupoAnimal.etiqueta(vaca.grupo),
+                            style: textos.bodySmall,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -196,7 +207,7 @@ class _FilaVaca extends StatelessWidget {
                 ),
               ),
               Text(
-                '${vaca.diasLactancia}',
+                vaca.cifra,
                 style: textos.headlineSmall?.copyWith(
                   color: const Color(0xFFB71C1C),
                 ),
@@ -226,12 +237,19 @@ class _Criterio extends StatelessWidget {
             Text('CÓMO SE ARMA ESTA LISTA', style: textos.titleSmall),
             const SizedBox(height: LecheSpacing.sm),
             Text(
-              'Entran las vacas que parieron hace $diasParaServir días o más y '
-              'todavía no están preñadas, estén en ordeño o secas.\n\n'
-              'El número grande son los días de lactancia. Los servicios son '
-              'las montas e inseminaciones desde que parió; el celo no '
-              'cuenta.\n\n'
-              'Una vaca sale de la lista cuando se le registra la preñez.',
+              '· Vacas abiertas: parieron hace $diasParaServir días o más y '
+              'todavía no están preñadas, estén en ordeño o secas. El número '
+              'grande son los días de lactancia.\n'
+              '· Novillas primerizas: nunca han parido y ya cumplieron '
+              '$mesesParaPrimerServicio meses. El número grande es la edad. '
+              'Para que entren hace falta la fecha de nacimiento en la '
+              'ficha.\n\n'
+              'Las dos van en la misma lista, de la más atrasada a la menos: '
+              'lo que se compara es cuánto lleva cada una pudiendo servirse '
+              'sin que nadie la sirviera.\n\n'
+              'Los servicios son las montas e inseminaciones; el celo no '
+              'cuenta. Un animal sale de la lista cuando se le registra la '
+              'preñez.',
               style: textos.bodySmall,
             ),
           ],
