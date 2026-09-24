@@ -31,7 +31,17 @@ CREATE TEMP TABLE p ON COMMIT DROP AS
 SELECT
   'd70a8c89-f2ba-47ea-9044-5e2378f90f89'::uuid AS lecheria,
   '1924c185-a5de-4e88-8530-47fcc0bbf562'::uuid AS usuario,
-  current_date                                 AS hoy;
+  current_date                                 AS hoy,
+  -- Prefijo de las llaves que genera este script. Los `id` salen de un md5
+  -- de este prefijo más el nombre de la fila, así que todo lo que se
+  -- referencia entre tablas —la madre, la cría, el toro, la sesión de pesa—
+  -- casa solo.
+  --
+  -- Lleva la hora de la corrida **a propósito**: cada vez que se corre, las
+  -- filas nuevas estrenan `id`. Sin eso, correrlo dos veces reventaría con
+  -- llave duplicada, porque las de la corrida anterior siguen ahí (enterradas,
+  -- pero ahí).
+  'lc:' || to_char(clock_timestamp(), 'YYYYMMDDHH24MISS') || ':' AS k;
 
 DO $$
 DECLARE nombre_actual text;
@@ -50,33 +60,53 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- 1. Borrar lo que hay, solo de esta lechería
 -- ---------------------------------------------------------------------------
+--
+-- Las lápidas se marcan **cinco minutos antes** que las filas nuevas, y eso no
+-- es un adorno.
+--
+-- El teléfono baja por `(updated_at, id)` y aplica en ese orden. Si la baja de
+-- la fila vieja y la nueva que ocupa su lugar llevan la misma marca de tiempo
+-- —lo que pasa si las dos se tocan en la misma transacción—, desempata el
+-- `id`, que es azar: a veces la nueva llega primero e insertarla choca contra
+-- el índice único del teléfono, porque la vieja todavía está viva ahí.
+--
+-- Pasó de verdad: un teléfono se quedó con «Hay 16 cambios que no logran
+-- subir… UNIQUE constraint failed: curva_referencia.lecheria_id,
+-- curva_referencia.dia_desde» y el otro, contra el mismo servidor, lo aplicó
+-- sin chistar. Y no se cura solo: el cursor no avanza sobre una fila que
+-- reventó, así que vuelve a chocar con la misma en cada sincronización.
+--
+-- La app **no** se defiende de esto, así que el orden lo tiene que poner el
+-- servidor: primero la lápida, después lo que ocupa su lugar. Solo pasa
+-- insertando a mano en una finca que ya tiene datos, que es justamente lo que
+-- hace este script y lo que nunca se le hace a la finca de un cliente.
 
-UPDATE public.pesas_leche SET deleted_at = now(), updated_at = now()
+UPDATE public.pesas_leche SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL
    AND sesion_id IN (SELECT id FROM public.pesas_sesiones
                       WHERE lecheria_id = (SELECT lecheria FROM p));
 
-UPDATE public.pesas_sesiones  SET deleted_at = now(), updated_at = now()
+UPDATE public.pesas_sesiones  SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.calidad_leche   SET deleted_at = now(), updated_at = now()
+UPDATE public.calidad_leche   SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.ingresos_semana SET deleted_at = now(), updated_at = now()
+UPDATE public.ingresos_semana SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.gastos_semana   SET deleted_at = now(), updated_at = now()
+UPDATE public.gastos_semana   SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.semanas         SET deleted_at = now(), updated_at = now()
+UPDATE public.semanas         SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.eventos_animal  SET deleted_at = now(), updated_at = now()
+UPDATE public.eventos_animal  SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.animales        SET deleted_at = now(), updated_at = now()
+UPDATE public.animales        SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.medicamentos    SET deleted_at = now(), updated_at = now()
+UPDATE public.medicamentos    SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.categorias_gasto SET deleted_at = now(), updated_at = now()
+UPDATE public.categorias_gasto SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.curva_referencia SET deleted_at = now(), updated_at = now()
+UPDATE public.curva_referencia SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
-UPDATE public.config_reporte  SET deleted_at = now(), updated_at = now()
+UPDATE public.config_reporte  SET deleted_at = now(), updated_at = now() - interval '5 minutes'
  WHERE deleted_at IS NULL AND lecheria_id = (SELECT lecheria FROM p);
 
 -- ---------------------------------------------------------------------------
@@ -87,7 +117,7 @@ INSERT INTO public.config_reporte
   (id, lecheria_id, pct_excelente, pct_bueno, pct_vigilar, pct_bajo,
    umbral_secado_litros, tope_kg_leche, kg_leche_por_kg_concentrado,
    created_at, updated_at)
-SELECT md5('lc:config')::uuid, lecheria, 100, 85, 70, 60, 8, 30, 3, now(), now()
+SELECT md5(p.k || 'config')::uuid, lecheria, 100, 85, 70, 60, 8, 30, 3, now(), now()
   FROM p;
 
 -- La curva de referencia: cuántos litros se esperan según los días que lleva
@@ -95,7 +125,7 @@ SELECT md5('lc:config')::uuid, lecheria, 100, 85, 70, 60, 8, 30, 3, now(), now()
 INSERT INTO public.curva_referencia
   (id, lecheria_id, orden, dia_desde, dia_hasta, litros_esperados,
    created_at, updated_at)
-SELECT md5('lc:curva:' || t.orden)::uuid, p.lecheria,
+SELECT md5(p.k || 'curva:' || t.orden)::uuid, p.lecheria,
        t.orden, t.desde, t.hasta, t.litros, now(), now()
   FROM p, (VALUES
     (1,   0,   30, 18.8),
@@ -109,7 +139,7 @@ SELECT md5('lc:curva:' || t.orden)::uuid, p.lecheria,
 
 INSERT INTO public.categorias_gasto
   (id, lecheria_id, nombre, orden, created_at, updated_at)
-SELECT md5('lc:cat:' || t.nombre)::uuid, p.lecheria, t.nombre, t.orden,
+SELECT md5(p.k || 'cat:' || t.nombre)::uuid, p.lecheria, t.nombre, t.orden,
        now(), now()
   FROM p, (VALUES
     ('Salarios', 1),
@@ -126,7 +156,7 @@ SELECT md5('lc:cat:' || t.nombre)::uuid, p.lecheria, t.nombre, t.orden,
 INSERT INTO public.medicamentos
   (id, lecheria_id, nombre, costo_envase, tipo_dosis, ml_envase,
    aplicaciones_envase, dosis_fija_ml, dias_retiro_leche, created_at, updated_at)
-SELECT md5('lc:med:' || t.nombre)::uuid, p.lecheria, t.nombre, t.costo,
+SELECT md5(p.k || 'med:' || t.nombre)::uuid, p.lecheria, t.nombre, t.costo,
        t.tipo, t.ml, t.aplic, t.fija, t.retiro, now(), now()
   FROM p, (VALUES
     ('Oxitetraciclina LA',    18500, 'fija',           250::numeric, NULL::numeric, 20::numeric, 4),
@@ -285,7 +315,7 @@ INSERT INTO public.animales
    fecha_nacimiento, fecha_probable_parto, fecha_ultimo_parto,
    retiro_leche_hasta, created_at, updated_at)
 SELECT
-  md5('lc:animal:' || h.ident)::uuid,
+  md5(p.k || 'animal:' || h.ident)::uuid,
   p.lecheria,
   h.ident,
   h.sexo,
@@ -300,9 +330,9 @@ SELECT
     ((p.hoy - (((right(h.ident, 1)::int % 4) * 3 + 1) * 7))::timestamp
        AT TIME ZONE 'America/Costa_Rica') END,
   CASE WHEN h.madre IS NOT NULL
-       THEN md5('lc:animal:' || h.madre)::uuid END,
+       THEN md5(p.k || 'animal:' || h.madre)::uuid END,
   CASE WHEN h.padre_toro IS NOT NULL
-       THEN md5('lc:animal:' || h.padre_toro)::uuid END,
+       THEN md5(p.k || 'animal:' || h.padre_toro)::uuid END,
   h.padre_pajilla,
   CASE
     WHEN h.nac_m IS NOT NULL THEN
@@ -330,8 +360,8 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, sexo_cria, cria_animal_id,
    detalle, registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:parto:' || h.ident || ':' || v.n)::uuid,
-  md5('lc:animal:' || h.ident)::uuid,
+  md5(p.k || 'parto:' || h.ident || ':' || v.n)::uuid,
+  md5(p.k || 'animal:' || h.ident)::uuid,
   p.lecheria,
   'parto',
   ((p.hoy - h.del - v.atras)::timestamp AT TIME ZONE 'America/Costa_Rica'),
@@ -343,7 +373,7 @@ FROM hato h
 CROSS JOIN p
 CROSS JOIN (VALUES (0, 0), (1, 395)) AS v(n, atras)
 LEFT JOIN LATERAL (
-  SELECT md5('lc:animal:' || h2.ident)::uuid AS id
+  SELECT md5(p.k || 'animal:' || h2.ident)::uuid AS id
     FROM hato h2 WHERE h2.madre = h.ident LIMIT 1
 ) c ON true
 WHERE h.del IS NOT NULL
@@ -354,8 +384,8 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, detalle, grupo_anterior, grupo_nuevo,
    registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:secado:' || h.ident)::uuid,
-  md5('lc:animal:' || h.ident)::uuid,
+  md5(p.k || 'secado:' || h.ident)::uuid,
+  md5(p.k || 'animal:' || h.ident)::uuid,
   p.lecheria, 'secado',
   ((p.hoy - h.seca)::timestamp AT TIME ZONE 'America/Costa_Rica'),
   'Se secó para descansar antes del parto.', NULL, NULL,
@@ -363,8 +393,8 @@ SELECT
 FROM hato h, p WHERE h.seca IS NOT NULL
 UNION ALL
 SELECT
-  md5('lc:cambio:' || h.ident)::uuid,
-  md5('lc:animal:' || h.ident)::uuid,
+  md5(p.k || 'cambio:' || h.ident)::uuid,
+  md5(p.k || 'animal:' || h.ident)::uuid,
   p.lecheria, 'cambio_grupo',
   ((p.hoy - h.seca)::timestamp AT TIME ZONE 'America/Costa_Rica'),
   NULL, 'en_ordeno', 'secas',
@@ -378,13 +408,13 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, toro_id, toro_pajilla, detalle,
    registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:servicio:' || h.ident)::uuid,
-  md5('lc:animal:' || h.ident)::uuid,
+  md5(p.k || 'servicio:' || h.ident)::uuid,
+  md5(p.k || 'animal:' || h.ident)::uuid,
   p.lecheria,
   CASE WHEN right(h.ident, 1)::int % 2 = 0 THEN 'monta' ELSE 'inseminacion' END,
   ((p.hoy + h.prob - 283)::timestamp AT TIME ZONE 'America/Costa_Rica'),
   CASE WHEN right(h.ident, 1)::int % 2 = 0
-       THEN md5('lc:animal:9001')::uuid END,
+       THEN md5(p.k || 'animal:9001')::uuid END,
   CASE WHEN right(h.ident, 1)::int % 2 = 1
        THEN 'HOLSTEIN 7HO14567' END,
   NULL, p.usuario, now(), now()
@@ -396,8 +426,8 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, resultado, detalle,
    registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:palpa:ok:' || h.ident)::uuid,
-  md5('lc:animal:' || h.ident)::uuid,
+  md5(p.k || 'palpa:ok:' || h.ident)::uuid,
+  md5(p.k || 'animal:' || h.ident)::uuid,
   p.lecheria, 'palpacion',
   ((p.hoy + h.prob - 238)::timestamp AT TIME ZONE 'America/Costa_Rica'),
   'preñada', 'Preñez confirmada.',
@@ -410,11 +440,11 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, toro_id, toro_pajilla,
    registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:serv2:' || t.ident)::uuid,
-  md5('lc:animal:' || t.ident)::uuid,
+  md5(p.k || 'serv2:' || t.ident)::uuid,
+  md5(p.k || 'animal:' || t.ident)::uuid,
   p.lecheria, t.tipo,
   ((p.hoy - t.dias)::timestamp AT TIME ZONE 'America/Costa_Rica'),
-  CASE WHEN t.toro IS NOT NULL THEN md5('lc:animal:' || t.toro)::uuid END,
+  CASE WHEN t.toro IS NOT NULL THEN md5(p.k || 'animal:' || t.toro)::uuid END,
   t.pajilla, p.usuario, now(), now()
 FROM p, (VALUES
   ('4105','monta',        40, '9001', NULL),
@@ -429,8 +459,8 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, resultado, detalle, tratamiento,
    registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:palpa:vacia:' || t.ident)::uuid,
-  md5('lc:animal:' || t.ident)::uuid,
+  md5(p.k || 'palpa:vacia:' || t.ident)::uuid,
+  md5(p.k || 'animal:' || t.ident)::uuid,
   p.lecheria, 'palpacion',
   ((p.hoy - t.dias)::timestamp AT TIME ZONE 'America/Costa_Rica'),
   'vacia', t.nota, t.trat, p.usuario, now(), now()
@@ -449,8 +479,8 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, detalle,
    registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:celo:' || t.ident)::uuid,
-  md5('lc:animal:' || t.ident)::uuid,
+  md5(p.k || 'celo:' || t.ident)::uuid,
+  md5(p.k || 'animal:' || t.ident)::uuid,
   p.lecheria, 'celo',
   ((p.hoy - t.dias)::timestamp AT TIME ZONE 'America/Costa_Rica'),
   'Se dejó montar de las otras. No se sirvió.',
@@ -464,11 +494,11 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, medicamento_id, dosis, dias_retiro,
    costo, detalle, registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:san:' || t.ident || ':' || t.dias)::uuid,
-  md5('lc:animal:' || t.ident)::uuid,
+  md5(p.k || 'san:' || t.ident || ':' || t.dias)::uuid,
+  md5(p.k || 'animal:' || t.ident)::uuid,
   p.lecheria, 'sanidad',
   ((p.hoy - t.dias)::timestamp AT TIME ZONE 'America/Costa_Rica'),
-  md5('lc:med:' || t.med)::uuid, t.dosis, t.retiro, t.costo, t.nota,
+  md5(p.k || 'med:' || t.med)::uuid, t.dosis, t.retiro, t.costo, t.nota,
   p.usuario, now(), now()
 FROM p, (VALUES
   ('4105',  2, 'Oxitetraciclina LA',    '20 ml', 4, 1480::numeric,
@@ -494,8 +524,8 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, detalle,
    registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:obs:' || t.ident)::uuid,
-  md5('lc:animal:' || t.ident)::uuid,
+  md5(p.k || 'obs:' || t.ident)::uuid,
+  md5(p.k || 'animal:' || t.ident)::uuid,
   p.lecheria, 'observacion',
   ((p.hoy - t.dias)::timestamp AT TIME ZONE 'America/Costa_Rica'),
   t.nota, p.usuario, now(), now()
@@ -512,8 +542,8 @@ INSERT INTO public.eventos_animal
   (id, animal_id, lecheria_id, tipo, fecha, motivo_baja, precio_venta, detalle,
    registrado_por, created_at, updated_at)
 SELECT
-  md5('lc:baja:' || h.ident)::uuid,
-  md5('lc:animal:' || h.ident)::uuid,
+  md5(p.k || 'baja:' || h.ident)::uuid,
+  md5(p.k || 'animal:' || h.ident)::uuid,
   p.lecheria, 'baja',
   ((p.hoy - h.baja_dias)::timestamp AT TIME ZONE 'America/Costa_Rica'),
   h.motivo_baja, h.precio_venta,
@@ -536,7 +566,7 @@ FROM hato h, p WHERE h.baja_dias IS NOT NULL;
 CREATE TEMP TABLE sem ON COMMIT DROP AS
 SELECT
   g.i                                AS n,
-  md5('lc:semana:' || d.lunes)::uuid AS id,
+  md5(p.k || 'semana:' || d.lunes)::uuid AS id,
   d.lunes                            AS inicio,
   (d.lunes + 6)                      AS fin
 FROM p
@@ -554,7 +584,7 @@ FROM sem s, p;
 -- Una pesada por semana, los miércoles.
 INSERT INTO public.pesas_sesiones
   (id, lecheria_id, fecha, cerrada, created_at, updated_at)
-SELECT md5('lc:sesion:' || s.inicio)::uuid, p.lecheria,
+SELECT md5(p.k || 'sesion:' || s.inicio)::uuid, p.lecheria,
        ((s.inicio + 2)::timestamp AT TIME ZONE 'America/Costa_Rica'),
        s.fin < p.hoy, now(), now()
 FROM sem s, p;
@@ -569,9 +599,9 @@ INSERT INTO public.pesas_leche
   (id, sesion_id, animal_id, litros, litros_manana, litros_tarde,
    concentrado_kg, created_at, updated_at)
 SELECT
-  md5('lc:pesa:' || s.inicio || ':' || h.ident)::uuid,
-  md5('lc:sesion:' || s.inicio)::uuid,
-  md5('lc:animal:' || h.ident)::uuid,
+  md5(p.k || 'pesa:' || s.inicio || ':' || h.ident)::uuid,
+  md5(p.k || 'sesion:' || s.inicio)::uuid,
+  md5(p.k || 'animal:' || h.ident)::uuid,
   x.manana + x.tarde,
   x.manana,
   x.tarde,
@@ -611,7 +641,7 @@ INSERT INTO public.calidad_leche
   (id, lecheria_id, semana_id, solidos_totales_pct, celulas_somaticas,
    conteo_bacterial, created_at, updated_at)
 SELECT
-  md5('lc:calidad:' || s.inicio)::uuid, p.lecheria, s.id,
+  md5(p.k || 'calidad:' || s.inicio)::uuid, p.lecheria, s.id,
   round((12.35 + ((s.n * 5) % 9) * 0.11)::numeric, 2),
   (155000 + ((s.n * 37) % 11) * 31000)::numeric,
   ( 18000 + ((s.n * 53) % 13) * 29000)::numeric,
@@ -628,7 +658,7 @@ INSERT INTO public.ingresos_semana
   (id, lecheria_id, semana_id, tipo, monto, litros, detalle,
    created_at, updated_at)
 SELECT
-  md5('lc:ing:leche:' || s.inicio)::uuid, p.lecheria, s.id, 'leche',
+  md5(p.k || 'ing:leche:' || s.inicio)::uuid, p.lecheria, s.id, 'leche',
   round((t.litros * 7 * 480)::numeric, 0),
   round((t.litros * 7)::numeric, 1),
   'Entrega a la cooperativa.',
@@ -638,7 +668,7 @@ CROSS JOIN p
 CROSS JOIN LATERAL (
   SELECT coalesce(sum(pl.litros), 0) AS litros
     FROM public.pesas_leche pl
-   WHERE pl.sesion_id = md5('lc:sesion:' || s.inicio)::uuid
+   WHERE pl.sesion_id = md5(p.k || 'sesion:' || s.inicio)::uuid
      AND pl.deleted_at IS NULL
 ) t
 WHERE t.litros > 0;
@@ -648,8 +678,8 @@ INSERT INTO public.ingresos_semana
   (id, lecheria_id, semana_id, tipo, monto, animal_id, detalle,
    created_at, updated_at)
 SELECT
-  md5('lc:ing:venta:' || h.ident)::uuid, p.lecheria, s.id, 'venta_ganado',
-  h.precio_venta, md5('lc:animal:' || h.ident)::uuid,
+  md5(p.k || 'ing:venta:' || h.ident)::uuid, p.lecheria, s.id, 'venta_ganado',
+  h.precio_venta, md5(p.k || 'animal:' || h.ident)::uuid,
   'Venta de ' || h.ident || '.', now(), now()
 FROM hato h
 CROSS JOIN p
@@ -658,7 +688,7 @@ WHERE h.precio_venta IS NOT NULL;
 
 INSERT INTO public.ingresos_semana
   (id, lecheria_id, semana_id, tipo, monto, detalle, created_at, updated_at)
-SELECT md5('lc:ing:otro')::uuid, p.lecheria, s.id, 'otro',
+SELECT md5(p.k || 'ing:otro')::uuid, p.lecheria, s.id, 'otro',
        85000, 'Venta de abono del corral.', now(), now()
 FROM sem s, p WHERE s.n = 3;
 
@@ -666,7 +696,7 @@ FROM sem s, p WHERE s.n = 3;
 INSERT INTO public.gastos_semana
   (id, lecheria_id, semana_id, categoria, monto, detalle, created_at, updated_at)
 SELECT
-  md5('lc:gasto:' || s.inicio || ':' || g.categoria)::uuid,
+  md5(p.k || 'gasto:' || s.inicio || ':' || g.categoria)::uuid,
   p.lecheria, s.id, g.categoria,
   round((g.base * (1 + (((s.n * 11) % 5) - 2) * 0.06))::numeric, 0),
   g.nota, now(), now()
@@ -684,7 +714,7 @@ CROSS JOIN (VALUES
 INSERT INTO public.gastos_semana
   (id, lecheria_id, semana_id, categoria, monto, detalle, created_at, updated_at)
 SELECT
-  md5('lc:gasto:x:' || s.inicio || ':' || g.categoria)::uuid,
+  md5(p.k || 'gasto:x:' || s.inicio || ':' || g.categoria)::uuid,
   p.lecheria, s.id, g.categoria, g.monto, g.nota, now(), now()
 FROM sem s
 CROSS JOIN p
@@ -704,7 +734,7 @@ WHERE s.n = g.semana;
 INSERT INTO public.gastos_semana
   (id, lecheria_id, semana_id, categoria, monto, detalle, created_at, updated_at)
 SELECT
-  md5('lc:gasto:compra:' || h.ident)::uuid,
+  md5(p.k || 'gasto:compra:' || h.ident)::uuid,
   p.lecheria, s.id, 'Compra de ganado', h.precio_compra,
   'Compra de ' || h.ident || '.', now(), now()
 FROM hato h
