@@ -115,6 +115,13 @@ class PesasRepository {
     DateTime? fecha,
   }) async {
     final ahora = fecha ?? DateTime.now();
+    // Cuándo PASÓ y cuándo se DIGITÓ no son lo mismo, y desde que se
+    // pueden pasar apuntes de días atrás hay que distinguirlos: `ahora`
+    // es el día del evento —el del papel— y `registrado` el momento en
+    // que se guardó. `created_at` con la fecha del evento borraría el
+    // único rastro de cuándo se digitó, y un `updated_at` viejo es
+    // además un mal dato para el sync, que ordena por él.
+    final registrado = DateTime.now();
     final inicioSemana = lunesDe(ahora);
     final finSemana = inicioSemana.add(const Duration(days: 7));
     // Puede haber MÁS de una sesión abierta: si dos dispositivos pesan sin
@@ -144,8 +151,8 @@ class PesasRepository {
             id: id,
             lecheriaId: lecheriaId,
             fecha: ahora,
-            createdAt: ahora,
-            updatedAt: ahora,
+            createdAt: registrado,
+            updatedAt: registrado,
             pendiente: const Value(true),
           ),
         );

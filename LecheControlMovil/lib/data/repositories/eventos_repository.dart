@@ -58,6 +58,13 @@ class EventosRepository {
     String? registradoPor,
   }) async {
     final ahora = fecha ?? DateTime.now();
+    // Cuándo PASÓ y cuándo se DIGITÓ no son lo mismo, y desde que se
+    // pueden pasar apuntes de días atrás hay que distinguirlos: `ahora`
+    // es el día del evento —el del papel— y `registrado` el momento en
+    // que se guardó. `created_at` con la fecha del evento borraría el
+    // único rastro de cuándo se digitó, y un `updated_at` viejo es
+    // además un mal dato para el sync, que ordena por él.
+    final registrado = DateTime.now();
     await db
         .into(db.eventosAnimal)
         .insert(
@@ -70,8 +77,8 @@ class EventosRepository {
             toroPajilla: Value(toroPajilla),
             toroId: Value(toroId),
             registradoPor: Value(registradoPor),
-            createdAt: ahora,
-            updatedAt: ahora,
+            createdAt: registrado,
+            updatedAt: registrado,
             pendiente: const Value(true),
           ),
         );
@@ -122,6 +129,13 @@ class EventosRepository {
     final limpio = texto.trim();
     if (limpio.isEmpty) return;
     final ahora = fecha ?? DateTime.now();
+    // Cuándo PASÓ y cuándo se DIGITÓ no son lo mismo, y desde que se
+    // pueden pasar apuntes de días atrás hay que distinguirlos: `ahora`
+    // es el día del evento —el del papel— y `registrado` el momento en
+    // que se guardó. `created_at` con la fecha del evento borraría el
+    // único rastro de cuándo se digitó, y un `updated_at` viejo es
+    // además un mal dato para el sync, que ordena por él.
+    final registrado = DateTime.now();
     await db
         .into(db.eventosAnimal)
         .insert(
@@ -133,8 +147,8 @@ class EventosRepository {
             fecha: ahora,
             detalle: Value(limpio),
             registradoPor: Value(registradoPor),
-            createdAt: ahora,
-            updatedAt: ahora,
+            createdAt: registrado,
+            updatedAt: registrado,
             pendiente: const Value(true),
           ),
         );
@@ -157,6 +171,13 @@ class EventosRepository {
     String? registradoPor,
   }) async {
     final ahora = fecha ?? DateTime.now();
+    // Cuándo PASÓ y cuándo se DIGITÓ no son lo mismo, y desde que se
+    // pueden pasar apuntes de días atrás hay que distinguirlos: `ahora`
+    // es el día del evento —el del papel— y `registrado` el momento en
+    // que se guardó. `created_at` con la fecha del evento borraría el
+    // único rastro de cuándo se digitó, y un `updated_at` viejo es
+    // además un mal dato para el sync, que ordena por él.
+    final registrado = DateTime.now();
     final preniada = resultado == ResultadoPalpacion.preniada;
     String? limpio(String? t) {
       final s = t?.trim();
@@ -179,8 +200,8 @@ class EventosRepository {
               detalle: Value(preniada ? null : limpio(observaciones)),
               tratamiento: Value(preniada ? null : limpio(tratamiento)),
               registradoPor: Value(registradoPor),
-              createdAt: ahora,
-              updatedAt: ahora,
+              createdAt: registrado,
+              updatedAt: registrado,
               pendiente: const Value(true),
             ),
           );
@@ -190,7 +211,7 @@ class EventosRepository {
             preniada ? EstadoReproductivo.preniada : EstadoReproductivo.vacia,
           ),
           fechaProbableParto: Value(preniada ? fechaProbableParto : null),
-          updatedAt: Value(ahora),
+          updatedAt: Value(registrado),
           pendiente: const Value(true),
         ),
       );
@@ -208,11 +229,18 @@ class EventosRepository {
       db.animales,
     )..where((t) => t.id.equals(animalId))).getSingle();
     final ahora = fecha ?? DateTime.now();
+    // Cuándo PASÓ y cuándo se DIGITÓ no son lo mismo, y desde que se
+    // pueden pasar apuntes de días atrás hay que distinguirlos: `ahora`
+    // es el día del evento —el del papel— y `registrado` el momento en
+    // que se guardó. `created_at` con la fecha del evento borraría el
+    // único rastro de cuándo se digitó, y un `updated_at` viejo es
+    // además un mal dato para el sync, que ordena por él.
+    final registrado = DateTime.now();
     await db.transaction(() async {
       await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
         AnimalesCompanion(
           grupo: const Value(GrupoAnimal.secas),
-          updatedAt: Value(ahora),
+          updatedAt: Value(registrado),
           pendiente: const Value(true),
         ),
       );
@@ -228,8 +256,8 @@ class EventosRepository {
               grupoAnterior: Value(animal.grupo),
               grupoNuevo: const Value(GrupoAnimal.secas),
               registradoPor: Value(registradoPor),
-              createdAt: ahora,
-              updatedAt: ahora,
+              createdAt: registrado,
+              updatedAt: registrado,
               pendiente: const Value(true),
             ),
           );
@@ -251,10 +279,17 @@ class EventosRepository {
       db.animales,
     )..where((t) => t.id.equals(animalId))).getSingle();
     final ahora = fecha ?? DateTime.now();
+    // Cuándo PASÓ y cuándo se DIGITÓ no son lo mismo, y desde que se
+    // pueden pasar apuntes de días atrás hay que distinguirlos: `ahora`
+    // es el día del evento —el del papel— y `registrado` el momento en
+    // que se guardó. `created_at` con la fecha del evento borraría el
+    // único rastro de cuándo se digitó, y un `updated_at` viejo es
+    // además un mal dato para el sync, que ordena por él.
+    final registrado = DateTime.now();
     final criaId = _uuid.v4();
     final identificador = identificadorCria?.trim().isNotEmpty == true
         ? identificadorCria!.trim()
-        : 'CRIA-${ahora.millisecondsSinceEpoch}';
+        : 'CRIA-${registrado.millisecondsSinceEpoch}';
     // De quién es la cría: el toro que montó a la madre o la pajilla con la
     // que se inseminó, tomados del último servicio anterior al parto. Es el
     // dato que después nadie puede reconstruir de memoria.
@@ -274,8 +309,8 @@ class EventosRepository {
               madreId: Value(animalId),
               padreId: Value(padre.toroId),
               padrePajilla: Value(padre.pajilla),
-              createdAt: ahora,
-              updatedAt: ahora,
+              createdAt: registrado,
+              updatedAt: registrado,
               pendiente: const Value(true),
             ),
           );
@@ -287,7 +322,7 @@ class EventosRepository {
           // Arranca de nuevo la cuenta de días de lactancia (DLac), que es la
           // base del reporte de producción.
           fechaUltimoParto: Value(ahora),
-          updatedAt: Value(ahora),
+          updatedAt: Value(registrado),
           pendiente: const Value(true),
         ),
       );
@@ -305,8 +340,8 @@ class EventosRepository {
               grupoNuevo: const Value(GrupoAnimal.enOrdeno),
               criaAnimalId: Value(criaId),
               registradoPor: Value(registradoPor),
-              createdAt: ahora,
-              updatedAt: ahora,
+              createdAt: registrado,
+              updatedAt: registrado,
               pendiente: const Value(true),
             ),
           );

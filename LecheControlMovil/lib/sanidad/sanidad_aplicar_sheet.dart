@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/campo_fecha_evento.dart';
 import '../data/local/database.dart';
 import '../services.dart';
 import 'sanidad_screen.dart';
@@ -30,6 +31,12 @@ class _SanidadAplicarSheetState extends State<SanidadAplicarSheet> {
   final _seleccionados = <String>{};
   bool _guardando = false;
 
+  /// El día en que se aplicó. Arranca en hoy y se puede cambiar: la sanidad
+  /// es de lo que más se pasa del papel, porque el peón trata en el corral y
+  /// lo anota. Con la fecha buena, la hoja de vida dice cuánto hace que se
+  /// trató a esa vaca.
+  DateTime _cuando = DateTime.now();
+
   /// Aplica lo seleccionado y se cierra devolviendo **si quedó anotado**:
   /// `true` si sí, `false` si falló, y `null` si se cerró sin aplicar nada.
   ///
@@ -45,6 +52,7 @@ class _SanidadAplicarSheetState extends State<SanidadAplicarSheet> {
         lecheriaId: widget.lecheriaId,
         medicamentoIds: _seleccionados.toList(),
         registradoPor: widget.usuarioId,
+        fecha: _cuando,
       );
       sincronizarSiSePuede();
       if (mounted) Navigator.pop(context, true);
@@ -102,6 +110,12 @@ class _SanidadAplicarSheetState extends State<SanidadAplicarSheet> {
                 Text(
                   'Marcá todos los que le vas a poner.',
                   style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                CampoFechaEvento(
+                  fecha: _cuando,
+                  etiqueta: 'Se aplicó',
+                  onCambiar: (d) => setState(() => _cuando = d),
                 ),
                 const SizedBox(height: 8),
                 for (final m in medicamentos)

@@ -37,7 +37,7 @@ void main() {
     await montar(tester, pantalla: const Size(400, 900));
 
     for (final clave in [
-      'home.trabajo',
+      'home.eventos',
       'home.inventario',
       'home.registroLeche',
       'home.finanzas',

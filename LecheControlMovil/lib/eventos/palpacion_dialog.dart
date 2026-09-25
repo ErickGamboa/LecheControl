@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/widgets/aviso_rapido.dart';
 import '../data/domain/grupos.dart';
+import '../app/widgets/campo_fecha_evento.dart';
 import '../services.dart';
 
 /// El diálogo de palpación, en su propio archivo porque se abre desde dos
@@ -24,7 +25,16 @@ Future<bool> mostrarPalpacionDialog(
   String? usuarioId,
 }) async {
   var resultado = ResultadoPalpacion.preniada;
-  var fechaProbableParto = DateTime.now().add(const Duration(days: 283));
+  var cuando = DateTime.now();
+  // Los nueve meses se cuentan desde el día de la palpación, no desde hoy. Si
+  // se está pasando lo que el veterinario hizo la semana pasada, la vaca va a
+  // parir una semana antes de lo que diría un cálculo hecho desde hoy.
+  //
+  // Y se recalcula si se cambia el día de la palpación, mientras nadie haya
+  // tocado a mano la fecha probable: quien la escribió sabe más que la cuenta,
+  // y pisársela sería el peor de los dos mundos.
+  var fechaProbableParto = cuando.add(const Duration(days: 283));
+  var probableEscritaAMano = false;
   final observaciones = TextEditingController();
   final tratamiento = TextEditingController();
 
@@ -39,6 +49,20 @@ Future<bool> mostrarPalpacionDialog(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: CampoFechaEvento(
+                    fecha: cuando,
+                    etiqueta: 'Se palpó',
+                    onCambiar: (d) => setState(() {
+                      cuando = d;
+                      if (!probableEscritaAMano) {
+                        fechaProbableParto = d.add(const Duration(days: 283));
+                      }
+                    }),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 SegmentedButton<String>(
                   segments: [
                     for (final r in ResultadoPalpacion.todos)
@@ -70,7 +94,10 @@ Future<bool> mostrarPalpacionDialog(
                         lastDate: DateTime.now().add(const Duration(days: 400)),
                       );
                       if (elegida != null) {
-                        setState(() => fechaProbableParto = elegida);
+                        setState(() {
+                          fechaProbableParto = elegida;
+                          probableEscritaAMano = true;
+                        });
                       }
                     },
                   ),
@@ -132,6 +159,7 @@ Future<bool> mostrarPalpacionDialog(
         observaciones: observaciones.text,
         tratamiento: tratamiento.text,
         registradoPor: usuarioId,
+        fecha: cuando,
       );
       if (context.mounted) {
         // El resultado y no "Palpación": lo que se quiere confirmar de un

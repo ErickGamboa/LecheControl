@@ -5,7 +5,7 @@ import '../data/domain/grupos.dart';
 import '../data/domain/palpacion.dart';
 import '../services.dart';
 import '../hoja_vida/hoja_vida_screen.dart';
-import '../trabajo/palpacion_dialog.dart';
+import '../eventos/palpacion_dialog.dart';
 import 'palpacion_previa_pdf_screen.dart';
 
 /// Vacas por palpar (Módulo 6 — Análisis): la hoja que se le pasa al

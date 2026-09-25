@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../domain/calce_arete.dart';
 import '../domain/grupos.dart';
 import '../domain/semana.dart';
 import '../local/database.dart';
@@ -44,6 +45,45 @@ class AnimalesRepository {
               t.deletedAt.isNull(),
         ))
         .getSingleOrNull();
+  }
+
+  /// Los animales activos cuyo arete pega con [texto], del más probable al
+  /// menos (ver [calceDeArete]).
+  ///
+  /// Es para «Pasar apuntes»: sentado con la hoja al lado se escribe `117` y
+  /// la lista se acorta sola, en vez de digitar `542117` veinte veces.
+  ///
+  /// Solo activos: a un animal dado de baja no se le anotan eventos nuevos, y
+  /// meterlo en la lista solo da con qué equivocarse.
+  ///
+  /// [limite] existe para que la lista siga siendo una ayuda. Con dos letras
+  /// escritas puede pegar medio hato, y una lista de sesenta aretes es peor
+  /// que ninguna: el que busca sigue escribiendo y la lista se afina sola.
+  Future<List<AnimalRow>> buscarParecidos(
+    String lecheriaId,
+    String texto, {
+    int limite = 12,
+  }) async {
+    if (texto.trim().isEmpty) return const [];
+    final activos =
+        await (db.select(db.animales)..where(
+              (t) =>
+                  t.lecheriaId.equals(lecheriaId) &
+                  t.deletedAt.isNull() &
+                  t.estado.equals(EstadoAnimal.activo),
+            ))
+            .get();
+
+    final conCalce = <(AnimalRow, CalceArete)>[];
+    for (final animal in activos) {
+      final calce = calceDeArete(animal.identificador, texto);
+      if (calce != null) conCalce.add((animal, calce));
+    }
+    conCalce.sort(
+      (a, b) =>
+          compararCalce((a.$1.identificador, a.$2), (b.$1.identificador, b.$2)),
+    );
+    return [for (final (animal, _) in conCalce.take(limite)) animal];
   }
 
   /// Stream reactivo con un animal por id (para la tarjeta de la Pantalla de
@@ -419,11 +459,18 @@ class AnimalesRepository {
     if (animal.grupo == nuevoGrupo) return;
 
     final ahora = fecha ?? DateTime.now();
+    // Cuándo PASÓ y cuándo se DIGITÓ no son lo mismo, y desde que se
+    // pueden pasar apuntes de días atrás hay que distinguirlos: `ahora`
+    // es el día del evento —el del papel— y `registrado` el momento en
+    // que se guardó. `created_at` con la fecha del evento borraría el
+    // único rastro de cuándo se digitó, y un `updated_at` viejo es
+    // además un mal dato para el sync, que ordena por él.
+    final registrado = DateTime.now();
     await db.transaction(() async {
       await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
         AnimalesCompanion(
           grupo: Value(nuevoGrupo),
-          updatedAt: Value(ahora),
+          updatedAt: Value(registrado),
           pendiente: const Value(true),
         ),
       );
@@ -439,8 +486,8 @@ class AnimalesRepository {
               grupoAnterior: Value(animal.grupo),
               grupoNuevo: Value(nuevoGrupo),
               registradoPor: Value(registradoPor),
-              createdAt: ahora,
-              updatedAt: ahora,
+              createdAt: registrado,
+              updatedAt: registrado,
               pendiente: const Value(true),
             ),
           );
@@ -464,11 +511,18 @@ class AnimalesRepository {
       _ => EstadoAnimal.descartado,
     };
     final ahora = fecha ?? DateTime.now();
+    // Cuándo PASÓ y cuándo se DIGITÓ no son lo mismo, y desde que se
+    // pueden pasar apuntes de días atrás hay que distinguirlos: `ahora`
+    // es el día del evento —el del papel— y `registrado` el momento en
+    // que se guardó. `created_at` con la fecha del evento borraría el
+    // único rastro de cuándo se digitó, y un `updated_at` viejo es
+    // además un mal dato para el sync, que ordena por él.
+    final registrado = DateTime.now();
     await db.transaction(() async {
       await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
         AnimalesCompanion(
           estado: Value(estadoNuevo),
-          updatedAt: Value(ahora),
+          updatedAt: Value(registrado),
           pendiente: const Value(true),
         ),
       );
@@ -486,8 +540,8 @@ class AnimalesRepository {
                 motivo == MotivoBaja.venta ? precioVenta : null,
               ),
               registradoPor: Value(registradoPor),
-              createdAt: ahora,
-              updatedAt: ahora,
+              createdAt: registrado,
+              updatedAt: registrado,
               pendiente: const Value(true),
             ),
           );

@@ -10,7 +10,7 @@ import '../inventario/inventario_screen.dart';
 import '../pesa/registro_leche_screen.dart';
 import '../sanidad/sanidad_screen.dart';
 import '../services.dart';
-import '../trabajo/trabajo_screen.dart';
+import '../eventos/eventos_screen.dart';
 import 'widgets/produccion_semanal.dart';
 import 'widgets/resumen_hato.dart';
 
@@ -60,13 +60,13 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final modulos = <_Modulo>[
       _Modulo(
-        valueKey: 'home.trabajo',
+        valueKey: 'home.eventos',
         icono: Icons.nfc,
-        titulo: 'Trabajo',
+        titulo: 'Eventos',
         color: kVerdeLeche,
         onTap: () => _abrir(
           context,
-          TrabajoScreen(lecheriaId: lecheria.id, usuarioId: usuarioId),
+          EventosScreen(lecheriaId: lecheria.id, usuarioId: usuarioId),
         ),
       ),
       _Modulo(

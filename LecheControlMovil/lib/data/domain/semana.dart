@@ -23,6 +23,26 @@ String etiquetaSemana(DateTime inicio, DateTime fin) {
       '${fin.day} de ${_meses[fin.month - 1]}';
 }
 
+/// Un día escrito como se dice: "24 de setiembre".
+///
+/// Lleva el año solo cuando no es el de hoy. Un "1 de setiembre" a secas se
+/// entiende y no estorba; un "1 de setiembre de 2026" en todas las pantallas
+/// es ruido, hasta el día que el apunte sea del año pasado y ahí sí hace
+/// falta que salte a la vista.
+String diaEnPalabras(DateTime dia, {DateTime? hoy}) {
+  final referencia = hoy ?? DateTime.now();
+  final base = '${dia.day} de ${_meses[dia.month - 1]}';
+  return dia.year == referencia.year ? base : '$base de ${dia.year}';
+}
+
+/// Si [dia] es el mismo día que [hoy], sin mirar la hora.
+bool esHoy(DateTime dia, {DateTime? hoy}) {
+  final referencia = hoy ?? DateTime.now();
+  return dia.year == referencia.year &&
+      dia.month == referencia.month &&
+      dia.day == referencia.day;
+}
+
 const _meses = [
   'enero',
   'febrero',
