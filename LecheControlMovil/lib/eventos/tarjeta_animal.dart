@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
 import '../app/theme.dart';
 import '../app/widgets/aviso_rapido.dart';
 import '../app/widgets/campo_fecha_evento.dart';
@@ -192,6 +193,16 @@ class TarjetaAnimal extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
+                              // El nombre con el que se le dice en la finca,
+                              // debajo del arete y no en su lugar.
+                              if (soloAlias(animal.alias) case final texto?)
+                                Text(
+                                  texto,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               Text(
                                 '${GrupoAnimal.etiqueta(animal.grupo)} · '
                                 '${EstadoReproductivo.etiqueta(animal.estadoReproductivo)}',

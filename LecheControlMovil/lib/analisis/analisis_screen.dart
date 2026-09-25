@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../app/widgets/opcion_menu_card.dart';
+import '../data/domain/secar.dart';
 import '../data/domain/servir.dart';
 import 'analisis_calidad_screen.dart';
 import 'analisis_finanzas_screen.dart';
@@ -9,6 +10,7 @@ import 'analisis_leche_screen.dart';
 import 'dieta_concentrado_screen.dart';
 import 'palpacion_screen.dart';
 import 'partos_screen.dart';
+import 'secar_screen.dart';
 import 'servir_screen.dart';
 
 /// Análisis (Módulo 6): mirar la finca **a lo largo del tiempo**, no la
@@ -126,6 +128,22 @@ class AnalisisScreen extends StatelessWidget {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => ServirScreen(lecheriaId: lecheriaId),
+                ),
+              ),
+            ),
+            const SizedBox(height: LecheSpacing.md),
+            OpcionMenuCard(
+              valueKey: 'analisis.secar',
+              icono: const Icon(Icons.pause_circle_outline),
+              color: kAzulLeche,
+              titulo: 'Vacas por secar',
+              detalle:
+                  'Las preñadas a las que les faltan $diasParaSecar días o '
+                  'menos para parir y siguen en ordeño. No salen hasta que se '
+                  'sequen.',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SecarScreen(lecheriaId: lecheriaId),
                 ),
               ),
             ),

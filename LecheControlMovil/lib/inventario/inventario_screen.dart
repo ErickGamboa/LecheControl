@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
 import '../hoja_vida/hoja_vida_screen.dart';
@@ -130,7 +131,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
             child: TextField(
               controller: _busquedaCtrl,
               decoration: const InputDecoration(
-                labelText: 'Buscar por identificador',
+                labelText: 'Buscar por identificador o alias',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(),
               ),
@@ -208,7 +209,9 @@ class _InventarioScreenState extends State<InventarioScreen> {
                   final texto = _busqueda.trim().toLowerCase();
                   animales = animales
                       .where(
-                        (a) => a.identificador.toLowerCase().contains(texto),
+                        (a) =>
+                            a.identificador.toLowerCase().contains(texto) ||
+                            (a.alias?.toLowerCase().contains(texto) ?? false),
                       )
                       .toList();
                 }
@@ -241,7 +244,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                 : a.identificador,
                           ),
                         ),
-                        title: Text(a.identificador),
+                        title: Text(etiquetaAnimal(a.identificador, a.alias)),
                         subtitle: Text(
                           [
                             if (_verBajas)

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
+
 import '../app/theme.dart';
 import '../data/domain/grupos.dart';
 import '../data/domain/servir.dart';
@@ -185,7 +187,10 @@ class _FilaVaca extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(vaca.identificador, style: textos.titleMedium),
+                        Text(
+                          etiquetaAnimal(vaca.identificador, vaca.alias),
+                          style: textos.titleMedium,
+                        ),
                         const SizedBox(width: LecheSpacing.sm),
                         // En una novilla pesa más saber que es primeriza que
                         // en qué grupo está: es lo que cambia qué se hace con

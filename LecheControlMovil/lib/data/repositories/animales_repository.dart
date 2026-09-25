@@ -20,6 +20,13 @@ class AnimalConHistoriaException implements Exception {
   const AnimalConHistoriaException();
 }
 
+/// Un animal que salió en una búsqueda, y **por cuál de sus dos nombres**.
+///
+/// Lo segundo no es un detalle de implementación: si se escribe `99` y
+/// aparece la vaca `1542`, sin decir que fue por el alias parece que el filtro
+/// está malo. La pantalla lo usa para dejarlo claro.
+typedef AnimalEncontrado = ({AnimalRow animal, bool porAlias});
+
 /// Acceso a animales (inventario). Lee y escribe en la base local; la
 /// sincronización con Supabase corre por separado (SyncService).
 class AnimalesRepository {
@@ -31,6 +38,17 @@ class AnimalesRepository {
   /// Para anotar sola la compra de un animal como gasto de la semana.
   final FinanzasRepository _finanzas;
   final _uuid = const Uuid();
+
+  /// El alias como hay que guardarlo: sin espacios de sobra y, si quedó
+  /// vacío, null.
+  ///
+  /// Guardar una cadena vacía sería peor que no guardar nada: la app
+  /// mostraría «1542 · alias » con el alias en blanco, y no hay forma de
+  /// distinguir eso de un alias que de verdad existe.
+  String? _aliasLimpio(String? alias) {
+    final limpio = alias?.trim() ?? '';
+    return limpio.isEmpty ? null : limpio;
+  }
 
   /// Busca un animal (no borrado, cualquier estado) por su identificador
   /// dentro de una lechería. Es el mismo dato que llega por RFID o manual.
@@ -59,7 +77,7 @@ class AnimalesRepository {
   /// [limite] existe para que la lista siga siendo una ayuda. Con dos letras
   /// escritas puede pegar medio hato, y una lista de sesenta aretes es peor
   /// que ninguna: el que busca sigue escribiendo y la lista se afina sola.
-  Future<List<AnimalRow>> buscarParecidos(
+  Future<List<AnimalEncontrado>> buscarParecidos(
     String lecheriaId,
     String texto, {
     int limite = 12,
@@ -74,16 +92,22 @@ class AnimalesRepository {
             ))
             .get();
 
-    final conCalce = <(AnimalRow, CalceArete)>[];
+    final conCalce = <(AnimalRow, CoincidenciaAnimal)>[];
     for (final animal in activos) {
-      final calce = calceDeArete(animal.identificador, texto);
-      if (calce != null) conCalce.add((animal, calce));
+      final c = coincidenciaDe(animal.identificador, animal.alias, texto);
+      if (c != null) conCalce.add((animal, c));
     }
-    conCalce.sort(
-      (a, b) =>
-          compararCalce((a.$1.identificador, a.$2), (b.$1.identificador, b.$2)),
-    );
-    return [for (final (animal, _) in conCalce.take(limite)) animal];
+    conCalce.sort((a, b) {
+      // Se compara con el texto por el que cada uno pegó: si fue por alias, el
+      // largo que manda es el del alias y no el del arete.
+      String suyo((AnimalRow, CoincidenciaAnimal) x) =>
+          x.$2.porAlias ? x.$1.alias! : x.$1.identificador;
+      return compararCoincidencia((suyo(a), a.$2), (suyo(b), b.$2));
+    });
+    return [
+      for (final (animal, c) in conCalce.take(limite))
+        (animal: animal, porAlias: c.porAlias),
+    ];
   }
 
   /// Stream reactivo con un animal por id (para la tarjeta de la Pantalla de
@@ -132,8 +156,14 @@ class AnimalesRepository {
       }
       if (busqueda == null || busqueda.trim().isEmpty) return lista;
       final termino = busqueda.trim().toLowerCase();
+      // Inventario busca por arete **y por alias**: es el mismo texto que el
+      // ganadero escribiría en Eventos, y sería raro que acá no funcionara.
       return lista
-          .where((a) => a.identificador.toLowerCase().contains(termino))
+          .where(
+            (a) =>
+                a.identificador.toLowerCase().contains(termino) ||
+                (a.alias?.toLowerCase().contains(termino) ?? false),
+          )
           .toList();
     });
   }
@@ -249,6 +279,7 @@ class AnimalesRepository {
   Future<String> altaAnimal({
     required String lecheriaId,
     required String identificador,
+    String? alias,
     required String sexo,
     required String grupo,
     required String origen,
@@ -271,6 +302,7 @@ class AnimalesRepository {
             id: id,
             lecheriaId: lecheriaId,
             identificador: identificador,
+            alias: Value(_aliasLimpio(alias)),
             sexo: sexo,
             grupo: grupo,
             origen: origen,
@@ -338,6 +370,7 @@ class AnimalesRepository {
   Future<void> editarAnimal({
     required String animalId,
     required String identificador,
+    String? alias,
     required String sexo,
     required String origen,
     double? precioCompra,
@@ -367,6 +400,9 @@ class AnimalesRepository {
     await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
       AnimalesCompanion(
         identificador: Value(nuevoIdentificador),
+        // Se escribe siempre, incluso en null: quitarle el alias a un animal
+        // tiene que ser posible.
+        alias: Value(_aliasLimpio(alias)),
         sexo: Value(sexo),
         origen: Value(origen),
         // Se escribe siempre, incluso en null: borrar una fecha mal puesta

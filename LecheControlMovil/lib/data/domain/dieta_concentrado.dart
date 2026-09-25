@@ -32,6 +32,7 @@ double? racionConcentrado({
 class RacionVaca {
   const RacionVaca({
     required this.identificador,
+    this.alias,
     required this.esManual,
     required this.litrosLeche,
     required this.fechaPesa,
@@ -40,6 +41,10 @@ class RacionVaca {
   });
 
   final String identificador;
+
+  /// El nombre con el que se le dice en la finca, si tiene. Va a la par del
+  /// arete en toda la app (ver `app/etiqueta_animal.dart`).
+  final String? alias;
 
   /// Vaca pesada que no está en el inventario: se muestra con asterisco, igual
   /// que en el reporte de producción.

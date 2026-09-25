@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
+
 import '../app/theme.dart';
 import '../data/domain/grupos.dart';
 import '../data/domain/palpacion.dart';
@@ -60,7 +62,7 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
     final accion = await showDialog<String>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: Text('Vaca ${vaca.identificador}'),
+        title: Text('Vaca ${etiquetaAnimal(vaca.identificador, vaca.alias)}'),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(dialogContext, 'hoja'),
@@ -301,7 +303,10 @@ class _FilaVaca extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(vaca.identificador, style: textos.titleMedium),
+                        Text(
+                          etiquetaAnimal(vaca.identificador, vaca.alias),
+                          style: textos.titleMedium,
+                        ),
                         const SizedBox(width: LecheSpacing.sm),
                         Text(
                           GrupoAnimal.etiqueta(vaca.grupo),

@@ -115,6 +115,19 @@ class Animales extends Table {
   TextColumn get id => text()();
   TextColumn get lecheriaId => text()();
   TextColumn get identificador => text()();
+
+  /// El nombre corto con el que se le dice al animal en la finca.
+  ///
+  /// El arete oficial es largo y nadie lo usa hablando: la vaca `1542` es «la
+  /// 99» o «la Pinta». El alias es ese nombre, y es lo que el ganadero va a
+  /// escribir cuando la busque. Puede ser número o letras.
+  ///
+  /// **No reemplaza al arete ni compite con él.** Es opcional, no tiene que
+  /// ser único —dos vacas pueden llamarse «Pinta» y la finca sabrá cuál es
+  /// cuál— y en pantalla se muestra siempre junto al arete, nunca en su lugar.
+  /// El que identifica al animal sigue siendo el arete.
+  TextColumn get alias => text().nullable()();
+
   TextColumn get sexo => text()(); // 'hembra' | 'macho'
   TextColumn get grupo => text()();
   TextColumn get estado => text().withDefault(const Constant('activo'))();
@@ -634,7 +647,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -690,6 +703,7 @@ class AppDatabase extends _$AppDatabase {
               animales.padreId,
               animales.padrePajilla,
               animales.fechaNacimiento,
+              animales.alias,
             ],
           ),
         );
@@ -791,6 +805,7 @@ class AppDatabase extends _$AppDatabase {
               animales.padreId,
               animales.padrePajilla,
               animales.fechaNacimiento,
+              animales.alias,
             ],
           ),
         );
@@ -817,6 +832,17 @@ class AppDatabase extends _$AppDatabase {
       // falta de verdad: el que ya estaba en la v12.
       if (from >= 12 && from < 13) {
         await m.addColumn(animales, animales.fechaNacimiento);
+      }
+      // v13 -> v14: el alias, el nombre corto con el que se le dice al animal
+      // en la finca.
+      //
+      // Mismo cuidado que con la fecha de nacimiento, y por el mismo motivo:
+      // los pasos `from < 4` y `from < 12` recrean `animales` y la columna va
+      // declarada en sus `newColumns`, así que para quien venga de antes de la
+      // v12 ya existe al llegar acá. Solo se agrega para el que ya estaba en
+      // la v12 o la v13; si no, revienta con «duplicate column».
+      if (from >= 12 && from < 14) {
+        await m.addColumn(animales, animales.alias);
       }
     },
   );

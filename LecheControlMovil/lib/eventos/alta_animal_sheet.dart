@@ -25,6 +25,7 @@ class _AltaAnimalSheetState extends State<AltaAnimalSheet> {
   late final TextEditingController _identCtrl = TextEditingController(
     text: widget.identificadorInicial,
   );
+  final _aliasCtrl = TextEditingController();
   final _precioCtrl = TextEditingController();
   String _sexo = Sexo.hembra;
   String _grupo = GrupoAnimal.enOrdeno;
@@ -38,6 +39,7 @@ class _AltaAnimalSheetState extends State<AltaAnimalSheet> {
   @override
   void dispose() {
     _identCtrl.dispose();
+    _aliasCtrl.dispose();
     _precioCtrl.dispose();
     super.dispose();
   }
@@ -56,6 +58,7 @@ class _AltaAnimalSheetState extends State<AltaAnimalSheet> {
       await animalesRepo.altaAnimal(
         lecheriaId: widget.lecheriaId,
         identificador: identificador,
+        alias: _aliasCtrl.text,
         sexo: _sexo,
         grupo: _grupo,
         origen: _origen,
@@ -107,6 +110,18 @@ class _AltaAnimalSheetState extends State<AltaAnimalSheet> {
               controller: _identCtrl,
               decoration: const InputDecoration(
                 labelText: 'Identificador',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              key: const ValueKey('trabajo.alta.alias'),
+              controller: _aliasCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Alias (opcional)',
+                // El «para buscarla» es lo que explica para qué sirve: sin
+                // eso, «alias» suena a capricho y nadie lo llena.
+                helperText: 'Cómo le dicen en la finca. Sirve para buscarla.',
                 border: OutlineInputBorder(),
               ),
             ),

@@ -141,6 +141,9 @@ class _FichaAnimalSheetState extends State<_FichaAnimalSheet> {
   late final TextEditingController _identCtrl = TextEditingController(
     text: widget.animal.identificador,
   );
+  late final TextEditingController _aliasCtrl = TextEditingController(
+    text: widget.animal.alias ?? '',
+  );
   late final TextEditingController _precioCtrl = TextEditingController(
     text: widget.animal.precioCompra == null
         ? ''
@@ -157,6 +160,7 @@ class _FichaAnimalSheetState extends State<_FichaAnimalSheet> {
   @override
   void dispose() {
     _identCtrl.dispose();
+    _aliasCtrl.dispose();
     _precioCtrl.dispose();
     super.dispose();
   }
@@ -175,6 +179,7 @@ class _FichaAnimalSheetState extends State<_FichaAnimalSheet> {
       await animalesRepo.editarAnimal(
         animalId: widget.animal.id,
         identificador: identificador,
+        alias: _aliasCtrl.text,
         sexo: _sexo,
         origen: _origen,
         precioCompra: _origen == OrigenAnimal.comprado
@@ -222,6 +227,16 @@ class _FichaAnimalSheetState extends State<_FichaAnimalSheet> {
               controller: _identCtrl,
               decoration: const InputDecoration(
                 labelText: 'Identificador',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              key: const ValueKey('animal.ficha.alias'),
+              controller: _aliasCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Alias (opcional)',
+                helperText: 'Cómo le dicen en la finca. Sirve para buscarla.',
                 border: OutlineInputBorder(),
               ),
             ),

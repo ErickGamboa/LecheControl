@@ -85,6 +85,7 @@ class VacaPorServir {
   const VacaPorServir({
     required this.animalId,
     required this.identificador,
+    this.alias,
     required this.grupo,
     required this.estadoReproductivo,
     required this.motivo,
@@ -96,6 +97,10 @@ class VacaPorServir {
 
   final String animalId;
   final String identificador;
+
+  /// El nombre con el que se le dice en la finca, si tiene. Va a la par del
+  /// arete en toda la app (ver `app/etiqueta_animal.dart`).
+  final String? alias;
   final String grupo;
   final String estadoReproductivo;
   final MotivoServir motivo;

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../app/etiqueta_animal.dart';
 import '../data/domain/dieta_concentrado.dart';
 
 /// El PDF de la dieta de concentrado, para verlo en pantalla o mandarlo por
@@ -157,7 +158,9 @@ pw.Widget _tabla(List<RacionVaca> raciones) {
         pw.TableRow(
           children: [
             _celda(
-              r.esManual ? '${r.identificador} *' : r.identificador,
+              r.esManual
+                  ? '${r.identificador} *'
+                  : etiquetaAnimal(r.identificador, r.alias),
               izquierda: true,
             ),
             _celda('${_num(r.litrosLeche)} L'),

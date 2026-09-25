@@ -2457,6 +2457,15 @@ class $AnimalesTable extends Animales
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _aliasMeta = const VerificationMeta('alias');
+  @override
+  late final GeneratedColumn<String> alias = GeneratedColumn<String>(
+    'alias',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sexoMeta = const VerificationMeta('sexo');
   @override
   late final GeneratedColumn<String> sexo = GeneratedColumn<String>(
@@ -2661,6 +2670,7 @@ class $AnimalesTable extends Animales
     id,
     lecheriaId,
     identificador,
+    alias,
     sexo,
     grupo,
     estado,
@@ -2715,6 +2725,12 @@ class $AnimalesTable extends Animales
       );
     } else if (isInserting) {
       context.missing(_identificadorMeta);
+    }
+    if (data.containsKey('alias')) {
+      context.handle(
+        _aliasMeta,
+        alias.isAcceptableOrUnknown(data['alias']!, _aliasMeta),
+      );
     }
     if (data.containsKey('sexo')) {
       context.handle(
@@ -2879,6 +2895,10 @@ class $AnimalesTable extends Animales
         DriftSqlType.string,
         data['${effectivePrefix}identificador'],
       )!,
+      alias: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}alias'],
+      ),
       sexo: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sexo'],
@@ -2964,6 +2984,18 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
   final String id;
   final String lecheriaId;
   final String identificador;
+
+  /// El nombre corto con el que se le dice al animal en la finca.
+  ///
+  /// El arete oficial es largo y nadie lo usa hablando: la vaca `1542` es «la
+  /// 99» o «la Pinta». El alias es ese nombre, y es lo que el ganadero va a
+  /// escribir cuando la busque. Puede ser número o letras.
+  ///
+  /// **No reemplaza al arete ni compite con él.** Es opcional, no tiene que
+  /// ser único —dos vacas pueden llamarse «Pinta» y la finca sabrá cuál es
+  /// cuál— y en pantalla se muestra siempre junto al arete, nunca en su lugar.
+  /// El que identifica al animal sigue siendo el arete.
+  final String? alias;
   final String sexo;
   final String grupo;
   final String estado;
@@ -3002,6 +3034,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     required this.id,
     required this.lecheriaId,
     required this.identificador,
+    this.alias,
     required this.sexo,
     required this.grupo,
     required this.estado,
@@ -3027,6 +3060,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     map['id'] = Variable<String>(id);
     map['lecheria_id'] = Variable<String>(lecheriaId);
     map['identificador'] = Variable<String>(identificador);
+    if (!nullToAbsent || alias != null) {
+      map['alias'] = Variable<String>(alias);
+    }
     map['sexo'] = Variable<String>(sexo);
     map['grupo'] = Variable<String>(grupo);
     map['estado'] = Variable<String>(estado);
@@ -3073,6 +3109,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       id: Value(id),
       lecheriaId: Value(lecheriaId),
       identificador: Value(identificador),
+      alias: alias == null && nullToAbsent
+          ? const Value.absent()
+          : Value(alias),
       sexo: Value(sexo),
       grupo: Value(grupo),
       estado: Value(estado),
@@ -3123,6 +3162,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       id: serializer.fromJson<String>(json['id']),
       lecheriaId: serializer.fromJson<String>(json['lecheriaId']),
       identificador: serializer.fromJson<String>(json['identificador']),
+      alias: serializer.fromJson<String?>(json['alias']),
       sexo: serializer.fromJson<String>(json['sexo']),
       grupo: serializer.fromJson<String>(json['grupo']),
       estado: serializer.fromJson<String>(json['estado']),
@@ -3158,6 +3198,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       'id': serializer.toJson<String>(id),
       'lecheriaId': serializer.toJson<String>(lecheriaId),
       'identificador': serializer.toJson<String>(identificador),
+      'alias': serializer.toJson<String?>(alias),
       'sexo': serializer.toJson<String>(sexo),
       'grupo': serializer.toJson<String>(grupo),
       'estado': serializer.toJson<String>(estado),
@@ -3183,6 +3224,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     String? id,
     String? lecheriaId,
     String? identificador,
+    Value<String?> alias = const Value.absent(),
     String? sexo,
     String? grupo,
     String? estado,
@@ -3205,6 +3247,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     id: id ?? this.id,
     lecheriaId: lecheriaId ?? this.lecheriaId,
     identificador: identificador ?? this.identificador,
+    alias: alias.present ? alias.value : this.alias,
     sexo: sexo ?? this.sexo,
     grupo: grupo ?? this.grupo,
     estado: estado ?? this.estado,
@@ -3241,6 +3284,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       identificador: data.identificador.present
           ? data.identificador.value
           : this.identificador,
+      alias: data.alias.present ? data.alias.value : this.alias,
       sexo: data.sexo.present ? data.sexo.value : this.sexo,
       grupo: data.grupo.present ? data.grupo.value : this.grupo,
       estado: data.estado.present ? data.estado.value : this.estado,
@@ -3284,6 +3328,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           ..write('id: $id, ')
           ..write('lecheriaId: $lecheriaId, ')
           ..write('identificador: $identificador, ')
+          ..write('alias: $alias, ')
           ..write('sexo: $sexo, ')
           ..write('grupo: $grupo, ')
           ..write('estado: $estado, ')
@@ -3311,6 +3356,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     id,
     lecheriaId,
     identificador,
+    alias,
     sexo,
     grupo,
     estado,
@@ -3337,6 +3383,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           other.id == this.id &&
           other.lecheriaId == this.lecheriaId &&
           other.identificador == this.identificador &&
+          other.alias == this.alias &&
           other.sexo == this.sexo &&
           other.grupo == this.grupo &&
           other.estado == this.estado &&
@@ -3361,6 +3408,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
   final Value<String> id;
   final Value<String> lecheriaId;
   final Value<String> identificador;
+  final Value<String?> alias;
   final Value<String> sexo;
   final Value<String> grupo;
   final Value<String> estado;
@@ -3384,6 +3432,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     this.id = const Value.absent(),
     this.lecheriaId = const Value.absent(),
     this.identificador = const Value.absent(),
+    this.alias = const Value.absent(),
     this.sexo = const Value.absent(),
     this.grupo = const Value.absent(),
     this.estado = const Value.absent(),
@@ -3408,6 +3457,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     required String id,
     required String lecheriaId,
     required String identificador,
+    this.alias = const Value.absent(),
     required String sexo,
     required String grupo,
     this.estado = const Value.absent(),
@@ -3439,6 +3489,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Expression<String>? id,
     Expression<String>? lecheriaId,
     Expression<String>? identificador,
+    Expression<String>? alias,
     Expression<String>? sexo,
     Expression<String>? grupo,
     Expression<String>? estado,
@@ -3463,6 +3514,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       if (id != null) 'id': id,
       if (lecheriaId != null) 'lecheria_id': lecheriaId,
       if (identificador != null) 'identificador': identificador,
+      if (alias != null) 'alias': alias,
       if (sexo != null) 'sexo': sexo,
       if (grupo != null) 'grupo': grupo,
       if (estado != null) 'estado': estado,
@@ -3490,6 +3542,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Value<String>? id,
     Value<String>? lecheriaId,
     Value<String>? identificador,
+    Value<String?>? alias,
     Value<String>? sexo,
     Value<String>? grupo,
     Value<String>? estado,
@@ -3514,6 +3567,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       id: id ?? this.id,
       lecheriaId: lecheriaId ?? this.lecheriaId,
       identificador: identificador ?? this.identificador,
+      alias: alias ?? this.alias,
       sexo: sexo ?? this.sexo,
       grupo: grupo ?? this.grupo,
       estado: estado ?? this.estado,
@@ -3547,6 +3601,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     }
     if (identificador.present) {
       map['identificador'] = Variable<String>(identificador.value);
+    }
+    if (alias.present) {
+      map['alias'] = Variable<String>(alias.value);
     }
     if (sexo.present) {
       map['sexo'] = Variable<String>(sexo.value);
@@ -3616,6 +3673,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
           ..write('id: $id, ')
           ..write('lecheriaId: $lecheriaId, ')
           ..write('identificador: $identificador, ')
+          ..write('alias: $alias, ')
           ..write('sexo: $sexo, ')
           ..write('grupo: $grupo, ')
           ..write('estado: $estado, ')
@@ -14377,6 +14435,7 @@ typedef $$AnimalesTableCreateCompanionBuilder =
       required String id,
       required String lecheriaId,
       required String identificador,
+      Value<String?> alias,
       required String sexo,
       required String grupo,
       Value<String> estado,
@@ -14402,6 +14461,7 @@ typedef $$AnimalesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> lecheriaId,
       Value<String> identificador,
+      Value<String?> alias,
       Value<String> sexo,
       Value<String> grupo,
       Value<String> estado,
@@ -14444,6 +14504,11 @@ class $$AnimalesTableFilterComposer
 
   ColumnFilters<String> get identificador => $composableBuilder(
     column: $table.identificador,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get alias => $composableBuilder(
+    column: $table.alias,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14562,6 +14627,11 @@ class $$AnimalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get alias => $composableBuilder(
+    column: $table.alias,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get sexo => $composableBuilder(
     column: $table.sexo,
     builder: (column) => ColumnOrderings(column),
@@ -14675,6 +14745,9 @@ class $$AnimalesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get alias =>
+      $composableBuilder(column: $table.alias, builder: (column) => column);
+
   GeneratedColumn<String> get sexo =>
       $composableBuilder(column: $table.sexo, builder: (column) => column);
 
@@ -14777,6 +14850,7 @@ class $$AnimalesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> lecheriaId = const Value.absent(),
                 Value<String> identificador = const Value.absent(),
+                Value<String?> alias = const Value.absent(),
                 Value<String> sexo = const Value.absent(),
                 Value<String> grupo = const Value.absent(),
                 Value<String> estado = const Value.absent(),
@@ -14800,6 +14874,7 @@ class $$AnimalesTableTableManager
                 id: id,
                 lecheriaId: lecheriaId,
                 identificador: identificador,
+                alias: alias,
                 sexo: sexo,
                 grupo: grupo,
                 estado: estado,
@@ -14825,6 +14900,7 @@ class $$AnimalesTableTableManager
                 required String id,
                 required String lecheriaId,
                 required String identificador,
+                Value<String?> alias = const Value.absent(),
                 required String sexo,
                 required String grupo,
                 Value<String> estado = const Value.absent(),
@@ -14848,6 +14924,7 @@ class $$AnimalesTableTableManager
                 id: id,
                 lecheriaId: lecheriaId,
                 identificador: identificador,
+                alias: alias,
                 sexo: sexo,
                 grupo: grupo,
                 estado: estado,

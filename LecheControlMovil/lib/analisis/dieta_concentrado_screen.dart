@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
+
 import '../app/theme.dart';
 import '../data/domain/dieta_concentrado.dart';
 import '../services.dart';
@@ -263,7 +265,9 @@ class _Tabla extends StatelessWidget {
                 cells: [
                   DataCell(
                     Text(
-                      r.esManual ? '${r.identificador} *' : r.identificador,
+                      r.esManual
+                          ? '${r.identificador} *'
+                          : etiquetaAnimal(r.identificador, r.alias),
                       style: TextStyle(
                         color: r.esManual ? Colors.blue.shade700 : null,
                       ),

@@ -110,6 +110,7 @@ class PartosRepository {
         VacaPorParir(
           animalId: a.id,
           identificador: a.identificador,
+          alias: a.alias,
           grupo: a.grupo,
           fechaProbable: fechaProbable,
           origen: confirmada != null

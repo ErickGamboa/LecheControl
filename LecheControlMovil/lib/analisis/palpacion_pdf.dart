@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../app/etiqueta_animal.dart';
 import '../data/domain/grupos.dart';
 import '../data/domain/palpacion.dart';
 
@@ -163,7 +164,11 @@ pw.Widget _tabla(List<VacaPorPalpar> vacas) {
       for (final v in vacas)
         pw.TableRow(
           children: [
-            _celda(v.identificador, izquierda: true, negrita: true),
+            _celda(
+              etiquetaAnimal(v.identificador, v.alias),
+              izquierda: true,
+              negrita: true,
+            ),
             _celda(
               v.motivo.etiquetaCorta,
               izquierda: true,

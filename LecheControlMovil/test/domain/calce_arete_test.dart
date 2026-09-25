@@ -79,4 +79,60 @@ void main() {
       expect(aretesQuePegan(['4101', '4102'], ''), isEmpty);
     });
   });
+
+  group('el alias', () {
+    test('la vaca aparece buscando por su alias', () {
+      // El caso de todos los días: la 1542 es «la 99» en la finca.
+      final c = coincidenciaDe('1542', '99', '99');
+      expect(c?.calce, CalceArete.exacto);
+      expect(c?.porAlias, isTrue, reason: 'hay que poder decir por qué salió');
+    });
+
+    test('también a pedazos, como el arete', () {
+      final c = coincidenciaDe('1542', 'Pinta', 'pin');
+      expect(c?.calce, CalceArete.empiezaCon);
+      expect(c?.porAlias, isTrue);
+    });
+
+    test('si pega el arete, no se marca como alias', () {
+      final c = coincidenciaDe('1542', '99', '42');
+      expect(c?.calce, CalceArete.terminaEn);
+      expect(c?.porAlias, isFalse);
+    });
+
+    test('pegando los dos, manda el calce más fuerte', () {
+      // El alias es exacto y el arete solo contiene: gana el alias.
+      final c = coincidenciaDe('1990', '99', '99');
+      expect(c?.calce, CalceArete.exacto);
+      expect(c?.porAlias, isTrue);
+    });
+
+    test('empatados, manda el arete', () {
+      // Los dos exactos. El arete es el dato oficial y va primero.
+      final c = coincidenciaDe('99', '99', '99');
+      expect(c?.porAlias, isFalse);
+    });
+
+    test('sin alias, se busca solo por arete', () {
+      expect(coincidenciaDe('1542', null, '99'), isNull);
+    });
+
+    test('lo que no pega por ninguno de los dos, no pega', () {
+      expect(coincidenciaDe('1542', 'Pinta', '777'), isNull);
+    });
+  });
+
+  group('el orden con alias', () {
+    (String, CoincidenciaAnimal) par(String id, String? alias, String texto) {
+      final c = coincidenciaDe(id, alias, texto)!;
+      return (c.porAlias ? alias! : id, c);
+    }
+
+    test('el que pegó por arete va antes que el que pegó por alias', () {
+      // Las dos son exactas: la del arete 99 antes que la que se llama 99.
+      final lista = [par('1542', '99', '99'), par('99', null, '99')]
+        ..sort(compararCoincidencia);
+      expect(lista.first.$2.porAlias, isFalse);
+    });
+  });
 }

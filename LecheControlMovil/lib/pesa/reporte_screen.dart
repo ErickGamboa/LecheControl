@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
+
 import '../ajustes/curva_screen.dart';
 import '../app/theme.dart';
 import '../data/domain/curva_lactancia.dart';
@@ -389,7 +391,9 @@ class _ProduccionPorVaca extends StatelessWidget {
                 cells: [
                   DataCell(
                     Text(
-                      f.esManual ? '${f.identificador} *' : f.identificador,
+                      f.esManual
+                          ? '${f.identificador} *'
+                          : etiquetaAnimal(f.identificador, f.alias),
                       style: TextStyle(
                         color: f.esManual ? Colors.blue.shade700 : null,
                       ),
@@ -667,7 +671,9 @@ class _RankingSegunCurva extends StatelessWidget {
                   for (final f in filas)
                     DataRow(
                       cells: [
-                        DataCell(Text(f.identificador)),
+                        DataCell(
+                          Text(etiquetaAnimal(f.identificador, f.alias)),
+                        ),
                         DataCell(Text('${f.diasLactancia}')),
                         DataCell(
                           Text(
@@ -757,7 +763,9 @@ class _ListaTop extends StatelessWidget {
               children: [
                 Flexible(
                   child: Text(
-                    f.esManual ? '${f.identificador} *' : f.identificador,
+                    f.esManual
+                        ? '${f.identificador} *'
+                        : etiquetaAnimal(f.identificador, f.alias),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

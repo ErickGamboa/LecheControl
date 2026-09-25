@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
+
 import '../app/theme.dart';
 import '../data/domain/grupos.dart';
 import '../data/domain/partos_proyectados.dart';
@@ -389,7 +391,7 @@ class _FilaVaca extends StatelessWidget {
                     // "NOVILLA-BLANQUITA-2024" se sale de la fila.
                     Flexible(
                       child: Text(
-                        vaca.identificador,
+                        etiquetaAnimal(vaca.identificador, vaca.alias),
                         style: textos.titleMedium,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -540,7 +542,8 @@ class _FueraDeRango extends StatelessWidget {
             const SizedBox(height: LecheSpacing.sm),
             for (final v in vacas)
               Text(
-                '${v.identificador} · ${v.fechaProbable.day}/'
+                '${etiquetaAnimal(v.identificador, v.alias)} · '
+                '${v.fechaProbable.day}/'
                 '${v.fechaProbable.month}/${v.fechaProbable.year}',
                 style: textos.bodyMedium,
               ),

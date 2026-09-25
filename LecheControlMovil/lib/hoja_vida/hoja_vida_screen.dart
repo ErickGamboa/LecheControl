@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
 import '../app/formato.dart';
 import '../app/widgets/acciones_fila.dart';
 import '../data/domain/curva_lactancia.dart';
@@ -50,7 +51,11 @@ class HojaVidaScreen extends StatelessWidget {
           length: 2,
           child: Scaffold(
             appBar: AppBar(
-              title: Text(animal?.identificador ?? 'Hoja de vida'),
+              title: Text(
+                animal == null
+                    ? 'Hoja de vida'
+                    : etiquetaAnimal(animal.identificador, animal.alias),
+              ),
               actions: [
                 if (animal != null)
                   PopupMenuButton<String>(

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
 import '../app/widgets/scan_field.dart';
 import '../data/domain/grupos.dart';
 import '../data/local/database.dart';
+import '../data/repositories/animales_repository.dart';
 import '../services.dart';
 import 'alta_animal_sheet.dart';
 import 'tarjeta_animal.dart';
@@ -38,7 +40,7 @@ class _EventosScreenState extends State<EventosScreen> {
   final _focus = FocusNode();
 
   AnimalRow? _animal;
-  List<AnimalRow> _candidatos = const [];
+  List<AnimalEncontrado> _candidatos = const [];
   bool _buscando = false;
   bool _noEncontrado = false;
 
@@ -203,14 +205,37 @@ class _EventosScreenState extends State<EventosScreen> {
   Widget _lista() => ListView.builder(
     itemCount: _candidatos.length,
     itemBuilder: (context, i) {
-      final a = _candidatos[i];
+      final encontrado = _candidatos[i];
+      final a = encontrado.animal;
       return Card(
         margin: const EdgeInsets.only(bottom: 8),
         child: ListTile(
           key: ValueKey('eventos.candidato.${a.identificador}'),
-          title: Text(
-            a.identificador,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          // El arete y el alias van los dos, y el alias se resalta cuando fue
+          // **por él** que el animal apareció. Escribir «99» y ver salir la
+          // 1542 sin explicación parece un filtro malo; con el alias marcado
+          // se entiende de una.
+          title: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: a.identificador,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (soloAlias(a.alias) case final texto?)
+                  TextSpan(
+                    text: '  ·  $texto',
+                    style: TextStyle(
+                      fontWeight: encontrado.porAlias
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: encontrado.porAlias
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+              ],
+            ),
           ),
           subtitle: Text(
             '${GrupoAnimal.etiqueta(a.grupo)} · '

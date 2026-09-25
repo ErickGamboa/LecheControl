@@ -662,6 +662,7 @@ class PesasRepository {
         RacionVaca(
           identificador:
               animal?.identificador ?? pesa.identificadorManual ?? 'sin id',
+          alias: animal?.alias,
           esManual: animal == null,
           litrosLeche: pesa.litros,
           fechaPesa: fila.readTable(db.pesasSesiones).fecha,

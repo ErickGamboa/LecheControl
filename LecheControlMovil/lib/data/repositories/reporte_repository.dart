@@ -31,6 +31,7 @@ enum RangoProduccion {
 class FilaReporte {
   const FilaReporte({
     required this.identificador,
+    this.alias,
     required this.esManual,
     required this.diasLactancia,
     required this.litrosManana,
@@ -43,6 +44,10 @@ class FilaReporte {
   });
 
   final String identificador;
+
+  /// El nombre con el que se le dice en la finca, si tiene. Va a la par del
+  /// arete en toda la app (ver `app/etiqueta_animal.dart`).
+  final String? alias;
   final bool esManual;
 
   /// null para las manuales y para las que no tienen parto registrado.
@@ -288,6 +293,7 @@ class ReporteRepository {
         FilaReporte(
           identificador:
               animal?.identificador ?? p.identificadorManual ?? 'sin id',
+          alias: animal?.alias,
           esManual: esManual,
           diasLactancia: dlac,
           litrosManana: p.litrosManana,

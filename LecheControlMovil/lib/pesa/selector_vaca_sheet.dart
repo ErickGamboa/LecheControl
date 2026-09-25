@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/etiqueta_animal.dart';
 import '../data/domain/curva_lactancia.dart';
 import '../data/local/database.dart';
 import '../services.dart';
@@ -90,7 +91,7 @@ class _SelectorVacaSheetState extends State<_SelectorVacaSheet> {
                     autofocus: false,
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
-                      hintText: 'Buscar por número',
+                      hintText: 'Buscar por número o alias',
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _filtro.isEmpty
                           ? null
@@ -120,9 +121,12 @@ class _SelectorVacaSheetState extends State<_SelectorVacaSheet> {
                       ? todas
                       : todas
                             .where(
-                              (a) => a.identificador.toLowerCase().contains(
-                                filtro,
-                              ),
+                              (a) =>
+                                  a.identificador.toLowerCase().contains(
+                                    filtro,
+                                  ) ||
+                                  (a.alias?.toLowerCase().contains(filtro) ??
+                                      false),
                             )
                             .toList();
 
@@ -217,7 +221,7 @@ class _FilaVaca extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
         ),
       ),
-      title: Text(animal.identificador),
+      title: Text(etiquetaAnimal(animal.identificador, animal.alias)),
       subtitle: Text(
         dlac == null ? 'Sin parto registrado' : '$dlac días de lactancia',
       ),

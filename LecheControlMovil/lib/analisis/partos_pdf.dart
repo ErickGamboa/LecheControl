@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../app/etiqueta_animal.dart';
 import '../data/domain/grupos.dart';
 import '../data/domain/partos_proyectados.dart';
 
@@ -75,7 +76,7 @@ Future<Uint8List> construirPdfPartos({
           _aviso(
             '${proyeccion.fueraDeRango.length} con fecha más allá de los doce '
             'meses: '
-            '${proyeccion.fueraDeRango.map((v) => '${v.identificador} '
+            '${proyeccion.fueraDeRango.map((v) => '${etiquetaAnimal(v.identificador, v.alias)} '
                 '(${_fechaCorta(v.fechaProbable)}/'
                 '${v.fechaProbable.year})').join(', ')}. '
             'Casi siempre es una fecha mal digitada.',
@@ -242,7 +243,11 @@ pw.TableRow _filaVaca(VacaPorParir v, DateTime hoy) {
   return pw.TableRow(
     children: [
       _celda('${v.fechaProbable.day}', negrita: true),
-      _celda(v.identificador, izquierda: true, negrita: true),
+      _celda(
+        etiquetaAnimal(v.identificador, v.alias),
+        izquierda: true,
+        negrita: true,
+      ),
       _celda(GrupoAnimal.etiqueta(v.grupo), izquierda: true),
       _celda(
         pasada ? 'Pasada' : '$dias d',

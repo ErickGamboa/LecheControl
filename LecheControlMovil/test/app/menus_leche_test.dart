@@ -40,16 +40,16 @@ void main() {
     expect(find.byKey(const ValueKey('registro.calidad')), findsOneWidget);
   });
 
-  testWidgets('Análisis ofrece las seis miradas', (tester) async {
+  testWidgets('Análisis ofrece las siete miradas', (tester) async {
     await montar(
       tester,
       const AnalisisScreen(
         lecheriaId: 'lecheria-1',
         nombreLecheria: 'LecheriaErick',
       ),
-      // Alta a propósito: las seis opciones no caben en una pantalla de
+      // Alta a propósito: las siete opciones no caben en una pantalla de
       // teléfono y las de abajo no se montarían.
-      tamano: const Size(400, 1400),
+      tamano: const Size(400, 1700),
     );
 
     for (final clave in [

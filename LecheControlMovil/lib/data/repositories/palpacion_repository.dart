@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../domain/grupos.dart';
 import '../domain/palpacion.dart';
+import '../domain/secar.dart';
 import '../domain/servir.dart';
 import '../local/database.dart';
 
@@ -91,6 +92,7 @@ class PalpacionRepository {
         VacaPorPalpar(
           animalId: a.id,
           identificador: a.identificador,
+          alias: a.alias,
           grupo: a.grupo,
           estadoReproductivo: a.estadoReproductivo,
           motivo: razon.motivo,
@@ -164,6 +166,7 @@ class PalpacionRepository {
         VacaPorServir(
           animalId: a.id,
           identificador: a.identificador,
+          alias: a.alias,
           grupo: a.grupo,
           estadoReproductivo: a.estadoReproductivo,
           motivo: razon.motivo,
@@ -187,5 +190,66 @@ class PalpacionRepository {
         ),
     ]..sort(compararPorServir);
     return lista;
+  }
+
+  /// Las vacas a las que les corresponde secarse (ver `domain/secar.dart`).
+  ///
+  /// Entra la preñada con fecha probable de parto a la que le faltan
+  /// [diasParaSecar] días o menos y **que no está en Secas**. No se va sola:
+  /// la saca el secado, que es lo que la pasa al grupo Secas.
+  ///
+  /// Trae además los litros de la última pesa, porque es lo que decide si
+  /// secarla duele: una vaca en 6 litros se seca sin pensarlo, una en 20 es
+  /// una conversación.
+  Future<List<VacaPorSecar>> porSecar(
+    String lecheriaId, {
+    DateTime? hoy,
+  }) async {
+    final animales =
+        await (db.select(db.animales)..where(
+              (t) =>
+                  t.lecheriaId.equals(lecheriaId) &
+                  t.deletedAt.isNull() &
+                  t.estado.equals(EstadoAnimal.activo) &
+                  t.sexo.equals(Sexo.hembra) &
+                  t.fechaProbableParto.isNotNull(),
+            ))
+            .get();
+
+    final lista = <VacaPorSecar>[];
+    for (final a in animales) {
+      final faltan = diasQueFaltanParaSecar(
+        grupo: a.grupo,
+        estadoReproductivo: a.estadoReproductivo,
+        fechaProbableParto: a.fechaProbableParto,
+        hoy: hoy,
+      );
+      if (faltan == null) continue;
+      lista.add(
+        VacaPorSecar(
+          animalId: a.id,
+          identificador: a.identificador,
+          alias: a.alias,
+          grupo: a.grupo,
+          diasParaParir: faltan,
+          diasLactancia: a.fechaUltimoParto == null
+              ? null
+              : diasDesde(a.fechaUltimoParto!, hoy: hoy),
+          ultimaProduccion: await _ultimaProduccion(a.id),
+        ),
+      );
+    }
+    return lista..sort(compararPorSecar);
+  }
+
+  /// Los litros de la última pesa del animal, si tiene alguna.
+  Future<double?> _ultimaProduccion(String animalId) async {
+    final fila =
+        await (db.select(db.pesasLeche)
+              ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+              ..limit(1))
+            .getSingleOrNull();
+    return fila?.litros;
   }
 }
