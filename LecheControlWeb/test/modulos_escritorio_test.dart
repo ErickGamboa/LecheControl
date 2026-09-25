@@ -23,7 +23,7 @@ void main() {
       'inicio',
       // El mismo orden que la grilla de HomeScreen, para que quien use las
       // dos versiones encuentre los módulos donde los dejó.
-      'trabajo',
+      'eventos',
       'inventario',
       'registroLeche',
       'finanzas',

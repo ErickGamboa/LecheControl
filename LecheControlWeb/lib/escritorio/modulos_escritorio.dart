@@ -7,7 +7,7 @@ import 'package:leche_control/finanzas/finanzas_screen.dart';
 import 'package:leche_control/inventario/inventario_screen.dart';
 import 'package:leche_control/pesa/registro_leche_screen.dart';
 import 'package:leche_control/sanidad/sanidad_screen.dart';
-import 'package:leche_control/trabajo/trabajo_screen.dart';
+import 'package:leche_control/eventos/eventos_screen.dart';
 
 import 'tablero_escritorio.dart';
 
@@ -61,11 +61,11 @@ const List<ModuloEscritorio> modulosEscritorio = [
     construir: _inicio,
   ),
   ModuloEscritorio(
-    clave: 'trabajo',
-    titulo: 'Trabajo',
+    clave: 'eventos',
+    titulo: 'Eventos',
     icono: Icons.nfc,
     color: kVerdeLeche,
-    construir: _trabajo,
+    construir: _eventos,
   ),
   ModuloEscritorio(
     clave: 'inventario',
@@ -128,8 +128,8 @@ const List<ModuloEscritorio> panelesEscritorio = [
 Widget _inicio(LecheriaRow lecheria, String usuarioId) =>
     TableroEscritorio(lecheria: lecheria);
 
-Widget _trabajo(LecheriaRow lecheria, String usuarioId) =>
-    TrabajoScreen(lecheriaId: lecheria.id, usuarioId: usuarioId);
+Widget _eventos(LecheriaRow lecheria, String usuarioId) =>
+    EventosScreen(lecheriaId: lecheria.id, usuarioId: usuarioId);
 
 Widget _inventario(LecheriaRow lecheria, String usuarioId) =>
     InventarioScreen(lecheriaId: lecheria.id, usuarioId: usuarioId);
