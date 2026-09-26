@@ -20,6 +20,7 @@ void main() {
         for (final sql in tablasQueSeRecrean) {
           raw.execute(sql);
         }
+        raw.execute(configReportePreV15);
         raw.execute('''
       CREATE TABLE IF NOT EXISTS lecherias (
         id TEXT NOT NULL PRIMARY KEY,

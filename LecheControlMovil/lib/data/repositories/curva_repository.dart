@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../domain/curva_lactancia.dart';
 import '../domain/dieta_concentrado.dart';
+import '../domain/secar.dart';
 import '../local/database.dart';
 
 /// La curva de referencia de lactancia y los umbrales del reporte de
@@ -130,6 +131,40 @@ class CurvaRepository {
     )..where((t) => t.id.equals(config.id))).write(
       ConfigReporteCompanion(
         topeKgLeche: Value(tope),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  /// A cuántos días del parto le corresponde secarse a la vaca en esta finca.
+  ///
+  /// Siempre hay una regla con la que armar la lista, así que si la lechería
+  /// todavía no tiene fila de config se devuelve el valor por defecto.
+  Future<int> diasParaSecarDe(String lecheriaId) async {
+    final config = await configDe(lecheriaId);
+    return config?.diasParaSecar ?? diasParaSecarPorDefecto;
+  }
+
+  /// Cambia a cuántos días del parto se seca.
+  ///
+  /// Se rechaza fuera de 30–120 días. No es un capricho: por debajo de 30 el
+  /// período seco no alcanza para nada y por encima de 120 la lista se
+  /// llenaría de vacas que todavía no hay que tocar, que es la manera más
+  /// rápida de que el ganadero deje de mirarla.
+  Future<void> editarDiasParaSecar({
+    required String lecheriaId,
+    required int dias,
+  }) async {
+    if (dias < 30 || dias > 120) return;
+    final config = await configDe(lecheriaId);
+    if (config == null) return;
+    final ahora = DateTime.now();
+    await (db.update(
+      db.configReporte,
+    )..where((t) => t.id.equals(config.id))).write(
+      ConfigReporteCompanion(
+        diasParaSecar: Value(dias),
         updatedAt: Value(ahora),
         pendiente: const Value(true),
       ),

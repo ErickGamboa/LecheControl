@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../app/widgets/opcion_menu_card.dart';
-import '../data/domain/secar.dart';
 import '../data/domain/servir.dart';
 import 'analisis_calidad_screen.dart';
 import 'analisis_finanzas_screen.dart';
@@ -138,9 +137,8 @@ class AnalisisScreen extends StatelessWidget {
               color: kAzulLeche,
               titulo: 'Vacas por secar',
               detalle:
-                  'Las preñadas a las que les faltan $diasParaSecar días o '
-                  'menos para parir y siguen en ordeño. No salen hasta que se '
-                  'sequen.',
+                  'Las preñadas que ya están cerca del parto y siguen '
+                  'en ordeño. No salen hasta que se sequen.',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => SecarScreen(lecheriaId: lecheriaId),

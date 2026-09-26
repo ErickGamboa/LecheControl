@@ -21,6 +21,7 @@ void main() {
         for (final sql in tablasQueSeRecrean) {
           raw.execute(sql);
         }
+        raw.execute(configReportePreV15);
         // Esquema v8 de `sync_cursores`: la clave era solo la tabla.
         raw.execute('''
       CREATE TABLE IF NOT EXISTS sync_cursores (

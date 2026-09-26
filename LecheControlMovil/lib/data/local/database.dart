@@ -374,6 +374,14 @@ class ConfigReporte extends Table {
   /// que da 18 L come 6 kg. Es la regla de la finca y se edita en Ajustes.
   RealColumn get kgLechePorKgConcentrado =>
       real().withDefault(const Constant(3))();
+
+  /// A cuántos días del parto le corresponde secarse a la vaca.
+  ///
+  /// Es la regla con la que se arma «Vacas por secar». Sesenta y cinco días
+  /// es lo que se maneja, pero no es igual en toda finca: depende de la raza,
+  /// de la condición con la que llegan las vacas y de cómo se maneje el
+  /// período seco. Por eso se configura acá y no está clavado en el código.
+  IntColumn get diasParaSecar => integer().withDefault(const Constant(65))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -647,7 +655,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -843,6 +851,15 @@ class AppDatabase extends _$AppDatabase {
       // la v12 o la v13; si no, revienta con «duplicate column».
       if (from >= 12 && from < 14) {
         await m.addColumn(animales, animales.alias);
+      }
+      // v14 -> v15: a cuántos días del parto secar, que hasta ahora era un
+      // número fijo en el código y ahora lo decide cada finca.
+      //
+      // Acá sí basta con `addColumn` y no hace falta el cuidado de las dos de
+      // arriba: ningún paso de esta migración recrea `config_reporte`, así
+      // que la columna no existe en ningún teléfono, venga de donde venga.
+      if (from < 15) {
+        await m.addColumn(configReporte, configReporte.diasParaSecar);
       }
     },
   );

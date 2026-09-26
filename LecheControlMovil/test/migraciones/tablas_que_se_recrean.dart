@@ -63,3 +63,32 @@ const tablasQueSeRecrean = <String>[
     pendiente INTEGER NOT NULL DEFAULT 0
   )''',
 ];
+
+/// `config_reporte` tal como quedó en la v7 y se mantuvo hasta la v14.
+///
+/// Va aparte de [tablasQueSeRecrean] porque no todas las pruebas la quieren
+/// así: las de la v5 a la v7 arman su propia versión, más vieja, porque es
+/// justo la columna que ese paso agrega lo que están probando.
+///
+/// La necesitan las pruebas de la v8 en adelante, desde que el paso v14 -> v15
+/// le agrega `dias_para_secar`: una migración no puede agregarle una columna a
+/// una tabla que en la base no está. Y en un teléfono de verdad siempre está
+/// —ninguna versión de LecheControl ha existido sin la config del reporte—,
+/// así que ponerla acá no inventa un escenario, deja de fingir uno que no
+/// pasa.
+const configReportePreV15 = '''
+  CREATE TABLE IF NOT EXISTS config_reporte (
+    id TEXT NOT NULL PRIMARY KEY,
+    lecheria_id TEXT NOT NULL,
+    pct_excelente REAL NOT NULL DEFAULT 100,
+    pct_bueno REAL NOT NULL DEFAULT 85,
+    pct_vigilar REAL NOT NULL DEFAULT 70,
+    pct_bajo REAL NOT NULL DEFAULT 60,
+    umbral_secado_litros REAL NOT NULL DEFAULT 8,
+    tope_kg_leche REAL,
+    kg_leche_por_kg_concentrado REAL NOT NULL DEFAULT 3,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    pendiente INTEGER NOT NULL DEFAULT 0
+  )''';

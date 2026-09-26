@@ -90,6 +90,7 @@ void main() {
             raw.execute(sql);
           }
         }
+        raw.execute(configReportePreV15);
         raw.execute(esquemaAnimales);
         raw.execute(insertarVaca);
         raw.execute('PRAGMA user_version = $version');
@@ -141,6 +142,7 @@ void main() {
           for (final sql in tablasQueSeRecrean) {
             raw.execute(sql);
           }
+          raw.execute(configReportePreV15);
           raw.execute(insertarVaca);
           raw.execute('PRAGMA user_version = 11');
         },

@@ -8,16 +8,18 @@
 /// El problema es que **nadie se acuerda solo**. La vaca está produciendo, va
 /// al ordeño todos los días y no hay nada que avise; para cuando alguien mira
 /// la fecha probable de parto, ya se pasó. Esta lista es ese aviso: sale sola
-/// a los [diasParaSecar] días del parto y **no se va hasta que se seque**.
+/// a los días del parto que diga la finca y **no se va hasta que se seque**.
 library;
 
 import 'palpacion.dart' show diasDesde;
 
-/// A cuántos días del parto hay que secar la vaca.
+/// A cuántos días del parto le corresponde secarse, cuando la finca no ha
+/// dicho otra cosa.
 ///
-/// Setenta días. Es el período seco que se maneja en la finca; por debajo de
-/// los sesenta la vaca llega sin reservas a la próxima lactancia.
-const diasParaSecar = 70;
+/// Sesenta y cinco días. Por debajo de los sesenta la vaca llega sin reservas
+/// a la próxima lactancia. Cada finca lo ajusta en Ajuste de métricas, porque
+/// el período seco no es igual con toda raza ni con todo manejo.
+const diasParaSecarPorDefecto = 65;
 
 /// Días de hoy a la fecha probable de parto. Negativo si ya se pasó.
 int diasParaParir(DateTime fechaProbableParto, {DateTime? hoy}) =>
@@ -27,6 +29,9 @@ int diasParaParir(DateTime fechaProbableParto, {DateTime? hoy}) =>
 ///
 /// Entra la que está **preñada, con fecha probable de parto, a
 /// [diasParaSecar] días o menos, y que todavía no está en Secas**.
+///
+/// [diasParaSecar] es la regla de la finca (ver `ConfigReporte`), no un
+/// número de la app.
 ///
 /// Las tres condiciones importan:
 ///
@@ -45,6 +50,7 @@ int? diasQueFaltanParaSecar({
   required String grupo,
   required String estadoReproductivo,
   required DateTime? fechaProbableParto,
+  int diasParaSecar = diasParaSecarPorDefecto,
   DateTime? hoy,
 }) {
   if (grupo == _secas) return null;

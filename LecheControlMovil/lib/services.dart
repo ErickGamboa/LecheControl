@@ -38,7 +38,10 @@ final CalidadRepository calidadRepo = CalidadRepository(
 );
 final EventosRepository eventosRepo = EventosRepository(db);
 final PesasRepository pesasRepo = PesasRepository(db);
-final PalpacionRepository palpacionRepo = PalpacionRepository(db);
+final PalpacionRepository palpacionRepo = PalpacionRepository(
+  db,
+  curva: curvaRepo,
+);
 final PartosRepository partosRepo = PartosRepository(db);
 final ReporteRepository reporteRepo = ReporteRepository(db, curva: curvaRepo);
 final MedicamentosRepository medicamentosRepo = MedicamentosRepository(db);

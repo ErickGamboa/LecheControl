@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'curva_screen.dart';
+import 'dias_secar_screen.dart';
 import 'dieta_screen.dart';
 import 'tope_kg_screen.dart';
 
@@ -40,6 +41,15 @@ class AjustesScreen extends StatelessWidget {
                   'Cuántos kilos de leche puede entregar la finca por semana. '
                   'Si se pasa, la app avisa al anotar el ingreso.',
               destino: TopeKgScreen(lecheriaId: lecheriaId),
+            ),
+            _Opcion(
+              clave: 'ajustes.diasSecar',
+              icono: Icons.event_busy_outlined,
+              titulo: 'Ajuste de días para secar',
+              detalle:
+                  'A cuántos días del parto le corresponde secarse a la vaca. '
+                  'Es con lo que se arma la lista de Vacas por secar.',
+              destino: DiasSecarScreen(lecheriaId: lecheriaId),
             ),
             _Opcion(
               clave: 'ajustes.dieta',

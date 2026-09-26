@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
+import '../domain/secar.dart';
 import '../local/database.dart';
 import 'sync_remote_gateway.dart';
 
@@ -1072,6 +1073,7 @@ class SyncService {
                 'umbral_secado_litros': c.umbralSecadoLitros,
                 'tope_kg_leche': c.topeKgLeche,
                 'kg_leche_por_kg_concentrado': c.kgLechePorKgConcentrado,
+                'dias_para_secar': c.diasParaSecar,
                 'created_at': c.createdAt.toUtc().toIso8601String(),
                 'deleted_at': c.deletedAt?.toUtc().toIso8601String(),
               },
@@ -1105,6 +1107,12 @@ class SyncService {
               topeKgLeche: (r['tope_kg_leche'] as num?)?.toDouble(),
               kgLechePorKgConcentrado:
                   (r['kg_leche_por_kg_concentrado'] as num?)?.toDouble() ?? 3,
+              // El `?? 65` no sobra: un servidor al que todavía no le
+              // corrieron la migración manda la columna en nulo, y sin
+              // esto la bajada reventaría en el teléfono.
+              diasParaSecar:
+                  (r['dias_para_secar'] as num?)?.toInt() ??
+                  diasParaSecarPorDefecto,
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: _fechaOpcional(r['deleted_at']),

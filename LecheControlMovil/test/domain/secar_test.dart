@@ -17,20 +17,31 @@ void main() {
     String grupo = GrupoAnimal.enOrdeno,
     String estado = EstadoReproductivo.preniada,
     DateTime? probable,
+    int dias = diasParaSecarPorDefecto,
   }) => diasQueFaltanParaSecar(
     grupo: grupo,
     estadoReproductivo: estado,
     fechaProbableParto: probable,
+    diasParaSecar: dias,
     hoy: hoy,
   );
 
   group('quién entra', () {
-    test('entra el día que le faltan 70 para parir', () {
-      expect(faltan(probable: hoy.add(const Duration(days: 70))), 70);
+    test('entra el día que le faltan 65 para parir', () {
+      expect(faltan(probable: hoy.add(const Duration(days: 65))), 65);
     });
 
     test('un día antes de eso todavía no', () {
-      expect(faltan(probable: hoy.add(const Duration(days: 71))), isNull);
+      expect(faltan(probable: hoy.add(const Duration(days: 66))), isNull);
+    });
+
+    test('la finca manda: con 80 configurados, la de 70 entra', () {
+      // El número no es de la app, es de la finca. Con el período seco más
+      // largo la misma vaca entra antes, y esa es toda la gracia de poder
+      // configurarlo.
+      final probable = hoy.add(const Duration(days: 70));
+      expect(faltan(probable: probable), isNull);
+      expect(faltan(probable: probable, dias: 80), 70);
     });
 
     test('cuanto más cerca del parto, menos días', () {

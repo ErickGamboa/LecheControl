@@ -8,7 +8,10 @@ import '../hoja_vida/hoja_vida_screen.dart';
 import '../services.dart';
 
 /// Vacas por secar (Módulo 6 — Análisis): las preñadas a las que les faltan
-/// [diasParaSecar] días o menos para parir y que **siguen en ordeño**.
+/// para parir los días que diga la finca o menos, y que **siguen en ordeño**.
+///
+/// Cuántos días son lo decide cada finca en Ajuste de métricas; de fábrica son
+/// [diasParaSecarPorDefecto].
 ///
 /// La vaca necesita dos meses largos de descanso antes de parir, y el aviso
 /// tiene que venir de la app porque de la finca no viene: la vaca camina al
@@ -30,8 +33,13 @@ class SecarScreen extends StatefulWidget {
   State<SecarScreen> createState() => _SecarScreenState();
 }
 
+/// La lista y la regla con la que se armó. Van juntas porque las dos hacen
+/// falta para pintar la pantalla: el número se escribe en pantalla y tiene
+/// que ser el mismo con el que se filtró, no uno parecido.
+typedef _Datos = ({List<VacaPorSecar> vacas, int dias});
+
 class _SecarScreenState extends State<SecarScreen> {
-  late Future<List<VacaPorSecar>> _futuro;
+  late Future<_Datos> _futuro;
 
   @override
   void initState() {
@@ -40,7 +48,14 @@ class _SecarScreenState extends State<SecarScreen> {
   }
 
   void _cargar() {
-    _futuro = palpacionRepo.porSecar(widget.lecheriaId);
+    _futuro = _leer();
+  }
+
+  Future<_Datos> _leer() async {
+    return (
+      vacas: await palpacionRepo.porSecar(widget.lecheriaId),
+      dias: await curvaRepo.diasParaSecarDe(widget.lecheriaId),
+    );
   }
 
   /// Se vuelve a leer la lista al regresar: si allá se la secó, ya no va acá.
@@ -58,14 +73,15 @@ class _SecarScreenState extends State<SecarScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Vacas por secar')),
       body: SafeArea(
-        child: FutureBuilder<List<VacaPorSecar>>(
+        child: FutureBuilder<_Datos>(
           future: _futuro,
           builder: (context, snap) {
-            if (!snap.hasData) {
+            final datos = snap.data;
+            if (datos == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            final vacas = snap.data!;
-            if (vacas.isEmpty) return const _SinVacas();
+            final vacas = datos.vacas;
+            if (vacas.isEmpty) return _SinVacas(dias: datos.dias);
 
             return ListView(
               padding: const EdgeInsets.all(LecheSpacing.lg),
@@ -75,7 +91,7 @@ class _SecarScreenState extends State<SecarScreen> {
                 for (final v in vacas)
                   _FilaVaca(vaca: v, onTap: () => _abrirHojaDeVida(v)),
                 const SizedBox(height: LecheSpacing.lg),
-                const _Criterio(),
+                _Criterio(dias: datos.dias),
                 const SizedBox(height: LecheSpacing.xl),
               ],
             );
@@ -213,7 +229,9 @@ class _FilaVaca extends StatelessWidget {
 }
 
 class _SinVacas extends StatelessWidget {
-  const _SinVacas();
+  const _SinVacas({required this.dias});
+
+  final int dias;
 
   @override
   Widget build(BuildContext context) {
@@ -234,8 +252,7 @@ class _SinVacas extends StatelessWidget {
             const SizedBox(height: LecheSpacing.sm),
             Text(
               'Acá van a salir las preñadas a las que les falten '
-              '$diasParaSecar días o menos para parir y que todavía estén '
-              'en ordeño.',
+              '$dias días o menos para parir y que todavía estén en ordeño.',
               style: textos.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -247,7 +264,9 @@ class _SinVacas extends StatelessWidget {
 }
 
 class _Criterio extends StatelessWidget {
-  const _Criterio();
+  const _Criterio({required this.dias});
+
+  final int dias;
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +280,7 @@ class _Criterio extends StatelessWidget {
             Text('CÓMO SE ARMA ESTA LISTA', style: textos.titleSmall),
             const SizedBox(height: LecheSpacing.sm),
             Text(
-              'Entra la vaca preñada a la que le faltan $diasParaSecar días o '
+              'Entra la vaca preñada a la que le faltan $dias días o '
               'menos para parir y que todavía no está en Secas. Va primero la '
               'que menos le falta.\n\n'
               'Una vaca que se pasó de la fecha y sigue ordeñándose no se va '

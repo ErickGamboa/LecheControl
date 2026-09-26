@@ -5,6 +5,7 @@ import '../domain/palpacion.dart';
 import '../domain/secar.dart';
 import '../domain/servir.dart';
 import '../local/database.dart';
+import 'curva_repository.dart';
 
 /// Arma la lista de vacas por palpar (Módulo 6 — Análisis).
 ///
@@ -12,9 +13,13 @@ import '../local/database.dart';
 /// acá solo se buscan los datos que esa regla necesita —el último parto, el
 /// último servicio y la última palpación de cada hembra— y se los pasa.
 class PalpacionRepository {
-  PalpacionRepository(this.db);
+  PalpacionRepository(this.db, {CurvaRepository? curva})
+    : _curva = curva ?? CurvaRepository(db);
 
   final AppDatabase db;
+
+  /// De acá sale a cuántos días del parto secar, que lo decide cada finca.
+  final CurvaRepository _curva;
 
   /// Tipos de evento que cuentan como "la vaca fue servida".
   ///
@@ -194,8 +199,8 @@ class PalpacionRepository {
 
   /// Las vacas a las que les corresponde secarse (ver `domain/secar.dart`).
   ///
-  /// Entra la preñada con fecha probable de parto a la que le faltan
-  /// [diasParaSecar] días o menos y **que no está en Secas**. No se va sola:
+  /// Entra la preñada con fecha probable de parto a la que le faltan los días
+  /// que diga la finca o menos y **que no está en Secas**. No se va sola:
   /// la saca el secado, que es lo que la pasa al grupo Secas.
   ///
   /// Trae además los litros de la última pesa, porque es lo que decide si
@@ -205,6 +210,7 @@ class PalpacionRepository {
     String lecheriaId, {
     DateTime? hoy,
   }) async {
+    final dias = await _curva.diasParaSecarDe(lecheriaId);
     final animales =
         await (db.select(db.animales)..where(
               (t) =>
@@ -222,6 +228,7 @@ class PalpacionRepository {
         grupo: a.grupo,
         estadoReproductivo: a.estadoReproductivo,
         fechaProbableParto: a.fechaProbableParto,
+        diasParaSecar: dias,
         hoy: hoy,
       );
       if (faltan == null) continue;

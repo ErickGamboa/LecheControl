@@ -16,6 +16,7 @@ void main() {
         for (final sql in tablasQueSeRecrean) {
           raw.execute(sql);
         }
+        raw.execute(configReportePreV15);
         // Esquema v7 de `semanas`: la calidad todavía no existe.
         raw.execute('''
       CREATE TABLE IF NOT EXISTS semanas (
