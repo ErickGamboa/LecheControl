@@ -35,10 +35,16 @@ class HomeScreen extends StatelessWidget {
     super.key,
     required this.lecheria,
     required this.usuarioId,
+    this.onCambiarFinca,
   });
 
   final LecheriaRow lecheria;
   final String usuarioId;
+
+  /// Volver a la lista de fincas. **null cuando la cuenta tiene una sola**, y
+  /// entonces el nombre de la barra es texto y nada más: un botón que no
+  /// lleva a ningún lado es peor que no tener botón.
+  final VoidCallback? onCambiarFinca;
 
   Future<void> _abrir(BuildContext context, Widget pantalla) {
     return Navigator.of(
@@ -76,7 +82,11 @@ class HomeScreen extends StatelessWidget {
         color: kAzulLeche,
         onTap: () => _abrir(
           context,
-          InventarioScreen(lecheriaId: lecheria.id, usuarioId: usuarioId),
+          InventarioScreen(
+            lecheriaId: lecheria.id,
+            usuarioId: usuarioId,
+            nombreLecheria: lecheria.nombre,
+          ),
         ),
       ),
       _Modulo(
@@ -126,7 +136,27 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(lecheria.nombre),
+        // El nombre de la finca es el camino para cambiarse a otra: está donde
+        // uno lo busca y no agrega un botón más a una barra que ya tiene tres.
+        title: onCambiarFinca == null
+            ? Text(lecheria.nombre)
+            : InkWell(
+                key: const ValueKey('home.cambiarFinca'),
+                onTap: onCambiarFinca,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        lecheria.nombre,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_drop_down),
+                  ],
+                ),
+              ),
         actions: [
           IconButton(
             key: const ValueKey('home.syncStatus'),

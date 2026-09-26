@@ -113,14 +113,28 @@ void main() {
       }
     });
 
-    test('el mensaje concuerda con el número', () {
+    test('no deja ver cuántas fincas caben', () {
+      // El tope no se nombra ni de refilón: ni el número, ni «una sola», ni
+      // «ya tiene todas». Al ganadero no le importa y decirlo hace que
+      // parezca que hay algo más que comprar. Donde se nota el tope es en
+      // que el botón de agregar no aparece, y con eso alcanza.
+      for (final limite in [1, 3, 99]) {
+        final texto = LimiteLecheriasException(limite).mensaje;
+        expect(texto, isNotEmpty);
+        expect(
+          RegExp(r'[0-9]').hasMatch(texto),
+          isFalse,
+          reason: '«$texto» deja ver el tope',
+        );
+        expect(texto.toLowerCase(), isNot(contains('sola')));
+        expect(texto.toLowerCase(), isNot(contains('máximo')));
+      }
+
+      // Y el mensaje es siempre el mismo, para que comparar dos cuentas no
+      // diga nada tampoco.
       expect(
         const LimiteLecheriasException(1).mensaje,
-        contains('tu lechería'),
-      );
-      expect(
         const LimiteLecheriasException(3).mensaje,
-        contains('3 lecherías'),
       );
     });
   });

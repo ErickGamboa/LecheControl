@@ -260,9 +260,17 @@ class _EsperandoCuentaState extends State<_EsperandoCuenta> {
   ];
 }
 
-/// Sub-gate: espera a que exista la lechería activa del usuario (creándola
-/// si es la primera vez) y luego muestra el home.
-class _LecheriaGate extends StatelessWidget {
+/// Sub-gate: decide en cuál finca se entra.
+///
+/// Son tres casos y uno solo de ellos es nuevo:
+///
+/// - **Ninguna finca** (primera vez): el formulario para crearla.
+/// - **Una sola finca**: se entra directo, como siempre. La inmensa mayoría de
+///   las cuentas está acá, y hacerlas tocar una lista de un solo renglón en
+///   cada arranque sería cobrarles un toque por una función que no usan.
+/// - **Varias fincas**: la lista, para escoger. Y desde adentro se puede
+///   volver a ella tocando el nombre en la barra del Inicio.
+class _LecheriaGate extends StatefulWidget {
   const _LecheriaGate({
     required this.usuarioId,
     required this.sinConexion,
@@ -274,23 +282,316 @@ class _LecheriaGate extends StatelessWidget {
   final ConstructorHome? construirHome;
 
   @override
+  State<_LecheriaGate> createState() => _LecheriaGateState();
+}
+
+class _LecheriaGateState extends State<_LecheriaGate> {
+  /// Cuál finca se escogió en esta sesión de la app. null es «todavía no
+  /// escogió», que con una sola finca no obliga a nada.
+  String? _elegida;
+
+  /// Si se pidió ver la lista a propósito, tocando el nombre en la barra.
+  ///
+  /// Es distinto de «todavía no escogió»: con una sola finca se entra directo
+  /// y el usuario igual puede querer ver la lista, sea para agregar otra o
+  /// solo para mirar.
+  bool _viendoLista = false;
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<LecheriaRow?>(
-      stream: lecheriasRepo.observarLecheriaDeUsuario(usuarioId),
+    return StreamBuilder<List<LecheriaRow>>(
+      stream: lecheriasRepo.observarLecheriasDeUsuario(widget.usuarioId),
       builder: (context, snapshot) {
-        final lecheria = snapshot.data;
-        if (lecheria == null) {
-          return _CrearLecheriaScreen(
-            usuarioId: usuarioId,
-            sinConexion: sinConexion,
+        final lecherias = snapshot.data;
+        if (lecherias == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
         }
-        final construir = construirHome;
-        if (construir != null) {
-          return construir(lecheria: lecheria, usuarioId: usuarioId);
+        if (lecherias.isEmpty) {
+          return _CrearLecheriaScreen(
+            usuarioId: widget.usuarioId,
+            sinConexion: widget.sinConexion,
+          );
         }
-        return HomeScreen(lecheria: lecheria, usuarioId: usuarioId);
+
+        // La elegida puede haber desaparecido —se borró en otro teléfono y
+        // bajó el borrado—, así que se busca en vez de confiar en el id.
+        final elegida = _elegida == null
+            ? null
+            : lecherias.where((l) => l.id == _elegida).firstOrNull;
+
+        if (_viendoLista || (elegida == null && lecherias.length > 1)) {
+          return _FincasScreen(
+            usuarioId: widget.usuarioId,
+            sinConexion: widget.sinConexion,
+            lecherias: lecherias,
+            onElegir: (l) => setState(() {
+              _elegida = l.id;
+              _viendoLista = false;
+            }),
+            // Solo hay a dónde volver si ya se estaba trabajando en una.
+            onVolver: _viendoLista
+                ? () => setState(() => _viendoLista = false)
+                : null,
+          );
+        }
+
+        final activa = elegida ?? lecherias.first;
+        // El nombre de la barra siempre lleva a la lista. Aunque haya una
+        // sola finca y no quepa otra, de ahí se la borra y se le cambia el
+        // nombre, así que el camino tiene que estar.
+        void volverALista() => setState(() => _viendoLista = true);
+
+        final construir = widget.construirHome;
+        if (construir != null) {
+          return construir(lecheria: activa, usuarioId: widget.usuarioId);
+        }
+        return HomeScreen(
+          lecheria: activa,
+          usuarioId: widget.usuarioId,
+          onCambiarFinca: volverALista,
+        );
       },
+    );
+  }
+}
+
+/// La lista de fincas de la cuenta, para escoger en cuál se trabaja.
+///
+/// **Acá no se habla de cupos.** Ni cuántas fincas tiene, ni cuántas podría
+/// tener, ni por qué. Lo único que cambia entre una cuenta y otra es si
+/// aparece el botón de agregar: si aparece, se puede; si no, no. El ganadero
+/// no tiene que entender nada más que eso.
+class _FincasScreen extends StatefulWidget {
+  const _FincasScreen({
+    required this.usuarioId,
+    required this.sinConexion,
+    required this.lecherias,
+    required this.onElegir,
+    this.onVolver,
+  });
+
+  final String usuarioId;
+  final bool sinConexion;
+  final List<LecheriaRow> lecherias;
+  final ValueChanged<LecheriaRow> onElegir;
+
+  /// Volver a la finca en la que se estaba, si se llegó acá tocando el nombre
+  /// en la barra. Al entrar a la app no hay nada atrás y va nulo.
+  final VoidCallback? onVolver;
+
+  @override
+  State<_FincasScreen> createState() => _FincasScreenState();
+}
+
+class _FincasScreenState extends State<_FincasScreen> {
+  /// Se resuelve una vez al abrir y se vuelve a resolver al agregar una.
+  late Future<bool> _puedeAgregar = lecheriasRepo.puedeAgregarLecheria(
+    widget.usuarioId,
+  );
+
+  /// Borrar una finca, con el nombre escrito a mano de por medio.
+  ///
+  /// Escribir el nombre no es un trámite: es lo único que separa un toque mal
+  /// dado de perder la finca entera. Un «¿Está seguro?» con un botón rojo se
+  /// contesta que sí sin leerlo; el nombre hay que copiarlo, y para copiarlo
+  /// hay que mirarlo.
+  Future<void> _eliminar(LecheriaRow lecheria) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (_) => _ConfirmarBorrado(nombre: lecheria.nombre),
+    );
+    if (confirmado != true) return;
+
+    await lecheriasRepo.eliminarLecheria(lecheria.id);
+    sincronizarSiSePuede();
+    if (!mounted) return;
+    // Borrar libera lugar, así que el botón de agregar puede volver.
+    setState(() {
+      _puedeAgregar = lecheriasRepo.puedeAgregarLecheria(widget.usuarioId);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${lecheria.nombre} se eliminó.')),
+    );
+  }
+
+  Future<void> _agregar() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => _CrearLecheriaScreen(
+          usuarioId: widget.usuarioId,
+          sinConexion: widget.sinConexion,
+          esLaPrimera: false,
+        ),
+      ),
+    );
+    if (mounted) {
+      setState(() {
+        _puedeAgregar = lecheriasRepo.puedeAgregarLecheria(widget.usuarioId);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Mis fincas'),
+        leading: widget.onVolver == null
+            ? null
+            : IconButton(
+                key: const ValueKey('fincas.volver'),
+                tooltip: 'Volver',
+                icon: const Icon(Icons.arrow_back),
+                onPressed: widget.onVolver,
+              ),
+        actions: [
+          // Salirse desde acá solo tiene sentido cuando esta es la primera
+          // pantalla; si se vino del tablero, el camino de vuelta es atrás.
+          if (widget.onVolver == null)
+            IconButton(
+              tooltip: 'Cerrar sesión',
+              icon: const Icon(Icons.logout),
+              onPressed: cerrarSesion,
+            ),
+        ],
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('¿En cuál finca vas a trabajar?', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 16),
+            for (final l in widget.lecherias)
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  key: ValueKey('fincas.finca.${l.id}'),
+                  leading: const Icon(Icons.holiday_village_outlined),
+                  title: Text(
+                    l.nombre,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  trailing: PopupMenuButton<String>(
+                    key: ValueKey('fincas.menu.${l.id}'),
+                    tooltip: 'Acciones',
+                    onSelected: (_) => _eliminar(l),
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'eliminar',
+                        child: Text('Eliminar finca'),
+                      ),
+                    ],
+                  ),
+                  onTap: () => widget.onElegir(l),
+                ),
+              ),
+          ],
+        ),
+      ),
+      floatingActionButton: FutureBuilder<bool>(
+        future: _puedeAgregar,
+        builder: (context, snap) {
+          // Mientras no se sepa, no hay botón: aparecer y desaparecer se ve
+          // peor que aparecer un instante después.
+          if (snap.data != true) return const SizedBox.shrink();
+          return FloatingActionButton.extended(
+            key: const ValueKey('fincas.agregar'),
+            onPressed: _agregar,
+            icon: const Icon(Icons.add),
+            label: const Text('Agregar finca'),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Pide escribir el nombre de la finca antes de borrarla.
+///
+/// El botón de borrar arranca apagado y solo se enciende cuando lo escrito
+/// coincide con el nombre. Se comparan sin mayúsculas y sin espacios de
+/// sobra: la idea es asegurarse de que la persona sabe cuál finca está
+/// borrando, no ponerle una prueba de mecanografía.
+class _ConfirmarBorrado extends StatefulWidget {
+  const _ConfirmarBorrado({required this.nombre});
+
+  final String nombre;
+
+  @override
+  State<_ConfirmarBorrado> createState() => _ConfirmarBorradoState();
+}
+
+class _ConfirmarBorradoState extends State<_ConfirmarBorrado> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  bool get _coincide =>
+      _ctrl.text.trim().toLowerCase() == widget.nombre.trim().toLowerCase();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: Text('Eliminar ${widget.nombre}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Se va a borrar esta finca con todo lo que tiene adentro: sus '
+            'animales, sus eventos, sus pesas y sus finanzas.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Esto no se puede deshacer, y también desaparece de los demás '
+            'teléfonos de la cuenta.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.error,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Para confirmar, escribí «${widget.nombre}».',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const ValueKey('fincas.eliminar.nombre'),
+            controller: _ctrl,
+            autofocus: true,
+            autocorrect: false,
+            decoration: const InputDecoration(
+              labelText: 'Nombre de la finca',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const ValueKey('fincas.eliminar.confirmar'),
+          style: FilledButton.styleFrom(
+            backgroundColor: theme.colorScheme.error,
+          ),
+          onPressed: _coincide ? () => Navigator.pop(context, true) : null,
+          child: const Text('Eliminar'),
+        ),
+      ],
     );
   }
 }
@@ -300,10 +601,16 @@ class _CrearLecheriaScreen extends StatefulWidget {
   const _CrearLecheriaScreen({
     required this.usuarioId,
     required this.sinConexion,
+    this.esLaPrimera = true,
   });
 
   final String usuarioId;
   final bool sinConexion;
+
+  /// Si es la finca con la que el ganadero empieza a usar la app o una que
+  /// agrega después. Solo cambia lo que dice la pantalla: la bienvenida no
+  /// tiene sentido la segunda vez.
+  final bool esLaPrimera;
 
   @override
   State<_CrearLecheriaScreen> createState() => _CrearLecheriaScreenState();
@@ -329,6 +636,9 @@ class _CrearLecheriaScreenState extends State<_CrearLecheriaScreen> {
         creadaPor: widget.usuarioId,
       );
       sincronizarSiSePuede();
+      // La primera se abre sola porque el gate la ve aparecer; las demás
+      // vuelven a la lista, que es de donde se entró.
+      if (!widget.esLaPrimera && mounted) Navigator.of(context).pop();
     } on CuentaNoSincronizadaException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -355,13 +665,14 @@ class _CrearLecheriaScreenState extends State<_CrearLecheriaScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('LecheControl'),
+        title: Text(widget.esLaPrimera ? 'LecheControl' : 'Agregar finca'),
         actions: [
-          IconButton(
-            tooltip: 'Cerrar sesión',
-            icon: const Icon(Icons.logout),
-            onPressed: cerrarSesion,
-          ),
+          if (widget.esLaPrimera)
+            IconButton(
+              tooltip: 'Cerrar sesión',
+              icon: const Icon(Icons.logout),
+              onPressed: cerrarSesion,
+            ),
         ],
       ),
       body: SafeArea(
@@ -381,7 +692,9 @@ class _CrearLecheriaScreenState extends State<_CrearLecheriaScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '¡Bienvenido a LecheControl!',
+                    widget.esLaPrimera
+                        ? '¡Bienvenido a LecheControl!'
+                        : 'Una finca más',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
@@ -389,7 +702,9 @@ class _CrearLecheriaScreenState extends State<_CrearLecheriaScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Ponele nombre a tu lechería para empezar.',
+                    widget.esLaPrimera
+                        ? 'Ponele nombre a tu lechería para empezar.'
+                        : 'Ponele el nombre con el que la conocés.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium,
                   ),

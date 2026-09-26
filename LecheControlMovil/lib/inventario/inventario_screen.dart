@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../app/etiqueta_animal.dart';
 import '../data/domain/grupos.dart';
+import '../data/domain/semana.dart';
 import '../data/local/database.dart';
 import '../hoja_vida/hoja_vida_screen.dart';
 import '../services.dart';
 import 'acciones_animal.dart';
+import 'inventario_previa_pdf_screen.dart';
 
 /// Inventario del hato (Módulo 2): lista de animales activos con búsqueda y
 /// filtro por grupo, acceso a la hoja de vida y baja rápida.
@@ -18,10 +20,15 @@ class InventarioScreen extends StatefulWidget {
     super.key,
     required this.lecheriaId,
     required this.usuarioId,
+    required this.nombreLecheria,
   });
 
   final String lecheriaId;
   final String usuarioId;
+
+  /// Para el encabezado del PDF: una hoja suelta tiene que decir de qué finca
+  /// es.
+  final String nombreLecheria;
 
   @override
   State<InventarioScreen> createState() => _InventarioScreenState();
@@ -39,6 +46,17 @@ class _InventarioScreenState extends State<InventarioScreen> {
   bool _verBajas = false;
   final _busquedaCtrl = TextEditingController();
   String _busqueda = '';
+
+  /// Rango de **fecha de ingreso**: cuándo entró el animal al sistema, que es
+  /// lo que la app guarda sola al registrarlo.
+  ///
+  /// No es cuándo llegó a la finca —eso nadie se lo pregunta al ganadero— sino
+  /// cuándo se digitó. Sirve para lo que realmente se necesita: «quiero ver
+  /// las novillas que metí del 25 de julio a hoy».
+  DateTimeRange? _ingreso;
+
+  /// Lo que el usuario está viendo, ya filtrado. Es lo que se exporta.
+  List<AnimalRow> _visibles = const [];
 
   @override
   void dispose() {
@@ -107,6 +125,87 @@ class _InventarioScreenState extends State<InventarioScreen> {
     sincronizarSiSePuede();
   }
 
+  Future<void> _escogerIngreso() async {
+    final hoy = DateTime.now();
+    final rango = await showDateRangePicker(
+      context: context,
+      // Cinco años para atrás alcanza de sobra: la app no existía antes.
+      firstDate: DateTime(hoy.year - 5),
+      // No se puede haber digitado un animal mañana.
+      lastDate: DateTime(hoy.year, hoy.month, hoy.day),
+      initialDateRange: _ingreso,
+      helpText: 'Fecha de ingreso al sistema',
+      saveText: 'Filtrar',
+    );
+    if (rango == null) return;
+    setState(() => _ingreso = rango);
+  }
+
+  /// Deja solo los que se digitaron dentro del rango.
+  ///
+  /// El día del «hasta» entra completo: quien pide «del 25 de julio al 25 de
+  /// setiembre» está contando los dos días, no parando a la medianoche del
+  /// 25 de setiembre.
+  List<AnimalRow> _delRango(List<AnimalRow> animales) {
+    final rango = _ingreso;
+    if (rango == null) return animales;
+    final desde = DateTime(
+      rango.start.year,
+      rango.start.month,
+      rango.start.day,
+    );
+    final hasta = DateTime(
+      rango.end.year,
+      rango.end.month,
+      rango.end.day,
+    ).add(const Duration(days: 1));
+    return animales
+        .where(
+          (a) => !a.createdAt.isBefore(desde) && a.createdAt.isBefore(hasta),
+        )
+        .toList();
+  }
+
+  /// Los filtros puestos, escritos con todas las letras para el encabezado del
+  /// PDF. Una hoja impresa sin esto no se entiende dentro de un mes.
+  String _filtrosEnPalabras() {
+    final rango = _ingreso;
+    final texto = _busqueda.trim();
+    final partes = <String>[
+      if (_verBajas)
+        'Animales dados de baja'
+      else if (_grupo != null)
+        GrupoAnimal.etiqueta(_grupo!)
+      else
+        'Todos los grupos',
+      if (_soloProntas) 'solo vacas prontas',
+      if (texto.isNotEmpty) 'que coinciden con «$texto»',
+      if (rango != null)
+        'ingresados al sistema del ${diaEnPalabras(rango.start)} '
+            'al ${diaEnPalabras(rango.end)}',
+    ];
+    return partes.join(' · ');
+  }
+
+  Future<void> _exportar() async {
+    if (_visibles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay animales que exportar.')),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => InventarioPreviaPdfScreen(
+          nombreLecheria: widget.nombreLecheria,
+          animales: _visibles,
+          filtros: _filtrosEnPalabras(),
+          generadoEl: DateTime.now(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _accion(String cual, AnimalRow animal) async {
     switch (cual) {
       case 'ficha':
@@ -123,7 +222,17 @@ class _InventarioScreenState extends State<InventarioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inventario')),
+      appBar: AppBar(
+        title: const Text('Inventario'),
+        actions: [
+          IconButton(
+            key: const ValueKey('inventario.exportar'),
+            tooltip: 'Exportar a PDF',
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            onPressed: _exportar,
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -174,6 +283,29 @@ class _InventarioScreenState extends State<InventarioScreen> {
                     if (v) _verBajas = false;
                   }),
                 ),
+                // El de fecha de ingreso no es excluyente con los otros:
+                // se suma. «Novillas» + «del 25 de julio a hoy» es justo el
+                // caso para el que existe.
+                _ingreso == null
+                    ? ActionChip(
+                        key: const ValueKey('inventario.filtro.ingreso'),
+                        avatar: const Icon(Icons.event_outlined, size: 18),
+                        label: const Text('Fecha de ingreso'),
+                        onPressed: _escogerIngreso,
+                      )
+                    : InputChip(
+                        key: const ValueKey('inventario.filtro.ingreso'),
+                        // Sin `avatar` a propósito: puesto el filtro, ese
+                        // lugar lo ocupa el visto bueno, igual que en los
+                        // chips de grupo.
+                        selected: true,
+                        label: Text(
+                          'Ingresaron ${diaEnPalabras(_ingreso!.start)} - '
+                          '${diaEnPalabras(_ingreso!.end)}',
+                        ),
+                        onPressed: _escogerIngreso,
+                        onDeleted: () => setState(() => _ingreso = null),
+                      ),
                 ChoiceChip(
                   key: const ValueKey('inventario.filtro.bajas'),
                   avatar: const Icon(Icons.history, size: 18),
@@ -215,6 +347,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                       )
                       .toList();
                 }
+                animales = _delRango(animales);
+                // Se guarda acá, sin setState, para que «Exportar» mande al
+                // PDF exactamente la lista que el usuario tiene enfrente.
+                _visibles = animales;
                 if (animales.isEmpty) {
                   return Center(
                     child: Text(

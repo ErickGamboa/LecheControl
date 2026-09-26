@@ -132,7 +132,11 @@ Widget _eventos(LecheriaRow lecheria, String usuarioId) =>
     EventosScreen(lecheriaId: lecheria.id, usuarioId: usuarioId);
 
 Widget _inventario(LecheriaRow lecheria, String usuarioId) =>
-    InventarioScreen(lecheriaId: lecheria.id, usuarioId: usuarioId);
+    InventarioScreen(
+      lecheriaId: lecheria.id,
+      usuarioId: usuarioId,
+      nombreLecheria: lecheria.nombre,
+    );
 
 Widget _registroLeche(LecheriaRow lecheria, String usuarioId) =>
     RegistroLecheScreen(
