@@ -47,6 +47,12 @@ mkdir -p "$SALIDA/img" "$SALIDA/app"
 cp sitio/*.html sitio/*.css sitio/*.js "$SALIDA/"
 cp web/favicon.png "$SALIDA/"
 
+# El .ico además del .png. La página declara el .png y los navegadores le
+# hacen caso, pero el panel de Vercel saca el ícono del proyecto pidiendo
+# /favicon.ico a secas, sin leer el <link>: sin este archivo mostraba un
+# genérico en lugar del logo.
+cp web/favicon.ico "$SALIDA/"
+
 # Imágenes del sitio: las mismas del logo y los íconos que usa la app, para
 # que no haya dos versiones del mismo dibujo dando vueltas. Salen de assets/
 # de este proyecto, que `sincronizar_web_assets.sh` mantiene igual al móvil.
